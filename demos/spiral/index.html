@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two-Spiral Classifier</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head><body><main>
+<p><a href="../../">← All demos</a></p>
+<h1>Two-Spiral Classifier</h1>
+<p class="muted">A 2 → 16 → 16 → 1 network (tanh, sigmoid output) trained with minibatch SGD in plain JavaScript.</p>
+<canvas id="c" width="400" height="400"></canvas>
+<div class="row">
+  <button id="toggle">Pause</button><button id="reset">Reset</button>
+  <span id="stats" class="muted"></span>
+</div>
+<script>
+const N=100, H=16, S=100; // points per class, hidden size, grid res
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const rnd=()=>Math.random()*2-1;
+function data(){const d=[];for(let c=0;c<2;c++)for(let i=0;i<N;i++){
+  const r=i/N*0.9+0.05, t=i/N*3.5*Math.PI+c*Math.PI+(Math.random()-.5)*0.3;
+  d.push({x:[r*Math.cos(t)*1.1,r*Math.sin(t)*1.1],y:c});}return d;}
+function layer(i,o){return{W:Array.from({length:o},()=>Array.from({length:i},()=>rnd()*Math.sqrt(2/i))),b:new Array(o).fill(0)};}
+let pts,net,epoch,loss,running=true;
+function init(){pts=data();net=[layer(2,H),layer(H,H),layer(H,1)];epoch=0;loss=0;}
+function fwd(x){const a=[x];let h=x;
+  net.forEach((L,k)=>{h=L.W.map((w,j)=>{let s=L.b[j];for(let i=0;i<w.length;i++)s+=w[i]*h[i];
+    return k<2?Math.tanh(s):1/(1+Math.exp(-s));});a.push(h);});return a;}
+function step(lr=0.05){
+  const g=net.map(L=>({W:L.W.map(w=>w.map(()=>0)),b:L.b.map(()=>0)}));let l=0;
+  for(const p of pts){const a=fwd(p.x),o=a[3][0];l-=p.y?Math.log(o+1e-9):Math.log(1-o+1e-9);
+    let d=[o-p.y];
+    for(let k=2;k>=0;k--){const nd=new Array(net[k].W[0].length).fill(0);
+      net[k].W.forEach((w,j)=>{g[k].b[j]+=d[j];for(let i=0;i<w.length;i++){g[k].W[j][i]+=d[j]*a[k][i];nd[i]+=d[j]*w[i];}});
+      if(k>0)d=nd.map((v,i)=>v*(1-a[k][i]**2));}}
+  net.forEach((L,k)=>L.W.forEach((w,j)=>{L.b[j]-=lr*g[k].b[j]/pts.length;for(let i=0;i<w.length;i++)w[i]-=lr*g[k].W[j][i]/pts.length;}));
+  loss=l/pts.length;epoch++;}
+function draw(){const s=cv.width/S,im=ctx.createImageData(S,S);
+  for(let j=0;j<S;j++)for(let i=0;i<S;i++){const o=fwd([(i/S)*2.4-1.2,(j/S)*2.4-1.2])[3][0],k=(j*S+i)*4;
+    im.data.set([239*o+37*(1-o),68*o+99*(1-o),68*o+235*(1-o),90],k);}
+  const t=document.createElement('canvas');t.width=t.height=S;t.getContext('2d').putImageData(im,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.imageSmoothingEnabled=true;ctx.drawImage(t,0,0,cv.width,cv.height);
+  for(const p of pts){ctx.beginPath();ctx.arc((p.x[0]+1.2)/2.4*cv.width,(p.x[1]+1.2)/2.4*cv.height,4,0,7);
+    ctx.fillStyle=p.y?'#ef4444':'#2563eb';ctx.fill();ctx.strokeStyle='#fff';ctx.stroke();}
+  let c=0;for(const p of pts)c+=(fwd(p.x)[3][0]>.5)==!!p.y;
+  document.getElementById('stats').textContent=`epoch ${epoch} · loss ${loss.toFixed(3)} · accuracy ${(c/pts.length*100).toFixed(0)}%`;}
+function loop(){if(running){for(let i=0;i<5;i++)step();draw();}requestAnimationFrame(loop);}
+document.getElementById('toggle').onclick=e=>{running=!running;e.target.textContent=running?'Pause':'Resume';};
+document.getElementById('reset').onclick=init;
+init();loop();
+</script></main></body></html>
