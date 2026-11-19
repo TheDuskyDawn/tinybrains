@@ -1,4 +1,4 @@
-# 🧠 learn-in-browser
+# 🧠 tinybrains
 
 > Machine learning, but the GPU is *your problem* now.
 
@@ -20,8 +20,8 @@ Everything runs on your device. Your data goes nowhere, because there is nowhere
 ## 🏃 Running It Locally
 
 ```sh
-git clone https://github.com/TheDuskyDawn/learn-in-browser
-cd learn-in-browser
+git clone https://github.com/TheDuskyDawn/tinybrains
+cd tinybrains
 python3 -m http.server 8000
 # open http://localhost:8000 and watch some math suffer
 ```
