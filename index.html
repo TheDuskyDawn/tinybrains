@@ -2,10 +2,38 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Learn in Browser</title>
-<link rel="stylesheet" href="assets/style.css">
-</head><body><main>
-<h1>Learn in Browser</h1>
-<p class="muted">Interactive models that train live, on your device. No server, no data leaves your browser.</p>
-<a class="card" href="demos/spiral/"><h3>Two-Spiral Classifier</h3><p>A small neural network learns to separate two interleaved spirals, trained step by step in real time.</p></a>
-<!-- Add new demos here as more <a class="card"> entries -->
-</main></body></html>
+<meta name="description" content="Small machine-learning experiments that train live in your browser tab. No server, no install, no data leaving your machine.">
+<meta property="og:title" content="Learn in Browser"><meta property="og:description" content="Models that learn while you watch, running entirely in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Newsreader:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101216'/%3E%3Cpath d='M5 8 C10 8 11 22 27 24' stroke='%23ffc233' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/site.css">
+</head><body>
+<div class="wrap">
+  <nav class="rise"><b>learn in browser</b><a href="https://github.com/TheDuskyDawn/learn-in-browser">source</a></nav>
+
+  <header class="hero">
+    <div class="rise" style="--i:1">
+      <h1>Models that learn <em>while you watch.</em></h1>
+      <p class="lede">Little machine-learning experiments that train inside this tab. Open one, and it starts out knowing nothing.</p>
+    </div>
+    <div class="curve rise" style="--i:2" aria-hidden="true">
+      <canvas id="loss"></canvas><span class="y">loss</span><span class="x">steps →</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="label rise" style="--i:3"><span>Experiments</span><span>newest first</span></div>
+    <div id="list" class="rise" style="--i:4">
+      <noscript><p>The list is built with JavaScript, which is also what the experiments run on. Sorry.</p></noscript>
+    </div>
+  </main>
+
+  <footer>
+    <p>Everything trains on your device. Nothing is uploaded, logged, or tracked, mostly because there is no server to do it.</p>
+    <p>Built by <a href="https://github.com/TheDuskyDawn">TheDuskyDawn</a>.</p>
+  </footer>
+</div>
+<script src="assets/js/experiments.js"></script>
+<script src="assets/js/home.js"></script>
+</body></html>

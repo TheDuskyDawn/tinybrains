@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch: paddles that teach themselves</title>
+<meta name="description" content="Watch 40 tiny neural networks evolve to catch a ball. Change the rules live and see what breaks.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Newsreader:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23101216'/%3E%3Ccircle cx='16' cy='13' r='5' fill='%23ffc233'/%3E%3Crect x='7' y='24' width='18' height='3' fill='%23ebe8e1'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0f;--p:#14161b;--v:#101216;--l:#262932;--t:#ebe8e1;--m:#8d909a;--a:#ffc233;--a2:#8ea3c7;--h:"Bricolage Grotesque",system-ui,sans-serif;--b:Newsreader,Georgia,serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.35 var(--b);height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+header{flex:none;height:52px;display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid var(--l)}
+header b{font:800 20px var(--h);letter-spacing:-.02em}
+.tag{flex:1;color:var(--m);font-style:italic}
+main{flex:1;min-height:0;display:grid;grid-template-columns:290px minmax(0,1fr) 350px;grid-template-rows:minmax(0,1fr);gap:14px;padding:14px}
+aside,#mid{min-height:0;display:flex;flex-direction:column;background:var(--p);border:1px solid var(--l);border-radius:12px;padding:14px}
+#left{overflow-y:auto}
+.rise{opacity:0;transform:translateY(14px);animation:ri .7s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--i)*.1s)}
+@keyframes ri{to{opacity:1;transform:none}}
+h3{margin:0 0 8px;font:500 12px var(--h);color:var(--m)}
+.btn{font:500 13px var(--h);padding:6px 12px;border:1.5px solid var(--t);border-radius:99px;color:var(--t);cursor:pointer;background:linear-gradient(var(--t),var(--t)) 0 100%/100% 0 no-repeat;transition:background-size .25s,color .25s}
+.btn:hover,.btn:focus-visible{background-size:100% 100%;color:var(--bg)}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.note{margin:8px 0 14px;min-height:3.9em;font:italic 14px/1.3 var(--b);color:var(--m)}
+.row{margin-bottom:9px}
+.row label{display:flex;justify-content:space-between;font:500 13px var(--h)}
+.row b{color:var(--a);font-weight:500}
+input[type=range]{width:100%;margin:2px 0 0;height:16px;accent-color:var(--a)}
+.chk{display:flex;gap:8px;align-items:center;font:500 13px var(--h);margin:12px 0}
+#ob{width:100%}
+.sw{flex:1;min-height:0;position:relative;background:var(--v);border-radius:8px;overflow:hidden}
+.sw canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.gen{position:absolute;left:14px;top:10px;font:500 12px var(--h);color:var(--m);pointer-events:none}
+.gen.r{left:auto;right:14px;text-align:right}
+.gen b{display:block;font:800 40px/1 var(--h);letter-spacing:-.03em;color:var(--a)}
+.ctl{flex:none;display:flex;align-items:center;gap:10px;margin-top:12px;font:500 13px var(--h)}
+.ctl input{flex:1;min-width:80px}
+.stats{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stats b{display:block;font:800 44px/1 var(--h);letter-spacing:-.04em;color:var(--a)}
+.stats span{font:500 12px var(--h);color:var(--m)}
+.cw{flex:none;height:min(32vh,240px);position:relative;background:var(--v);border-radius:8px}
+.how{flex:1;min-height:0;overflow-y:auto;margin-top:14px}
+.how p{margin:0 0 10px;color:var(--m)}
+.how b{color:var(--t);font-weight:400}
+.cw canvas{position:absolute;inset:0;width:100%;height:100%}
+dialog{background:var(--p);color:var(--t);border:1px solid var(--l);border-radius:14px;padding:24px;width:calc(100% - 32px);max-width:780px}
+dialog::backdrop{background:#000b}
+dialog[open]{animation:pop .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
+dialog h2{margin:0 0 14px;font:800 28px var(--h);letter-spacing:-.03em}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;margin-bottom:18px}
+dialog ol{margin:0;padding-left:20px}dialog li{margin-bottom:10px}dialog li b{font:800 16px var(--h)}
+#net{width:100%;height:auto}
+.fl{stroke:var(--m);stroke-opacity:.5;stroke-dasharray:3 8;animation:fl 1.6s linear infinite}
+@keyframes fl{to{stroke-dashoffset:-22}}
+.nd{fill:var(--p);stroke:var(--t);stroke-width:2;transform-box:fill-box;transform-origin:center;animation:pu 2.6s ease-in-out infinite}
+.nd.o{fill:var(--a);stroke:var(--a)}
+@keyframes pu{50%{transform:scale(1.35)}}
+#net text{font:italic 14px var(--b);fill:var(--t)}
+@media(max-width:980px){body{height:auto;overflow:auto}main{grid-template-columns:1fr;grid-template-rows:none}.sw{flex:none;aspect-ratio:3/2}.cw{flex:none;height:300px}#left{overflow:visible}.dg{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-delay:0s!important;transition-duration:.01s!important}}
+</style></head><body>
+<header class="rise" style="--i:0"><a href="../../" title="All experiments" style="color:var(--m);text-decoration:none;font:500 13px var(--h)">← all</a><b>Catch</b><span class="tag">Paddles that teach themselves to catch</span><button class="btn" id="hb">How it works</button></header>
+<main>
+<aside id="left" class="rise" style="--i:1"><h3>Experiments</h3><div class="presets" id="pre"></div><p class="note" id="pd">Pick one to restart training with different rules.</p><h3>Rules</h3><div id="panel"></div></aside>
+<section id="mid" class="rise" style="--i:2"><div class="sw"><canvas id="cv" width="600" height="400"></canvas><div class="gen">Generation<b id="sg">1</b></div><div class="gen r">Still alive<b id="sa">40</b></div></div>
+<div class="ctl"><label for="sp">Fast-forward</label><input id="sp" type="range" min="1" max="80" value="4"><span id="spv">4x</span><button class="btn" id="pb">Pause</button><button class="btn" id="rb">Restart</button></div></section>
+<aside id="right" class="rise" style="--i:3"><div class="stats"><div><b id="sl">–</b><span>Last best, of <i id="mb">30</i></span></div><div><b id="sv">–</b><span>Last average</span></div></div><div class="cw"><canvas id="ch"></canvas></div>
+<div class="how"><h3>Reading the graph</h3>
+<p>Each step along the bottom is one generation. The <b>amber line</b> is the most catches by any single paddle. The <b>blue-grey line</b> is the average across all of them. The graph slides along as new generations arrive.</p>
+<p>Early on both lines sit near zero because the networks are random. When one paddle stumbles onto “move toward the ball”, its children inherit it and the whole population jumps within a few generations.</p>
+<p>The average stays a little under the best because every child carries random changes, and most random changes make a paddle worse. Raise the mutation in the rules and watch the gap widen.</p></div></aside>
+</main>
+<dialog id="dlg"><h2>How a paddle thinks</h2><div class="dg"><ol>
+<li><b>See.</b> Each paddle reads five numbers: the gap to the ball, the ball’s position and height, its sideways drift, and where the paddle stands.</li>
+<li><b>Decide.</b> A tiny network turns them into one number: push left, push right, or stay put.</li>
+<li><b>Score.</b> A catch earns a point. A miss costs a life, and a near miss earns a little credit so progress can show.</li>
+<li><b>Evolve.</b> The top four carry over unchanged. The rest are children of the top ten, with a few weights changed at random.</li></ol>
+<svg id="net" viewBox="0 0 380 260" role="img" aria-label="A network with five inputs, eight hidden units and one output"></svg></div>
+<form method="dialog"><button class="btn">Close</button></form></dialog>
+<script>
+const $=id=>document.getElementById(id);
+const W=600,H=400,PY=H-24,HID=8,NW=57;
+let PW=46,N=40,MAXB=30,LIVES=3,MAXV=7,BSPD=4.2,ELITE=4,PAR=10,MR=0.1,MS=0.25,BIG=0.05,ADAPT=1;
+const K={d:"#101216",c:"#ebe8e1",s:"#ffc233",m:"#8ea3c7"};
+const cv=$("cv"),ctx=cv.getContext("2d"),ch=$("ch"),cx=ch.getContext("2d");
+let pop=[],ball={x:0,y:0},done=0,gen=1,hist=[],paused=false;
+const gauss=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+const mk=w=>({w:w||Array.from({length:NW},()=>gauss()*0.8),x:W/2,lives:LIVES,catches:0,fit:0,alive:true});
+function spawn(){ball={x:40+Math.random()*(W-80),y:0,vx:(Math.random()-.5)*5,vy:BSPD}}
+function act(a){
+  const I=[(ball.x-a.x)/W*2,(ball.x/W-.5)*2,ball.y/H,ball.vx/3,(a.x/W-.5)*2];
+  let o=a.w[56];
+  for(let h=0;h<HID;h++){let s=a.w[40+h];for(let i=0;i<5;i++)s+=I[i]*a.w[h*5+i];o+=Math.tanh(s)*a.w[48+h];}
+  return Math.tanh(o);
+}
+function reset(){pop=Array.from({length:N},()=>mk());gen=1;hist=[];view=0;done=0;spawn();$("sl").textContent="–";$("sv").textContent="–";chart();}
+function endGen(){
+  pop.sort((a,b)=>b.fit-a.fit);
+  const best=pop[0].catches,avg=pop.reduce((s,a)=>s+a.catches,0)/pop.length;
+  hist.push({best,avg});$("sl").textContent=best;$("sv").textContent=avg.toFixed(1);chart();
+  const next=pop.slice(0,Math.min(ELITE,N)).map(a=>mk(a.w.slice()));
+  while(next.length<N){
+    const p=pop[Math.floor(Math.random()*Math.min(PAR,pop.length))];
+    const big=Math.random()<BIG;
+    const s=ADAPT?Math.max(0.03,MS*(1-pop[0].catches/MAXB)):MS;
+    next.push(mk(p.w.map(v=>Math.random()<MR?v+gauss()*(big?0.6:s):v)));
+  }
+  pop=next;gen++;done=0;spawn();
+}
+function step(){
+  for(const a of pop){if(a.alive)a.x=Math.max(PW/2,Math.min(W-PW/2,a.x+act(a)*MAXV));}
+  ball.x+=ball.vx;ball.y+=ball.vy;
+  if(ball.x<8||ball.x>W-8){ball.vx*=-1;ball.x=Math.max(8,Math.min(W-8,ball.x));}
+  if(ball.y>=PY){
+    for(const a of pop){
+      if(!a.alive)continue;
+      const d=Math.abs(ball.x-a.x);
+      if(d<=PW/2+6){a.catches++;a.fit+=1;}
+      else{a.fit+=Math.max(0,1-d/(W/2))*0.4;if(--a.lives<=0)a.alive=false;}
+    }
+    done++;spawn();
+    if(done>=MAXB||!pop.some(a=>a.alive))endGen();
+  }
+}
+function draw(){
+  ctx.globalAlpha=.3;ctx.fillStyle=K.d;ctx.fillRect(0,0,W,H);
+  ctx.globalAlpha=.25;ctx.fillStyle=K.c;ctx.fillRect(0,PY+10,W,1);
+  let lead=null;for(const a of pop)if(a.alive&&(!lead||a.fit>lead.fit))lead=a;
+  for(const a of pop){ctx.globalAlpha=a.alive?.3:.08;ctx.fillStyle=K.c;ctx.fillRect(a.x-PW/2,PY,PW,8);}
+  ctx.globalAlpha=1;
+  if(lead){ctx.fillStyle=K.s;ctx.fillRect(lead.x-PW/2,PY-2,PW,12);}
+  ctx.fillStyle=K.c;ctx.beginPath();ctx.arc(ball.x,ball.y,7,0,7);ctx.fill();
+  $("sg").textContent=gen;$("sa").textContent=pop.filter(a=>a.alive).length;
+}
+const WIN=30;let view=0;
+function chart(){
+  const w=ch.width,h=ch.height,s=w/(ch.clientWidth||w),l=34*s,r=12*s,t=28*s,b=26*s;
+  cx.clearRect(0,0,w,h);
+  cx.font=`500 ${12*s}px 'Bricolage Grotesque',system-ui,sans-serif`;cx.textAlign="left";
+  const Y=v=>h-b-(v/MAXB)*(h-b-t),X=i=>l+(i-view)/(WIN-1)*(w-l-r);
+  cx.lineWidth=s;
+  for(let k=0;k<=3;k++){
+    const v=MAXB*k/3,y=Y(v);
+    cx.strokeStyle="rgba(235,232,225,.14)";cx.beginPath();cx.moveTo(l,y);cx.lineTo(w-r,y);cx.stroke();
+    cx.fillStyle="rgba(235,232,225,.6)";cx.fillText(Math.round(v),6*s,y+4*s);
+  }
+  cx.save();cx.beginPath();cx.rect(l,0,w-l-r+2*s,h);cx.clip();
+  cx.textAlign="center";
+  for(let i=Math.max(0,Math.floor(view)-1);i<=view+WIN;i++){
+    if((i+1)%5)continue;
+    const x=X(i);cx.strokeStyle="rgba(235,232,225,.08)";cx.beginPath();cx.moveTo(x,t);cx.lineTo(x,h-b);cx.stroke();
+    cx.fillStyle="rgba(235,232,225,.6)";cx.fillText(i+1,x,h-8*s);
+  }
+  cx.lineWidth=2.5*s;cx.lineJoin="round";
+  const i0=Math.max(0,Math.floor(view)-1);
+  for(const[k,c]of[["avg",K.m],["best",K.s]]){
+    cx.strokeStyle=c;cx.beginPath();
+    for(let i=i0;i<hist.length;i++)i>i0?cx.lineTo(X(i),Y(hist[i][k])):cx.moveTo(X(i),Y(hist[i][k]));
+    cx.stroke();
+    if(hist.length){cx.fillStyle=c;cx.beginPath();cx.arc(X(hist.length-1),Y(hist[hist.length-1][k]),3.5*s,0,7);cx.fill();}
+  }
+  cx.restore();cx.textAlign="left";
+  cx.fillStyle=K.s;cx.fillText("Best",l,18*s);cx.fillStyle=K.m;cx.fillText("Average",l+46*s,18*s);
+}
+function slide(){
+  const t=Math.max(0,hist.length-WIN);
+  if(Math.abs(t-view)>.005){view+=(t-view)*.12;chart();}
+  else if(view!==t){view=t;chart();}
+}
+function fit(){const r=ch.parentElement.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);ch.width=Math.max(200,Math.round(r.width*d));ch.height=Math.max(150,Math.round(r.height*d));chart();}
+function loop(){
+  if(!paused){const s=+$("sp").value;for(let i=0;i<s;i++)step();}
+  slide();draw();requestAnimationFrame(loop);
+}
+$("sp").oninput=e=>$("spv").textContent=e.target.value+"x";
+$("pb").onclick=e=>{paused=!paused;e.target.textContent=paused?"Resume":"Pause"};
+$("rb").onclick=reset;
+$("hb").onclick=()=>$("dlg").showModal();
+
+const DEFS=[
+["pop","Population",10,120,2,40,v=>N=v,"Agents per generation. Applies from the next generation."],
+["elite","Elites kept",0,20,1,4,v=>ELITE=v,"Best agents copied unchanged"],
+["par","Parent pool",2,40,1,10,v=>PAR=v,"Top agents allowed to have children"],
+["mr","Mutation chance",0.01,0.6,0.01,0.1,v=>MR=v,"Chance that each weight changes"],
+["ms","Mutation size",0.01,1,0.01,0.25,v=>MS=v,"How far a changed weight moves"],
+["big","Big-jump chance",0,0.5,0.01,0.05,v=>BIG=v,"Chance a child gets a large mutation"],
+["pw","Paddle width",16,120,1,46,v=>PW=v,"Wider is easier"],
+["bs","Ball speed",2,10,0.1,4.2,v=>BSPD=v,"Faster is harder"],
+["pv","Paddle speed",2,14,0.5,7,v=>MAXV=v,"Max paddle movement per step"],
+["lv","Lives",1,10,1,3,v=>LIVES=v,"Misses allowed per generation"],
+["mb","Balls per generation",10,100,5,30,v=>{MAXB=v;$("mb").textContent=v;chart()},"Length of each generation"]];
+$("panel").innerHTML=DEFS.map(d=>`<div class="row" title="${d[7]}"><label for="s_${d[0]}"><span>${d[1]}</span><b id="v_${d[0]}"></b></label><input id="s_${d[0]}" type="range" min="${d[2]}" max="${d[3]}" step="${d[4]}"></div>`).join("")+`<label class="chk"><input id="s_ad" type="checkbox"> Shrink mutation near perfect</label><button class="btn" id="ob">Reset to optimal values</button>`;
+function setDef(d,val){$("s_"+d[0]).value=val;$("v_"+d[0]).textContent=val;d[6](+val);}
+DEFS.forEach(d=>{setDef(d,d[5]);$("s_"+d[0]).oninput=e=>setDef(d,e.target.value)});
+$("s_ad").checked=true;$("s_ad").onchange=e=>{ADAPT=e.target.checked?1:0};
+$("ob").onclick=()=>{DEFS.forEach(d=>setDef(d,d[5]));$("s_ad").checked=true;ADAPT=1;$("pd").textContent="Optimal values restored. Training restarted.";reset();};
+const PRE={
+wild:["Reckless mutation",{ms:1,mr:.6,big:.5},0,"Every child is a heavily changed copy. Predict what happens to the average, then watch the chart."],
+lone:["No elites",{elite:0},1,"Nothing is copied unchanged, so a perfect parent can lose its own skill."],
+tiny:["Tiny population",{pop:10},1,"Ten agents leave more to luck in each generation."],
+hard:["Hard world",{bs:8,pw:30},1,"A faster ball and a narrower paddle. How long does it take to adapt?"]};
+$("pre").innerHTML=Object.keys(PRE).map(k=>`<button class="btn" data-k="${k}">${PRE[k][0]}</button>`).join("");
+$("pre").onclick=e=>{
+  const k=e.target.dataset.k;if(!k)return;
+  const[,o,ad,t]=PRE[k];
+  DEFS.forEach(d=>setDef(d,o[d[0]]??d[5]));
+  ADAPT=ad;$("s_ad").checked=!!ad;$("pd").textContent=t;reset();
+};
+
+const IN=["gap to ball","ball x","ball height","ball drift","paddle x"];
+const P=(n,x,a,b)=>Array.from({length:n},(_,i)=>[x,n==1?(a+b)/2:a+(b-a)*i/(n-1)]);
+const L=P(5,150,30,230),M=P(8,255,20,240),R=P(1,350,130,130);
+let sv="";const dl=()=>`style="animation-delay:${(Math.random()*-2).toFixed(2)}s"`;
+for(const p of L)for(const q of M)sv+=`<line class="fl" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" ${dl()}/>`;
+for(const q of M)sv+=`<line class="fl" x1="${q[0]}" y1="${q[1]}" x2="350" y2="130" ${dl()}/>`;
+[...L,...M,...R].forEach((p,i)=>sv+=`<circle class="nd${i>12?" o":""}" cx="${p[0]}" cy="${p[1]}" r="6" style="animation-delay:${(i*.17).toFixed(2)}s"/>`);
+L.forEach((p,i)=>sv+=`<text x="${p[0]-14}" y="${p[1]+5}" text-anchor="end">${IN[i]}</text>`);
+$("net").innerHTML=sv;
+new ResizeObserver(fit).observe(ch.parentElement);
+reset();loop();
+</script></body></html>
