@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BALANCE — Cart-Pole Neuroevolution Laboratory</title>
+  <meta name="description" content="Watch 50 neural networks evolve in real time to balance an upright inverted pendulum pole on a moving cart.">
+
+  <!-- Google Fonts: Bricolage Grotesque (headings/UI) & Newsreader (editorial/prose) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* DESIGN TOKENS */
+    :root {
+      --bg: #090a0f;
+      --surface: #10121a;
+      --surface-card: #151824;
+      --surface-hover: #1c2132;
+      --surface-active: #22283d;
+      --border: #202638;
+      --border-subtle: #171b28;
+      --border-focus: #3b4666;
+      --text: #ede8df;
+      --text-muted: #8e95a5;
+      --text-dim: #545b6e;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --slate: #64748b;
+      --slate-light: #94a3b8;
+      --slate-dim: rgba(100, 116, 139, 0.18);
+      --danger: #ef4444;
+      --danger-dim: rgba(239, 68, 68, 0.2);
+      --success: #10b981;
+      
+      --font-display: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-body: 'Newsreader', Georgia, Cambria, "Times New Roman", serif;
+      
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --transition-fast: 140ms ease;
+      --transition-smooth: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* BASE RESET */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 13px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    /* APP SHELL */
+    #app {
+      display: grid;
+      grid-template-rows: 48px 1fr;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* TOP HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--surface);
+      z-index: 10;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .brand-title span {
+      color: var(--amber);
+    }
+
+    .brand-tagline {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-header:hover {
+      background: var(--surface-hover);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* WORKSPACE 3-COLUMN GRID */
+    .workspace {
+      display: grid;
+      grid-template-columns: 290px 1fr 310px;
+      height: calc(100vh - 48px);
+      overflow: hidden;
+    }
+
+    /* PANELS */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      animation: panelFadeIn 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .panel-right {
+      border-right: none;
+      border-left: 1px solid var(--border);
+      animation-delay: 80ms;
+    }
+
+    .panel-center {
+      background: var(--bg);
+      position: relative;
+      border-right: none;
+      animation-delay: 40ms;
+    }
+
+    @keyframes panelFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-scrollable {
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: 100%;
+    }
+
+    .panel-scrollable::-webkit-scrollbar {
+      width: 5px;
+    }
+    .panel-scrollable::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .panel-scrollable::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+    .panel-scrollable::-webkit-scrollbar-thumb:hover {
+      background: var(--border-focus);
+    }
+
+    /* SECTION HEADINGS */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* PRESETS */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .btn-preset {
+      padding: 7px 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--text);
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-preset:hover {
+      background: var(--surface-hover);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .btn-preset.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* SLIDERS */
+    .sliders-container {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11.5px;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .slider-val {
+      font-family: monospace;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--amber-bright);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--surface-card);
+      cursor: pointer;
+      transition: transform var(--transition-fast), background var(--transition-fast);
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb {
+      transform: scale(1.2);
+      background: var(--amber);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--surface-card);
+      cursor: pointer;
+    }
+
+    /* CHECKBOX TOGGLE */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      user-select: none;
+      transition: border-color var(--transition-fast);
+    }
+
+    .checkbox-row:hover {
+      border-color: var(--border-focus);
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* RESET BUTTON */
+    .btn-reset {
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: center;
+    }
+
+    .btn-reset:hover {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+      background: var(--amber-dim);
+    }
+
+    /* CENTER STAGE (TRACK CANVAS & HUD) */
+    .stage-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* HUD */
+    .stage-hud {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 18px;
+      background: rgba(16, 18, 26, 0.75);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 5;
+    }
+
+    .hud-metrics {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hud-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .hud-value {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .hud-value.amber {
+      color: var(--amber-bright);
+    }
+
+    .hud-value.slate {
+      color: var(--slate-light);
+    }
+
+    /* CANVAS CONTAINER */
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 8px;
+      background: radial-gradient(circle at 50% 65%, #121622 0%, #090a0f 85%);
+    }
+
+    #simCanvas {
+      width: 100%;
+      height: 100%;
+      max-width: 960px;
+      max-height: 600px;
+      aspect-ratio: 920 / 580;
+      object-fit: contain;
+      display: block;
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+    }
+
+    /* CELEBRATION TOAST */
+    .balanced-toast {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      opacity: 0;
+      pointer-events: none;
+      background: rgba(245, 158, 11, 0.95);
+      color: #090a0f;
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.7);
+      transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 20;
+    }
+
+    .balanced-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* STAGE CONTROLS */
+    .stage-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      z-index: 5;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-control {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-control:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+    }
+
+    .btn-control.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .btn-speed {
+      padding: 4px 9px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    .btn-speed.active {
+      background: var(--surface-active);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+      font-weight: bold;
+    }
+
+    /* RIGHT TELEMETRY & GRAPH PANEL */
+    .telemetry-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .stat-number {
+      font-size: 19px;
+      font-weight: 800;
+      font-family: monospace;
+      letter-spacing: -0.02em;
+      margin-top: 2px;
+    }
+
+    .stat-number.amber {
+      color: var(--amber-bright);
+    }
+
+    .stat-number.slate {
+      color: var(--slate-light);
+    }
+
+    /* GRAPH CONTAINER */
+    .graph-wrapper {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      background: var(--bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .graph-legend {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.amber {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+    }
+
+    .legend-dot.slate {
+      background: var(--slate-light);
+      box-shadow: 0 0 6px var(--slate);
+    }
+
+    /* EDITORIAL TEXT */
+    .editorial-card {
+      font-family: var(--font-body);
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+
+    .editorial-card h4 {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .editorial-card p {
+      margin-bottom: 8px;
+    }
+
+    .editorial-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .editorial-highlight {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* MODAL POPUP */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border-focus);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 840px;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.96);
+      transition: transform var(--transition-smooth);
+    }
+
+    .modal-backdrop.open .modal-dialog {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .modal-title span {
+      color: var(--amber);
+    }
+
+    .btn-close {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-close:hover {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .modal-body {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-canvases-split {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 12px;
+    }
+
+    .network-canvas-container, .mini-sim-container {
+      position: relative;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      height: 230px;
+    }
+
+    #networkCanvas, #miniSimCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .modal-prose {
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .modal-prose h4 {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin: 12px 0 4px 0;
+    }
+
+    .modal-prose ul {
+      margin-left: 20px;
+      margin-top: 4px;
+    }
+
+    .modal-prose li {
+      margin-bottom: 4px;
+    }
+
+    /* REDUCED MOTION */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    /* RESPONSIVE DEGRADATION */
+    @media (max-width: 1100px) {
+      html, body {
+        overflow: auto;
+        height: auto;
+      }
+      #app {
+        height: auto;
+        overflow: visible;
+      }
+      .workspace {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+      .panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .panel-center {
+        min-height: 480px;
+      }
+      #simCanvas {
+        max-height: 420px;
+      }
+      .modal-canvases-split {
+        grid-template-columns: 1fr;
+      }
+      .mini-sim-container {
+        height: 160px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- HEADER -->
+    <header>
+      <div class="brand-group">
+        <div class="brand-title">BALANCE <span>//</span> LAB</div>
+        <div class="brand-tagline">Swarm neuroevolution on the classic inverted pendulum</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-header" id="btnHowItWorks">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          How It Works
+        </button>
+      </div>
+    </header>
+
+    <!-- 3-COLUMN WORKSPACE -->
+    <div class="workspace">
+      <!-- LEFT PANEL: PRESETS & LIVE SLIDERS -->
+      <aside class="panel">
+        <div class="panel-scrollable">
+          <div>
+            <div class="section-title">Experiment Presets</div>
+            <div class="presets-grid">
+              <button class="btn-preset" data-preset="reckless">Reckless mutation</button>
+              <button class="btn-preset" data-preset="noElites">No elites</button>
+              <button class="btn-preset" data-preset="tinyPop">Tiny population</button>
+              <button class="btn-preset" data-preset="hardWorld">Hard world</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Evolutionary Parameters</div>
+            <div class="sliders-container">
+              <!-- 1. Population -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Population</span>
+                  <span class="slider-val" id="val-population">50</span>
+                </div>
+                <input type="range" id="param-population" min="10" max="100" step="1" value="50">
+              </div>
+
+              <!-- 2. Elites -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Elites</span>
+                  <span class="slider-val" id="val-elites">4</span>
+                </div>
+                <input type="range" id="param-elites" min="0" max="10" step="1" value="4">
+              </div>
+
+              <!-- 3. Parent Pool -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Parent Pool</span>
+                  <span class="slider-val" id="val-parentPool">10</span>
+                </div>
+                <input type="range" id="param-parentPool" min="2" max="25" step="1" value="10">
+              </div>
+
+              <!-- 4. Mutation Chance -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Mutation Chance</span>
+                  <span class="slider-val" id="val-mutationChance">0.10</span>
+                </div>
+                <input type="range" id="param-mutationChance" min="0.01" max="0.50" step="0.01" value="0.10">
+              </div>
+
+              <!-- 5. Mutation Size -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Mutation Size</span>
+                  <span class="slider-val" id="val-mutationSize">0.25</span>
+                </div>
+                <input type="range" id="param-mutationSize" min="0.05" max="0.80" step="0.01" value="0.25">
+              </div>
+
+              <!-- 6. Big-Jump Chance -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Big-Jump Chance</span>
+                  <span class="slider-val" id="val-bigJumpChance">0.05</span>
+                </div>
+                <input type="range" id="param-bigJumpChance" min="0.00" max="0.20" step="0.01" value="0.05">
+              </div>
+
+              <!-- Checkbox: Shrink mutation -->
+              <label class="checkbox-row" for="param-shrinkMutation">
+                <input type="checkbox" id="param-shrinkMutation" checked>
+                <span class="checkbox-label">Shrink mutation near perfect</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Physics & Disturbance</div>
+            <div class="sliders-container">
+              <!-- 7. Force Strength -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Force Strength (N)</span>
+                  <span class="slider-val" id="val-forceStrength">10</span>
+                </div>
+                <input type="range" id="param-forceStrength" min="2" max="25" step="1" value="10">
+              </div>
+
+              <!-- 8. Pole Length -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Pole Length (m)</span>
+                  <span class="slider-val" id="val-poleLength">1.0</span>
+                </div>
+                <input type="range" id="param-poleLength" min="0.4" max="2.0" step="0.1" value="1.0">
+              </div>
+
+              <!-- 9. Gravity -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Gravity (m/s²)</span>
+                  <span class="slider-val" id="val-gravity">9.8</span>
+                </div>
+                <input type="range" id="param-gravity" min="2.0" max="20.0" step="0.2" value="9.8">
+              </div>
+
+              <!-- 10. Push Strength -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Push Strength</span>
+                  <span class="slider-val" id="val-pushStrength">0.5</span>
+                </div>
+                <input type="range" id="param-pushStrength" min="0.0" max="2.0" step="0.1" value="0.5">
+              </div>
+
+              <!-- 11. Max Frames -->
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-label">Max Frames</span>
+                  <span class="slider-val" id="val-maxFrames">1000</span>
+                </div>
+                <input type="range" id="param-maxFrames" min="300" max="2500" step="50" value="1000">
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-reset" id="btnResetDefaults">Reset to optimal values</button>
+        </div>
+      </aside>
+
+      <!-- CENTER PANEL: SIMULATION WORLD -->
+      <main class="panel panel-center">
+        <div class="stage-wrapper">
+          <!-- TOP HUD -->
+          <div class="stage-hud">
+            <div class="hud-metrics">
+              <div class="hud-item">
+                <span class="hud-title">Generation</span>
+                <span class="hud-value amber" id="hudGeneration">01</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-title">Still Balancing</span>
+                <span class="hud-value" id="hudAlive">50 / 50</span>
+              </div>
+              <div class="hud-item">
+                <span class="hud-title">Leader Surviving</span>
+                <span class="hud-value slate" id="hudLeaderScore">0 / 1000</span>
+              </div>
+            </div>
+            <div class="hud-metrics">
+              <div class="hud-item" style="text-align: right;">
+                <span class="hud-title">Frame Time</span>
+                <span class="hud-value" id="hudTime" style="font-size: 13px; font-family: monospace;">0.00 s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CANVAS & BALANCED BANNER -->
+          <div class="canvas-container">
+            <div class="balanced-toast" id="balancedToast">★ BALANCED ★</div>
+            <canvas id="simCanvas" width="920" height="580"></canvas>
+          </div>
+
+          <!-- BOTTOM CONTROLS -->
+          <div class="stage-controls">
+            <div class="btn-group">
+              <button class="btn-control" id="btnPlayPause">Pause</button>
+              <button class="btn-control" id="btnRestart">Restart</button>
+            </div>
+            <div class="btn-group">
+              <span class="section-title" style="margin: 0 4px 0 0;">Speed:</span>
+              <button class="btn-control btn-speed active" data-speed="1">1x</button>
+              <button class="btn-control btn-speed" data-speed="2">2x</button>
+              <button class="btn-control btn-speed" data-speed="5">5x</button>
+              <button class="btn-control btn-speed" data-speed="10">10x</button>
+              <button class="btn-control btn-speed" data-speed="25">25x</button>
+              <button class="btn-control btn-speed" data-speed="80">80x</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT PANEL: TELEMETRY & GRAPH -->
+      <aside class="panel panel-right">
+        <div class="panel-scrollable">
+          <div>
+            <div class="section-title">Generational Telemetry</div>
+            <div class="telemetry-card">
+              <div class="telemetry-grid">
+                <div class="stat-box">
+                  <span class="stat-title">Last-Best</span>
+                  <span class="stat-number amber" id="statLastBest">0</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-title">Average</span>
+                  <span class="stat-number slate" id="statAverage">0</span>
+                </div>
+              </div>
+              <div class="telemetry-grid" style="border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+                <div class="stat-box">
+                  <span class="stat-title">Survival Ratio</span>
+                  <span class="stat-number" id="statRatio" style="font-size: 15px; color: var(--text);">0.0%</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-title">All-Time Peak</span>
+                  <span class="stat-number" id="statAllTime" style="font-size: 15px; color: var(--text-muted);">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">
+              <span>Survival History</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Last 30 Gens</span>
+            </div>
+            <div class="graph-wrapper">
+              <canvas id="graphCanvas" width="280" height="140"></canvas>
+            </div>
+            <div class="graph-legend">
+              <div class="legend-item">
+                <span class="legend-dot amber"></span>
+                <span>Best cart in gen</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot slate"></span>
+                <span>Flock average</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="editorial-card">
+            <h4>Reading the graph</h4>
+            <p>
+              The <span class="editorial-highlight" style="color: var(--amber-bright);">amber line</span> indicates the maximum frames survived by any cart in that generation. Upward leaps reflect stabilizing reflexes—such as timely counter-thrusts when hit by sideways pushes.
+            </p>
+            <p>
+              The <span class="editorial-highlight" style="color: var(--slate-light);">blue-grey line</span> shows the mean score across all 50 carts. As the average climbs toward the best line, the swarm is converging—the surviving chromosomes are dominating the parent pool.
+            </p>
+            <p>
+              Once a cart survives all 1,000 frames (a full 20 seconds), natural selection continues refining smooth centering and minimal angular deviation.
+            </p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS MODAL -->
+  <div class="modal-backdrop" id="modalHowItWorks">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Neural Controller <span>&</span> Dynamics</div>
+        <button class="btn-close" id="btnCloseModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-canvases-split">
+          <div class="network-canvas-container">
+            <canvas id="networkCanvas" width="460" height="230"></canvas>
+          </div>
+          <div class="mini-sim-container">
+            <canvas id="miniSimCanvas" width="300" height="230"></canvas>
+          </div>
+        </div>
+        <div class="modal-prose">
+          <h4>Topology & Control Law (49 Weights)</h4>
+          <p>
+            Each cart is governed by a compact feedforward neural network evaluated every 0.02s physics tick:
+          </p>
+          <ul>
+            <li><strong>4 Normalized Inputs:</strong> Cart position ($x / 2.4$), cart velocity ($\dot{x} / 3.0$), pole angle ($\theta / 0.21$), and pole angular velocity ($\dot{\theta} / 3.0$).</li>
+            <li><strong>8 Hidden Neurons:</strong> Hyperbolic tangent ($\tanh$) non-linearities synthesizing angular momentum with track centering.</li>
+            <li><strong>1 Output ($\tanh$):</strong> Scaled by the force parameter (default 10 N) applied directly to the cart chassis.</li>
+            <li><strong>Weight Matrix:</strong> $4 \times 8 + 8 \text{ (biases)} + 8 \times 1 + 1 \text{ (bias)} = 49$ total synaptic parameters.</li>
+          </ul>
+          <h4>Fairness & Non-Interacting Swarm</h4>
+          <p>
+            All 50 cart-poles share the same physical rail without colliding. Within a generation, every cart begins from identical initial conditions (a random tilt up to $\pm 0.05\text{ rad}$) and experiences the exact same periodic wind impulses (every 3 seconds). A seeded random sequence ensures fair evolutionary competition within each generation while preventing simple memorization across generations.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INLINE APPLICATION LOGIC -->
+  <script>
+  (function() {
+    'use strict';
+
+    /* ==========================================================================
+       SECTION 1: CONFIGURATION & CONSTANTS
+       ========================================================================== */
+    const DEFAULT_CONFIG = {
+      population: 50,
+      elites: 4,
+      parentPool: 10,
+      mutationChance: 0.10,
+      mutationSize: 0.25,
+      bigJumpChance: 0.05,
+      forceStrength: 10,
+      poleLength: 1.0,   // Full length (half-length = 0.5)
+      gravity: 9.8,
+      pushStrength: 0.5,
+      maxFrames: 1000,
+      shrinkMutation: true
+    };
+
+    const PRESETS = {
+      reckless: {
+        mutationChance: 0.35,
+        mutationSize: 0.55,
+        bigJumpChance: 0.20,
+        elites: 2,
+        parentPool: 15,
+        shrinkMutation: false
+      },
+      noElites: {
+        elites: 0,
+        parentPool: 10,
+        mutationChance: 0.10,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        shrinkMutation: true
+      },
+      tinyPop: {
+        population: 15,
+        elites: 2,
+        parentPool: 5,
+        mutationChance: 0.12,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        shrinkMutation: true
+      },
+      hardWorld: {
+        poleLength: 0.6,
+        pushStrength: 1.2,
+        forceStrength: 6,
+        gravity: 12.0,
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 0.12,
+        mutationSize: 0.25,
+        bigJumpChance: 0.08,
+        shrinkMutation: true
+      }
+    };
+
+    const config = Object.assign({}, DEFAULT_CONFIG);
+
+    // Physics constants
+    const CART_MASS = 1.0;
+    const POLE_MASS = 0.1;
+    const DT = 0.02; // 50 Hz integration
+    const TRACK_LIMIT = 2.4;
+    const ANGLE_LIMIT = 0.21; // ~12 degrees
+    const PUSH_INTERVAL = 150; // 3 seconds at 50 Hz
+
+    /* ==========================================================================
+       SECTION 2: MATH & PSEUDORANDOM GENERATOR
+       ========================================================================== */
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussianRandom() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    /* ==========================================================================
+       SECTION 3: CART-POLE SYSTEM & NEURAL NETWORK (4-8-1 Tanh)
+       ========================================================================== */
+    class CartPole {
+      constructor(genome) {
+        // 4*8 + 8 + 8*1 + 1 = 49 weights
+        this.genome = genome ? new Float32Array(genome) : new Float32Array(49);
+        if (!genome) {
+          for (let i = 0; i < 49; i++) {
+            this.genome[i] = gaussianRandom() * 0.5;
+          }
+        }
+
+        // State variables
+        this.x = 0;
+        this.xDot = 0;
+        this.theta = 0;
+        this.thetaDot = 0;
+        this.force = 0;
+
+        this.alive = true;
+        this.deathReason = '';
+        this.framesSurvived = 0;
+        this.sumAbsTheta = 0;
+        this.fitness = 0;
+
+        // Visual telemetry
+        this.opacity = 1.0;
+        this.failFlash = 0;
+        this.trail = [];
+        this.hiddenActivations = new Float32Array(8);
+      }
+
+      reset(initTheta) {
+        this.x = 0;
+        this.xDot = 0;
+        this.theta = initTheta;
+        this.thetaDot = 0;
+        this.force = 0;
+        this.alive = true;
+        this.deathReason = '';
+        this.framesSurvived = 0;
+        this.sumAbsTheta = 0;
+        this.fitness = 0;
+        this.opacity = 1.0;
+        this.failFlash = 0;
+        this.trail = [];
+      }
+
+      evaluate() {
+        // 4 Normalized inputs
+        const in0 = this.x / TRACK_LIMIT;
+        const in1 = this.xDot / 3.0;
+        const in2 = this.theta / ANGLE_LIMIT;
+        const in3 = this.thetaDot / 3.0;
+
+        // Hidden layer: 8 units tanh
+        // W1 at 0..31, B1 at 32..39
+        for (let j = 0; j < 8; j++) {
+          let sum = this.genome[32 + j];
+          sum += in0 * this.genome[0 * 8 + j];
+          sum += in1 * this.genome[1 * 8 + j];
+          sum += in2 * this.genome[2 * 8 + j];
+          sum += in3 * this.genome[3 * 8 + j];
+          this.hiddenActivations[j] = Math.tanh(sum);
+        }
+
+        // Output layer: 1 unit tanh
+        // W2 at 40..47, B2 at 48
+        let out = this.genome[48];
+        for (let j = 0; j < 8; j++) {
+          out += this.hiddenActivations[j] * this.genome[40 + j];
+        }
+        return Math.tanh(out);
+      }
+
+      update(appliedPush, halfLength, forceLimit, gravity) {
+        if (!this.alive) {
+          // If fallen, continue falling pole with gravity and fade out
+          if (this.opacity > 0) {
+            this.thetaDot += DT * (this.theta >= 0 ? 15 : -15);
+            this.theta += DT * this.thetaDot;
+            this.opacity = Math.max(0, this.opacity - 0.04);
+          }
+          return;
+        }
+
+        // Apply external push impulse if scheduled
+        if (appliedPush !== 0) {
+          this.thetaDot += appliedPush;
+        }
+
+        // Neural inference
+        const action = this.evaluate();
+        this.force = action * forceLimit;
+
+        // Semi-implicit Euler integration of cart-pole dynamics
+        const totalMass = CART_MASS + POLE_MASS;
+        const poleMassLength = POLE_MASS * halfLength;
+        const costheta = Math.cos(this.theta);
+        const sintheta = Math.sin(this.theta);
+
+        const temp = (this.force + poleMassLength * this.thetaDot * this.thetaDot * sintheta) / totalMass;
+        const thetaAcc = (gravity * sintheta - costheta * temp) / (halfLength * (4.0 / 3.0 - (POLE_MASS * costheta * costheta) / totalMass));
+        const xAcc = temp - (poleMassLength * thetaAcc * costheta) / totalMass;
+
+        this.xDot += DT * xAcc;
+        this.x += DT * this.xDot;
+        this.thetaDot += DT * thetaAcc;
+        this.theta += DT * this.thetaDot;
+
+        this.framesSurvived++;
+        this.sumAbsTheta += Math.abs(this.theta);
+
+        // Record pole tip trail
+        if (this.framesSurvived % 2 === 0) {
+          this.trail.push({ x: this.x, theta: this.theta });
+          if (this.trail.length > 14) this.trail.shift();
+        }
+
+        // Failure criteria
+        if (Math.abs(this.theta) > ANGLE_LIMIT) {
+          this.alive = false;
+          this.deathReason = 'tilt';
+          this.failFlash = 1.0;
+        } else if (Math.abs(this.x) > TRACK_LIMIT) {
+          this.alive = false;
+          this.deathReason = 'track';
+          this.failFlash = 1.0;
+        }
+
+        // Fitness calculation
+        const centerBonus = 10 * (1.0 - Math.min(1.0, Math.abs(this.x) / TRACK_LIMIT));
+        const flailPenalty = 20 * (this.sumAbsTheta / Math.max(1, this.framesSurvived));
+        this.fitness = this.framesSurvived + centerBonus - flailPenalty;
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 4: SIMULATION STATE & LIFECYCLE
+       ========================================================================== */
+    // Explicit initialization of state structures
+    let population = [];
+    const history = []; // Array of { gen, bestFrames, avgFrames, bestFitness }
+    let currentPushes = {}; // Map of frame -> push impulse
+    let currentInitTheta = 0;
+    let generation = 1;
+    let frame = 0;
+    let simulationSpeed = 1;
+    let isPaused = false;
+    let leaderCart = null;
+    let allTimeBestFrames = 0;
+    let balancedShownThisGen = false;
+    let activePushIndicator = 0; // Visual impulse indicator
+
+    // Seeded generation conditions
+    function setupGenerationConditions(gen) {
+      const rng = mulberry32(1000 + gen * 997);
+      currentInitTheta = (rng() * 2 - 1) * 0.05; // Random angle up to +-0.05 rad
+      currentPushes = {};
+
+      const maxF = config.maxFrames;
+      for (let f = PUSH_INTERVAL; f < maxF; f += PUSH_INTERVAL) {
+        // Sideways push with randomized direction & magnitude
+        const dir = rng() > 0.5 ? 1 : -1;
+        const mag = 0.6 * config.pushStrength + rng() * 0.4 * config.pushStrength;
+        currentPushes[f] = dir * mag;
+      }
+    }
+
+    function initPopulation(size) {
+      setupGenerationConditions(generation);
+      const pop = [];
+      for (let i = 0; i < size; i++) {
+        const cart = new CartPole();
+        cart.reset(currentInitTheta);
+        pop.push(cart);
+      }
+      return pop;
+    }
+
+    population = initPopulation(config.population);
+    leaderCart = population[0];
+
+    /* ==========================================================================
+       SECTION 5: EVOLUTION ENGINE
+       ========================================================================== */
+    function evolvePopulation() {
+      // Sort in descending order of fitness
+      population.sort((a, b) => b.fitness - a.fitness);
+
+      const best = population[0];
+      const bestFrames = best.framesSurvived;
+      const avgFrames = population.reduce((sum, c) => sum + c.framesSurvived, 0) / population.length;
+
+      if (bestFrames > allTimeBestFrames) {
+        allTimeBestFrames = bestFrames;
+      }
+
+      history.push({
+        gen: generation,
+        bestFrames: bestFrames,
+        avgFrames: avgFrames,
+        bestFitness: best.fitness
+      });
+
+      updateTelemetryUI(bestFrames, avgFrames);
+
+      // Create next generation
+      const nextGen = [];
+      const targetPop = config.population;
+      const eliteCount = Math.min(config.elites, population.length);
+
+      // 1. Preserve top elites unchanged
+      for (let i = 0; i < eliteCount; i++) {
+        nextGen.push(new CartPole(population[i].genome));
+      }
+
+      // 2. Mutation step annealing: 0.25 * (1 - best/maxFrames), floor 0.03
+      const bestRatio = Math.min(1.0, bestFrames / config.maxFrames);
+      const normalStep = config.shrinkMutation
+        ? Math.max(0.03, config.mutationSize * (1.0 - bestRatio))
+        : config.mutationSize;
+
+      // 3. Breed children from top parentPool
+      const poolSize = Math.min(config.parentPool, population.length);
+
+      while (nextGen.length < targetPop) {
+        const p1 = Math.floor(Math.random() * poolSize);
+        let p2 = Math.floor(Math.random() * poolSize);
+        if (poolSize > 1 && p2 === p1) {
+          p2 = (p2 + 1) % poolSize;
+        }
+
+        const parentA = population[p1].genome;
+        const parentB = population[p2].genome;
+
+        // Single-point crossover
+        const cp = 1 + Math.floor(Math.random() * 47);
+        const childGenome = new Float32Array(49);
+        for (let i = 0; i < cp; i++) childGenome[i] = parentA[i];
+        for (let i = cp; i < 49; i++) childGenome[i] = parentB[i];
+
+        // 5% get big jump mutation (step 0.6)
+        const isBigJump = Math.random() < config.bigJumpChance;
+        const stepSize = isBigJump ? 0.6 : normalStep;
+
+        // Gaussian mutation on ~10% of weights
+        for (let i = 0; i < 49; i++) {
+          if (Math.random() < config.mutationChance) {
+            childGenome[i] += gaussianRandom() * stepSize;
+          }
+        }
+
+        nextGen.push(new CartPole(childGenome));
+      }
+
+      generation++;
+      frame = 0;
+      balancedShownThisGen = false;
+      setupGenerationConditions(generation);
+
+      population = nextGen;
+      for (let i = 0; i < population.length; i++) {
+        population[i].reset(currentInitTheta);
+      }
+
+      leaderCart = population[0];
+      updateHUD();
+      renderGraph();
+    }
+
+    /* ==========================================================================
+       SECTION 6: FIXED-STEP SIMULATION LOOP
+       ========================================================================== */
+    function tickSimulation() {
+      frame++;
+
+      const halfLength = config.poleLength / 2;
+      const appliedPush = currentPushes[frame] || 0;
+      if (appliedPush !== 0) {
+        activePushIndicator = appliedPush;
+      } else if (activePushIndicator !== 0) {
+        activePushIndicator *= 0.88;
+        if (Math.abs(activePushIndicator) < 0.01) activePushIndicator = 0;
+      }
+
+      let aliveCount = 0;
+      let highestFitness = -9999;
+      let currentLeader = leaderCart;
+
+      for (let i = 0; i < population.length; i++) {
+        const cart = population[i];
+        cart.update(appliedPush, halfLength, config.forceStrength, config.gravity);
+
+        if (cart.alive) {
+          aliveCount++;
+          if (cart.fitness > highestFitness) {
+            highestFitness = cart.fitness;
+            currentLeader = cart;
+          }
+        }
+      }
+
+      leaderCart = currentLeader || population[0];
+
+      // Balanced celebratory banner trigger
+      if (!balancedShownThisGen && leaderCart && leaderCart.framesSurvived >= config.maxFrames) {
+        balancedShownThisGen = true;
+        triggerBalancedCelebration();
+      }
+
+      // Generation ends when all carts out or maxFrames reached
+      if (aliveCount === 0 || frame >= config.maxFrames) {
+        evolvePopulation();
+      }
+    }
+
+    function triggerBalancedCelebration() {
+      const toast = document.getElementById('balancedToast');
+      if (toast) {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2200);
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 7: RENDERING (MAIN CANVAS, GRAPH, NETWORK & MINI CART-POLE)
+       ========================================================================== */
+    const simCanvas = document.getElementById('simCanvas');
+    const simCtx = simCanvas ? simCanvas.getContext('2d') : null;
+
+    const graphCanvas = document.getElementById('graphCanvas');
+    const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+    const networkCanvas = document.getElementById('networkCanvas');
+    const networkCtx = networkCanvas ? networkCanvas.getContext('2d') : null;
+
+    const miniSimCanvas = document.getElementById('miniSimCanvas');
+    const miniSimCtx = miniSimCanvas ? miniSimCanvas.getContext('2d') : null;
+
+    function renderSimulationWorld() {
+      if (!simCtx) return;
+      const w = simCanvas.width;
+      const h = simCanvas.height;
+
+      // Clear dark background
+      simCtx.fillStyle = '#090a0f';
+      simCtx.fillRect(0, 0, w, h);
+
+      const originX = w / 2;
+      const railY = h * 0.70;
+      const scaleX = 160; // 1 unit = 160 px (Track +-2.4 = +-384 px)
+      const polePxLen = config.poleLength * 170; // Pole visual length
+
+      // 1. Draw Safe Angle Threshold Arc Background
+      simCtx.save();
+      simCtx.beginPath();
+      simCtx.arc(originX, railY - 14, polePxLen * 1.05, -Math.PI / 2 - ANGLE_LIMIT, -Math.PI / 2 + ANGLE_LIMIT);
+      simCtx.strokeStyle = 'rgba(245, 158, 11, 0.08)';
+      simCtx.lineWidth = 12;
+      simCtx.stroke();
+      simCtx.restore();
+
+      // 2. Draw Track Rail with tick marks and center line
+      simCtx.beginPath();
+      simCtx.moveTo(originX - TRACK_LIMIT * scaleX, railY);
+      simCtx.lineTo(originX + TRACK_LIMIT * scaleX, railY);
+      simCtx.strokeStyle = '#22283d';
+      simCtx.lineWidth = 4;
+      simCtx.stroke();
+
+      // Track tick marks
+      simCtx.strokeStyle = '#2d354d';
+      simCtx.lineWidth = 1;
+      for (let u = -2; u <= 2; u++) {
+        const tx = originX + u * scaleX;
+        simCtx.beginPath();
+        simCtx.moveTo(tx, railY - 4);
+        simCtx.lineTo(tx, railY + 4);
+        simCtx.stroke();
+      }
+
+      // Center mark
+      simCtx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+      simCtx.beginPath();
+      simCtx.moveTo(originX, railY - 8);
+      simCtx.lineTo(originX, railY + 8);
+      simCtx.stroke();
+
+      // 3. Track End Stop Bumpers with hazard styling
+      const leftEnd = originX - TRACK_LIMIT * scaleX;
+      const rightEnd = originX + TRACK_LIMIT * scaleX;
+      function drawBumper(bx) {
+        simCtx.fillStyle = '#1c2132';
+        simCtx.fillRect(bx - 6, railY - 16, 12, 32);
+        simCtx.strokeStyle = '#fbbf24';
+        simCtx.lineWidth = 2;
+        simCtx.strokeRect(bx - 6, railY - 16, 12, 32);
+      }
+      drawBumper(leftEnd);
+      drawBumper(rightEnd);
+
+      // 4. Draw Push Gust Arrow if active
+      if (activePushIndicator !== 0) {
+        simCtx.save();
+        const arrowDir = activePushIndicator > 0 ? 1 : -1;
+        const arrowY = railY - polePxLen * 0.8;
+        simCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+        simCtx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+        simCtx.lineWidth = 2.5;
+
+        simCtx.beginPath();
+        simCtx.moveTo(originX - arrowDir * 60, arrowY);
+        simCtx.lineTo(originX, arrowY);
+        simCtx.stroke();
+
+        simCtx.beginPath();
+        simCtx.moveTo(originX, arrowY);
+        simCtx.lineTo(originX - arrowDir * 10, arrowY - 6);
+        simCtx.lineTo(originX - arrowDir * 10, arrowY + 6);
+        simCtx.closePath();
+        simCtx.fill();
+
+        simCtx.font = '10px monospace';
+        simCtx.textAlign = 'center';
+        simCtx.fillText(`WIND IMPULSE ${activePushIndicator > 0 ? '+' : ''}${activePushIndicator.toFixed(2)}`, originX, arrowY - 10);
+        simCtx.restore();
+      }
+
+      // 5. Draw Translucent Swarm Poles & Carts
+      for (let i = 0; i < population.length; i++) {
+        const cart = population[i];
+        if (cart === leaderCart) continue;
+        if (cart.opacity <= 0) continue;
+        drawCartPoleSystem(simCtx, cart, originX, railY, scaleX, polePxLen, false);
+      }
+
+      // 6. Draw Leader Cart-Pole (Solid Amber Accent)
+      if (leaderCart && leaderCart.opacity > 0) {
+        drawCartPoleSystem(simCtx, leaderCart, originX, railY, scaleX, polePxLen, true);
+
+        // Leader HUD readout above cart
+        const cx = originX + leaderCart.x * scaleX;
+        const angleDeg = (leaderCart.theta * (180 / Math.PI)).toFixed(1);
+        const forceVal = (leaderCart.force).toFixed(1);
+
+        simCtx.save();
+        simCtx.font = '11px monospace';
+        simCtx.textAlign = 'center';
+
+        const tagText = `θ: ${angleDeg > 0 ? '+' : ''}${angleDeg}°  |  F: ${forceVal > 0 ? '+' : ''}${forceVal}N`;
+        const textW = simCtx.measureText(tagText).width;
+
+        simCtx.fillStyle = 'rgba(16, 18, 26, 0.85)';
+        simCtx.fillRect(cx - textW / 2 - 6, railY - polePxLen - 30, textW + 12, 18);
+        simCtx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+        simCtx.lineWidth = 1;
+        simCtx.strokeRect(cx - textW / 2 - 6, railY - polePxLen - 30, textW + 12, 18);
+
+        simCtx.fillStyle = '#fbbf24';
+        simCtx.fillText(tagText, cx, railY - polePxLen - 17);
+
+        // Force vector arrow pushing cart
+        if (Math.abs(leaderCart.force) > 0.5) {
+          const fDir = leaderCart.force > 0 ? 1 : -1;
+          const arrowLen = Math.min(40, Math.abs(leaderCart.force) * 3);
+          simCtx.beginPath();
+          simCtx.moveTo(cx, railY + 6);
+          simCtx.lineTo(cx + fDir * arrowLen, railY + 6);
+          simCtx.strokeStyle = '#f59e0b';
+          simCtx.lineWidth = 2.5;
+          simCtx.stroke();
+        }
+        simCtx.restore();
+      }
+    }
+
+    function drawCartPoleSystem(ctx, cart, originX, railY, scaleX, polePxLen, isLeader) {
+      const cx = originX + cart.x * scaleX;
+      const cy = railY - 10;
+      const cartW = 48;
+      const cartH = 20;
+
+      ctx.save();
+      ctx.globalAlpha = cart.opacity;
+
+      // Draw pole tip trail
+      if (cart.trail.length > 2) {
+        ctx.beginPath();
+        for (let t = 0; t < cart.trail.length; t++) {
+          const px = originX + cart.trail[t].x * scaleX;
+          const tx = px + polePxLen * Math.sin(cart.trail[t].theta);
+          const ty = (railY - 14) - polePxLen * Math.cos(cart.trail[t].theta);
+          if (t === 0) ctx.moveTo(tx, ty);
+          else ctx.lineTo(tx, ty);
+        }
+        ctx.strokeStyle = isLeader ? 'rgba(245, 158, 11, 0.35)' : 'rgba(100, 116, 139, 0.12)';
+        ctx.lineWidth = isLeader ? 2 : 1;
+        ctx.stroke();
+      }
+
+      // Draw Cart Body
+      ctx.fillStyle = isLeader ? '#1d2230' : 'rgba(21, 24, 36, 0.4)';
+      ctx.strokeStyle = isLeader ? '#f59e0b' : 'rgba(100, 116, 139, 0.3)';
+      ctx.lineWidth = isLeader ? 2 : 1;
+      ctx.fillRect(cx - cartW / 2, cy - cartH / 2, cartW, cartH);
+      ctx.strokeRect(cx - cartW / 2, cy - cartH / 2, cartW, cartH);
+
+      // Cart wheels
+      ctx.fillStyle = isLeader ? '#fbbf24' : '#334155';
+      ctx.beginPath();
+      ctx.arc(cx - cartW / 3, cy + cartH / 2 + 2, 4, 0, Math.PI * 2);
+      ctx.arc(cx + cartW / 3, cy + cartH / 2 + 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pole Pivot point
+      const pivotX = cx;
+      const pivotY = cy - cartH / 2;
+
+      // Pole tip coordinates
+      const tipX = pivotX + polePxLen * Math.sin(cart.theta);
+      const tipY = pivotY - polePxLen * Math.cos(cart.theta);
+
+      // Draw Pole Rod
+      ctx.beginPath();
+      ctx.moveTo(pivotX, pivotY);
+      ctx.lineTo(tipX, tipY);
+      ctx.strokeStyle = isLeader ? '#f59e0b' : 'rgba(148, 163, 184, 0.28)';
+      ctx.lineWidth = isLeader ? 3.5 : 2;
+      ctx.stroke();
+
+      // Pole tip bob
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, isLeader ? 5 : 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = isLeader ? '#fbbf24' : 'rgba(148, 163, 184, 0.4)';
+      ctx.fill();
+
+      // Pivot pin
+      ctx.beginPath();
+      ctx.arc(pivotX, pivotY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = isLeader ? '#ede8df' : '#475569';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       SECTION 8: GRAPH RENDERING (SLIDING 30-GEN WINDOW)
+       ========================================================================== */
+    function renderGraph() {
+      if (!graphCtx) return;
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+      const padding = { top: 12, bottom: 20, left: 34, right: 10 };
+
+      graphCtx.fillStyle = '#090a0f';
+      graphCtx.fillRect(0, 0, w, h);
+
+      if (history.length === 0) return;
+
+      const maxGens = 30;
+      const startIdx = Math.max(0, history.length - maxGens);
+      const slice = history.slice(startIdx);
+      const count = slice.length;
+
+      let maxVal = config.maxFrames;
+      const plotW = w - padding.left - padding.right;
+      const plotH = h - padding.top - padding.bottom;
+
+      // Draw horizontal grid lines & score labels
+      graphCtx.strokeStyle = '#181b28';
+      graphCtx.lineWidth = 1;
+      graphCtx.fillStyle = '#545b6e';
+      graphCtx.font = '9px monospace';
+      graphCtx.textAlign = 'right';
+
+      const gridSteps = 4;
+      for (let i = 0; i <= gridSteps; i++) {
+        const val = (maxVal / gridSteps) * i;
+        const y = padding.top + plotH - (val / maxVal) * plotH;
+        graphCtx.beginPath();
+        graphCtx.moveTo(padding.left, y);
+        graphCtx.lineTo(w - padding.right, y);
+        graphCtx.stroke();
+        graphCtx.fillText(Math.round(val), padding.left - 4, y + 3);
+      }
+
+      const getX = (index) => padding.left + (index / Math.max(1, count - 1)) * plotW;
+      const getY = (val) => padding.top + plotH - (Math.max(0, Math.min(maxVal, val)) / maxVal) * plotH;
+
+      // 1. Average Survival line (blue-grey)
+      graphCtx.beginPath();
+      for (let i = 0; i < count; i++) {
+        const x = getX(i);
+        const y = getY(slice[i].avgFrames);
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = '#94a3b8';
+      graphCtx.lineWidth = 1.6;
+      graphCtx.stroke();
+
+      // 2. Best Survival line (amber) with subtle gradient fill
+      graphCtx.beginPath();
+      for (let i = 0; i < count; i++) {
+        const x = getX(i);
+        const y = getY(slice[i].bestFrames);
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = '#f59e0b';
+      graphCtx.lineWidth = 2.2;
+      graphCtx.stroke();
+
+      // Fill area under best curve
+      graphCtx.lineTo(getX(count - 1), padding.top + plotH);
+      graphCtx.lineTo(getX(0), padding.top + plotH);
+      graphCtx.closePath();
+      graphCtx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+      graphCtx.fill();
+
+      // Current point dot
+      if (count > 0) {
+        const lastX = getX(count - 1);
+        const lastY = getY(slice[count - 1].bestFrames);
+        graphCtx.beginPath();
+        graphCtx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        graphCtx.fillStyle = '#fbbf24';
+        graphCtx.fill();
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 9: NETWORK DIAGRAM & MINI CART-POLE (HOW IT WORKS POPUP)
+       ========================================================================== */
+    function renderHowItWorksVisuals() {
+      if (!networkCtx || !miniSimCtx) return;
+      const nw = networkCanvas.width;
+      const nh = networkCanvas.height;
+
+      // 1. Network diagram
+      networkCtx.fillStyle = '#090a0f';
+      networkCtx.fillRect(0, 0, nw, nh);
+
+      const targetCart = leaderCart || population[0];
+      if (!targetCart) return;
+
+      const inputLabels = ['Cart Pos (x)', 'Cart Vel (ẋ)', 'Pole Angle (θ)', 'Angle Vel (θ̇)'];
+      const inNodes = [];
+      for (let i = 0; i < 4; i++) {
+        inNodes.push({ x: 90, y: 35 + i * 46 });
+      }
+
+      const hidNodes = [];
+      for (let j = 0; j < 8; j++) {
+        hidNodes.push({ x: 250, y: 22 + j * 24 });
+      }
+
+      const outNode = { x: 390, y: 110 };
+
+      // Synapses Layer 1 -> Layer 2 (4 * 8 = 32 weights)
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 8; j++) {
+          const wgt = targetCart.genome[i * 8 + j];
+          networkCtx.beginPath();
+          networkCtx.moveTo(inNodes[i].x, inNodes[i].y);
+          networkCtx.lineTo(hidNodes[j].x, hidNodes[j].y);
+          networkCtx.strokeStyle = wgt >= 0 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(100, 116, 139, 0.2)';
+          networkCtx.lineWidth = Math.min(2.5, Math.max(0.6, Math.abs(wgt) * 1.2));
+          networkCtx.stroke();
+        }
+      }
+
+      // Synapses Layer 2 -> Layer 3 (8 * 1 = 8 weights)
+      for (let j = 0; j < 8; j++) {
+        const wgt = targetCart.genome[40 + j];
+        networkCtx.beginPath();
+        networkCtx.moveTo(hidNodes[j].x, hidNodes[j].y);
+        networkCtx.lineTo(outNode.x, outNode.y);
+        networkCtx.strokeStyle = wgt >= 0 ? 'rgba(245, 158, 11, 0.35)' : 'rgba(100, 116, 139, 0.25)';
+        networkCtx.lineWidth = Math.min(3, Math.max(0.8, Math.abs(wgt) * 1.5));
+        networkCtx.stroke();
+      }
+
+      // Draw Nodes
+      function drawNodeCircle(nx, ny, active, label, isRight) {
+        networkCtx.beginPath();
+        networkCtx.arc(nx, ny, 5, 0, Math.PI * 2);
+        networkCtx.fillStyle = active ? '#f59e0b' : '#334155';
+        networkCtx.fill();
+        networkCtx.strokeStyle = '#ede8df';
+        networkCtx.lineWidth = 1;
+        networkCtx.stroke();
+
+        if (label) {
+          networkCtx.font = '10px monospace';
+          networkCtx.fillStyle = '#8e95a5';
+          networkCtx.textAlign = isRight ? 'left' : 'right';
+          networkCtx.fillText(label, isRight ? nx + 10 : nx - 10, ny + 3);
+        }
+      }
+
+      const inVals = [
+        targetCart.x / TRACK_LIMIT,
+        targetCart.xDot / 3.0,
+        targetCart.theta / ANGLE_LIMIT,
+        targetCart.thetaDot / 3.0
+      ];
+
+      for (let i = 0; i < 4; i++) {
+        drawNodeCircle(inNodes[i].x, inNodes[i].y, Math.abs(inVals[i]) > 0.1, `${inputLabels[i]} (${inVals[i].toFixed(2)})`, false);
+      }
+      for (let j = 0; j < 8; j++) {
+        drawNodeCircle(hidNodes[j].x, hidNodes[j].y, Math.abs(targetCart.hiddenActivations[j]) > 0.2, null, false);
+      }
+      drawNodeCircle(outNode.x, outNode.y, true, `Force Output (${targetCart.force.toFixed(1)} N)`, true);
+
+      // 2. Mini Live Cart-Pole beside network
+      const mw = miniSimCanvas.width;
+      const mh = miniSimCanvas.height;
+      miniSimCtx.fillStyle = '#090a0f';
+      miniSimCtx.fillRect(0, 0, mw, mh);
+
+      const mOriginX = mw / 2;
+      const mRailY = mh * 0.72;
+      const mScaleX = 55;
+      const mPoleLen = 75;
+
+      // Rail
+      miniSimCtx.beginPath();
+      miniSimCtx.moveTo(mOriginX - TRACK_LIMIT * mScaleX, mRailY);
+      miniSimCtx.lineTo(mOriginX + TRACK_LIMIT * mScaleX, mRailY);
+      miniSimCtx.strokeStyle = '#22283d';
+      miniSimCtx.lineWidth = 2;
+      miniSimCtx.stroke();
+
+      // Mini Cart
+      const mcx = mOriginX + targetCart.x * mScaleX;
+      miniSimCtx.fillStyle = '#1e2538';
+      miniSimCtx.strokeStyle = '#f59e0b';
+      miniSimCtx.lineWidth = 1.5;
+      miniSimCtx.fillRect(mcx - 16, mRailY - 8, 32, 14);
+      miniSimCtx.strokeRect(mcx - 16, mRailY - 8, 32, 14);
+
+      // Mini Pole
+      const mTipX = mcx + mPoleLen * Math.sin(targetCart.theta);
+      const mTipY = (mRailY - 8) - mPoleLen * Math.cos(targetCart.theta);
+
+      miniSimCtx.beginPath();
+      miniSimCtx.moveTo(mcx, mRailY - 8);
+      miniSimCtx.lineTo(mTipX, mTipY);
+      miniSimCtx.strokeStyle = '#f59e0b';
+      miniSimCtx.lineWidth = 2.5;
+      miniSimCtx.stroke();
+
+      miniSimCtx.beginPath();
+      miniSimCtx.arc(mTipX, mTipY, 3.5, 0, Math.PI * 2);
+      miniSimCtx.fillStyle = '#fbbf24';
+      miniSimCtx.fill();
+
+      // Heading label
+      miniSimCtx.font = '10px monospace';
+      miniSimCtx.fillStyle = '#8e95a5';
+      miniSimCtx.textAlign = 'center';
+      miniSimCtx.fillText('LIVE CONTROLLER INFERENCE', mw / 2, 20);
+    }
+
+    /* ==========================================================================
+       SECTION 10: UI BINDINGS & CONTROLS
+       ========================================================================== */
+    function updateHUD() {
+      const hudGen = document.getElementById('hudGeneration');
+      const hudAlive = document.getElementById('hudAlive');
+      const hudLead = document.getElementById('hudLeaderScore');
+      const hudTime = document.getElementById('hudTime');
+
+      if (hudGen) hudGen.textContent = String(generation).padStart(2, '0');
+      if (hudAlive) {
+        const count = population.filter(c => c.alive).length;
+        hudAlive.textContent = `${count} / ${population.length}`;
+      }
+      if (hudLead && leaderCart) {
+        hudLead.textContent = `${leaderCart.framesSurvived} / ${config.maxFrames}`;
+      }
+      if (hudTime) {
+        hudTime.textContent = `${(frame * DT).toFixed(2)} s`;
+      }
+    }
+
+    function updateTelemetryUI(bestFrames, avgFrames) {
+      const elBest = document.getElementById('statLastBest');
+      const elAvg = document.getElementById('statAverage');
+      const elRatio = document.getElementById('statRatio');
+      const elAll = document.getElementById('statAllTime');
+
+      if (elBest) elBest.textContent = `${bestFrames} / ${config.maxFrames}`;
+      if (elAvg) elAvg.textContent = `${Math.round(avgFrames)} / ${config.maxFrames}`;
+      if (elRatio) {
+        const pct = ((bestFrames / config.maxFrames) * 100).toFixed(1);
+        elRatio.textContent = bestFrames >= config.maxFrames ? '100% (Balanced!)' : `${pct}%`;
+      }
+      if (elAll) elAll.textContent = `${allTimeBestFrames} / ${config.maxFrames}`;
+    }
+
+    function bindSliders() {
+      const sliderDefs = [
+        { id: 'population', key: 'population', isInt: true },
+        { id: 'elites', key: 'elites', isInt: true },
+        { id: 'parentPool', key: 'parentPool', isInt: true },
+        { id: 'mutationChance', key: 'mutationChance', decimals: 2 },
+        { id: 'mutationSize', key: 'mutationSize', decimals: 2 },
+        { id: 'bigJumpChance', key: 'bigJumpChance', decimals: 2 },
+        { id: 'forceStrength', key: 'forceStrength', isInt: true },
+        { id: 'poleLength', key: 'poleLength', decimals: 1 },
+        { id: 'gravity', key: 'gravity', decimals: 1 },
+        { id: 'pushStrength', key: 'pushStrength', decimals: 1 },
+        { id: 'maxFrames', key: 'maxFrames', isInt: true }
+      ];
+
+      sliderDefs.forEach(def => {
+        const input = document.getElementById(`param-${def.id}`);
+        const display = document.getElementById(`val-${def.id}`);
+        if (!input || !display) return;
+
+        input.addEventListener('input', (e) => {
+          const raw = parseFloat(e.target.value);
+          const val = def.isInt ? parseInt(raw, 10) : raw;
+          config[def.key] = val;
+          display.textContent = def.decimals !== undefined ? val.toFixed(def.decimals) : val;
+        });
+      });
+
+      const checkShrink = document.getElementById('param-shrinkMutation');
+      if (checkShrink) {
+        checkShrink.addEventListener('change', (e) => {
+          config.shrinkMutation = e.target.checked;
+        });
+      }
+    }
+
+    function syncUIValues() {
+      const keys = [
+        'population', 'elites', 'parentPool', 'mutationChance',
+        'mutationSize', 'bigJumpChance', 'forceStrength', 'poleLength',
+        'gravity', 'pushStrength', 'maxFrames'
+      ];
+      keys.forEach(k => {
+        const input = document.getElementById(`param-${k}`);
+        const display = document.getElementById(`val-${k}`);
+        if (input && display) {
+          input.value = config[k];
+          const isInt = (k === 'population' || k === 'elites' || k === 'parentPool' || k === 'forceStrength' || k === 'maxFrames');
+          display.textContent = isInt ? config[k] : config[k].toFixed(k === 'mutationChance' || k === 'mutationSize' || k === 'bigJumpChance' ? 2 : 1);
+        }
+      });
+      const checkShrink = document.getElementById('param-shrinkMutation');
+      if (checkShrink) checkShrink.checked = config.shrinkMutation;
+    }
+
+    function bindPresets() {
+      const presetButtons = document.querySelectorAll('.btn-preset');
+      presetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          presetButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const key = btn.dataset.preset;
+          const p = PRESETS[key];
+          if (p) {
+            Object.assign(config, p);
+            syncUIValues();
+          }
+        });
+      });
+
+      const btnReset = document.getElementById('btnResetDefaults');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => {
+          presetButtons.forEach(b => b.classList.remove('active'));
+          Object.assign(config, DEFAULT_CONFIG);
+          syncUIValues();
+        });
+      }
+    }
+
+    function bindControls() {
+      const btnPlayPause = document.getElementById('btnPlayPause');
+      if (btnPlayPause) {
+        btnPlayPause.addEventListener('click', () => {
+          isPaused = !isPaused;
+          btnPlayPause.textContent = isPaused ? 'Resume' : 'Pause';
+          btnPlayPause.classList.toggle('active', isPaused);
+        });
+      }
+
+      const btnRestart = document.getElementById('btnRestart');
+      if (btnRestart) {
+        btnRestart.addEventListener('click', () => {
+          generation = 1;
+          frame = 0;
+          history.length = 0;
+          allTimeBestFrames = 0;
+          population = initPopulation(config.population);
+          leaderCart = population[0];
+          updateHUD();
+          updateTelemetryUI(0, 0);
+          renderGraph();
+        });
+      }
+
+      const speedButtons = document.querySelectorAll('.btn-speed');
+      speedButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          speedButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          simulationSpeed = parseInt(btn.dataset.speed, 10) || 1;
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (btnPlayPause) btnPlayPause.click();
+        } else if (e.code === 'KeyR') {
+          if (btnRestart) btnRestart.click();
+        }
+      });
+
+      // How It Works Modal
+      const modal = document.getElementById('modalHowItWorks');
+      const btnOpen = document.getElementById('btnHowItWorks');
+      const btnClose = document.getElementById('btnCloseModal');
+
+      if (btnOpen && modal) {
+        btnOpen.addEventListener('click', () => {
+          modal.classList.add('open');
+          renderHowItWorksVisuals();
+        });
+      }
+      if (btnClose && modal) {
+        btnClose.addEventListener('click', () => modal.classList.remove('open'));
+      }
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.classList.remove('open');
+        });
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 11: ANIMATION LOOP & STARTUP
+       ========================================================================== */
+    function animationLoop() {
+      if (!isPaused) {
+        for (let s = 0; s < simulationSpeed; s++) {
+          tickSimulation();
+        }
+      }
+
+      renderSimulationWorld();
+      updateHUD();
+
+      const modal = document.getElementById('modalHowItWorks');
+      if (modal && modal.classList.contains('open')) {
+        renderHowItWorksVisuals();
+      }
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Startup
+    bindSliders();
+    bindPresets();
+    bindControls();
+    syncUIValues();
+    updateHUD();
+    renderGraph();
+    requestAnimationFrame(animationLoop);
+
+    // Headless testing hook
+    if (typeof window !== 'undefined') {
+      window.__BALANCE__ = {
+        config,
+        population: () => population,
+        history: () => history,
+        generation: () => generation,
+        frame: () => frame,
+        tickSimulation,
+        evolvePopulation,
+        renderGraph
+      };
+    }
+  })();
+  </script>
+</body>
+</html>
