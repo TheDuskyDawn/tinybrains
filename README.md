@@ -2,6 +2,8 @@
 
 > Machine learning, but the GPU is *your problem* now.
 
+### 👉 [**Open the live site**](https://theduskydawn.github.io/tinybrains/)
+
 Welcome to my collection of tiny experiments where neural networks learn **live, in your browser tab**, while you sit there and judge them.
 
 No server. No backend. No API key. No "please sign in to continue training." Just JavaScript, a canvas, and a model that starts out dumber than a bag of hammers and gets better in front of your eyes. Like a Rocky montage, but with gradient descent.
