@@ -16,7 +16,8 @@ No server. No backend. No API key. No "please sign in to continue training." Jus
 | 02 | [**NeuroFlap**](experiments/neuroflap/) | 50 birds evolve neural nets to flap through pipes | a few generations |
 | 03 | [**DRIVE**](experiments/drive/) | 50 neural nets learn to race a track from 5 distance sensors | a few generations |
 | 04 | [**BALANCE**](experiments/balance/) | 50 neural nets learn to balance a pole on a cart | a few generations |
-| 05 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
+| 05 | [**Slither**](experiments/slither/) | 12 snakes learn Snake with one shared Q-table | a few minutes |
+| 06 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
 
 ## 🔒 Privacy Policy
 
@@ -49,7 +50,8 @@ Don't double-click `index.html`. Some browsers get weird about `file://`. They h
     ├── catch/              # experiment 01
     ├── neuroflap/          # experiment 02
     ├── drive/              # experiment 03
-    └── balance/            # experiment 04
+    ├── balance/            # experiment 04
+    └── slither/            # experiment 05
 ```
 
 Each experiment lives in its own folder and is **fully self-contained**. If one breaks, the others carry on, like siblings at a wedding.

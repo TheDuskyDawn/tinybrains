@@ -1,0 +1,2646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slither — Multi-Agent Tabular Q-Learning Simulation</title>
+  <meta name="description" content="Watch 12 snakes learn to play Snake in real time using shared tabular Q-learning with a compact 512-state representation.">
+
+  <!-- Google Fonts: Bricolage Grotesque (headings/UI) & Newsreader (explanatory/editorial) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* DESIGN TOKENS */
+    :root {
+      --bg: #090a0f;
+      --surface: #11131a;
+      --surface-card: #151822;
+      --surface-hover: #1c2130;
+      --surface-active: #232a3d;
+      --border: #202638;
+      --border-subtle: #171b28;
+      --border-focus: #3b4666;
+      --text: #ede8df;
+      --text-muted: #8e95a5;
+      --text-dim: #545b6e;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --blue-grey: #64748b;
+      --blue-grey-bright: #94a3b8;
+      --blue-grey-dim: rgba(100, 116, 139, 0.18);
+      --danger: #ef4444;
+      --danger-dim: rgba(239, 68, 68, 0.18);
+      --success: #10b981;
+      --success-dim: rgba(16, 185, 129, 0.18);
+      --radius-sm: 4px;
+      --radius-md: 7px;
+      --radius-lg: 10px;
+      --font-ui: 'Bricolage Grotesque', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-prose: 'Newsreader', Georgia, Cambria, 'Times New Roman', serif;
+      --transition: 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* BASE STYLES */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* TOP HEADER */
+    header {
+      height: 46px;
+      min-height: 46px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand .logo-pip {
+      width: 9px;
+      height: 9px;
+      background: var(--amber);
+      border-radius: 2px;
+      box-shadow: 0 0 10px var(--amber-glow);
+    }
+
+    .brand .tagline {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      border-left: 1px solid var(--border);
+      padding-left: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-header {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-header:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+      color: var(--amber-bright);
+    }
+
+    /* MAIN THREE-COLUMN LAYOUT */
+    main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 285px 1fr 310px;
+      gap: 12px;
+      padding: 10px 14px 12px 14px;
+      overflow: hidden;
+    }
+
+    /* STAGGERED ENTRANCE ANIMATION */
+    @keyframes panelEntrance {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+      animation: panelEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: 0.05s;
+    }
+
+    .middle-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+      animation: panelEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: 0.12s;
+    }
+
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+      animation: panelEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: 0.20s;
+    }
+
+    /* PANELS GENERAL */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .panel-header {
+      padding: 9px 13px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-title::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--amber);
+    }
+
+    .presets-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 11px;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .btn-preset {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px 6px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: left;
+      line-height: 1.25;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-preset span.desc {
+      display: block;
+      font-size: 9.5px;
+      color: var(--text-dim);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .btn-preset:hover {
+      background: var(--surface-hover);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .btn-preset.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .sliders-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .sliders-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .sliders-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sliders-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .sliders-scroll::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .sliders-scroll::-webkit-scrollbar-thumb:hover {
+      background: var(--border-focus);
+    }
+
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+    }
+
+    .control-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .control-val {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber-bright);
+    }
+
+    .slider-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .slider-input:hover {
+      background: var(--border-focus);
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      background: var(--amber-bright);
+      transform: scale(1.2);
+    }
+
+    .slider-input::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      padding: 4px 0;
+      cursor: pointer;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .sliders-footer {
+      padding: 9px 12px;
+      border-top: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.015);
+    }
+
+    .btn-reset-params {
+      width: 100%;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .btn-reset-params:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+
+    /* MIDDLE COLUMN: BOARDS & TOP CONTROLS */
+    .middle-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sim-toolbar {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+
+    .stat-pills {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-pill .label {
+      font-size: 9.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    .stat-pill .value {
+      font-family: monospace;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-pill.alive .value {
+      color: var(--success);
+    }
+
+    .sim-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .speed-group {
+      display: flex;
+      align-items: center;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 1px;
+    }
+
+    .btn-speed {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 6px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-speed:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .btn-speed.active {
+      background: var(--amber);
+      color: #000;
+      font-weight: 800;
+    }
+
+    .btn-sim {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 9px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-sim:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+    }
+
+    .btn-sim.btn-danger-hover:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    /* BOARDS GRID CONTAINER */
+    .boards-container {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .board-cell {
+      background: #08090d;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .board-cell.is-leader {
+      border-color: var(--amber);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+    }
+
+    .board-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+
+    .board-meta {
+      position: absolute;
+      top: 3px;
+      left: 5px;
+      right: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 9px;
+      font-family: monospace;
+      color: var(--text-dim);
+      z-index: 2;
+    }
+
+    .board-meta .tag-leader {
+      background: var(--amber);
+      color: #000;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-size: 8px;
+      letter-spacing: 0.05em;
+      display: none;
+    }
+
+    .board-cell.is-leader .board-meta .tag-leader {
+      display: inline-block;
+    }
+
+    /* RIGHT COLUMN: METRICS & GRAPHS */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .metrics-summary {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 11px 13px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-box .metric-name {
+      font-size: 9.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+
+    .metric-box .metric-digit {
+      font-family: monospace;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .metric-box.best .metric-digit {
+      color: var(--amber-bright);
+    }
+
+    .metric-box.avg .metric-digit {
+      color: var(--blue-grey-bright);
+    }
+
+    .metric-box.epoch .metric-digit {
+      color: var(--text);
+    }
+
+    /* EXPLORATION METER */
+    .meter-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .meter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+    }
+
+    .meter-title {
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .meter-val {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber-bright);
+    }
+
+    .meter-track {
+      width: 100%;
+      height: 7px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--amber), var(--amber-bright));
+      width: 100%;
+      border-radius: 3px;
+      transition: width 0.2s ease-out;
+    }
+
+    /* GRAPH PANEL */
+    .graph-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .graph-body {
+      flex: 1;
+      padding: 8px 10px;
+      position: relative;
+      min-height: 110px;
+      overflow: hidden;
+    }
+
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .graph-legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 12px 8px 12px;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.best { background: var(--amber-bright); }
+    .legend-dot.avg { background: var(--blue-grey-bright); }
+
+    /* EDITORIAL / PROSE CARD */
+    .explainer-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .explainer-card h3 {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .explainer-card p {
+      font-family: var(--font-prose);
+      font-size: 12px;
+      line-height: 1.45;
+      color: #b5bcc9;
+    }
+
+    /* LEARNED BANNER CELEBRATION */
+    .learned-banner {
+      display: none;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(16, 185, 129, 0.15));
+      border: 1px solid var(--amber);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--amber-bright);
+      align-items: center;
+      justify-content: space-between;
+      animation: pulse-border 2s infinite;
+    }
+
+    .learned-banner.visible {
+      display: flex;
+    }
+
+    /* PULSE ANIMATIONS */
+    @keyframes pulse-border {
+      0%, 100% { border-color: var(--amber); box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+      50% { border-color: var(--success); box-shadow: 0 0 12px rgba(16, 185, 129, 0.35); }
+    }
+
+    .celebrate-pulse {
+      animation: flash-highlight 0.7s ease-out;
+    }
+
+    @keyframes flash-highlight {
+      0% { transform: scale(1.04); color: #fff; text-shadow: 0 0 10px var(--amber-bright); }
+      100% { transform: scale(1); }
+    }
+
+    /* MODAL: HOW IT WORKS */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 5, 8, 0.82);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-window {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 820px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.7);
+    }
+
+    .modal-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    .modal-content {
+      padding: 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .diagram-pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      position: relative;
+    }
+
+    .diagram-pipeline::before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg,
+        rgba(245, 158, 11, 0.1),
+        rgba(245, 158, 11, 0.8),
+        rgba(16, 185, 129, 0.8),
+        rgba(245, 158, 11, 0.1)
+      );
+      background-size: 200% 100%;
+      animation: flowDiagramLine 2.8s linear infinite;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    @keyframes flowDiagramLine {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .diagram-step {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .diagram-step-num {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--amber);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .diagram-step-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .diagram-box-live {
+      background: #08090d;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      font-family: monospace;
+      font-size: 10.5px;
+      min-height: 95px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .q-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 9.5px;
+    }
+
+    .q-bar-label {
+      width: 48px;
+      color: var(--text-muted);
+    }
+
+    .q-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--surface-hover);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .q-bar-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.1s ease-out;
+    }
+
+    .q-bar-fill.negative {
+      background: var(--danger);
+    }
+
+    .q-bar-val {
+      width: 38px;
+      text-align: right;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .modal-prose {
+      font-family: var(--font-prose);
+      font-size: 13px;
+      line-height: 1.5;
+      color: #b5bcc9;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 14px;
+    }
+
+    /* TOOLTIP */
+    .graph-tooltip {
+      position: absolute;
+      display: none;
+      pointer-events: none;
+      background: #11131c;
+      border: 1px solid var(--border-focus);
+      border-radius: var(--radius-sm);
+      padding: 5px 8px;
+      font-family: monospace;
+      font-size: 10px;
+      color: var(--text);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    /* RESPONSIVE & PREFERS-REDUCED-MOTION */
+    @media (max-width: 1050px) {
+      body {
+        height: auto;
+        max-height: none;
+        overflow-y: auto;
+      }
+      main {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .boards-container {
+        min-height: 480px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="logo-pip"></div>
+      <h1>SLITHER</h1>
+      <span class="tagline">Multi-Agent Tabular Q-Learning Simulation</span>
+    </div>
+    <div class="header-actions">
+      <div class="learned-banner" id="learnedBanner">
+        <span>LEARNED (Avg &ge; 15)</span>
+      </div>
+      <button class="btn-header" id="btnHowItWorks" aria-label="Open how it works modal">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        How It Works
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main>
+    <!-- LEFT PANEL: PRESETS & SLIDERS -->
+    <aside class="left-column">
+      <!-- EXPERIMENT PRESETS -->
+      <div class="presets-card">
+        <div class="panel-title">Experiment Presets</div>
+        <div class="presets-grid">
+          <button class="btn-preset" data-preset="never-stop">
+            Never Stops Exploring
+            <span class="desc">&epsilon; never decays (&epsilon;=1)</span>
+          </button>
+          <button class="btn-preset" data-preset="greedy">
+            Greedy from Start
+            <span class="desc">No random exploration (&epsilon;=0)</span>
+          </button>
+          <button class="btn-preset" data-preset="shortsighted">
+            Short-Sighted
+            <span class="desc">Low discount (&gamma;=0.1)</span>
+          </button>
+          <button class="btn-preset" data-preset="big-board">
+            Big Board
+            <span class="desc">Expanded 20&times;20 grid</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 11 HYPERPARAMETER SLIDERS -->
+      <div class="panel sliders-panel">
+        <div class="panel-header">
+          <div class="panel-title">Parameters</div>
+          <span style="font-size: 10px; color: var(--text-dim);">Live Tuning</span>
+        </div>
+        <div class="sliders-scroll">
+          <!-- 1. Snakes -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Snakes</span>
+              <span class="control-val" id="valSnakes">12</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderSnakes" min="1" max="24" step="1" value="12">
+          </div>
+
+          <!-- 2. Grid Size -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Grid Size</span>
+              <span class="control-val" id="valGridSize">12&times;12</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderGridSize" min="8" max="24" step="1" value="12">
+          </div>
+
+          <!-- 3. Learning Rate Alpha -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Learning Rate (&alpha;)</span>
+              <span class="control-val" id="valAlpha">0.10</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderAlpha" min="0.01" max="0.50" step="0.01" value="0.10">
+          </div>
+
+          <!-- 4. Discount Gamma -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Discount (&gamma;)</span>
+              <span class="control-val" id="valGamma">0.90</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderGamma" min="0.00" max="0.99" step="0.01" value="0.90">
+          </div>
+
+          <!-- 5. Epsilon Floor -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Epsilon Floor</span>
+              <span class="control-val" id="valEpsFloor">0.010</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderEpsFloor" min="0.00" max="0.50" step="0.005" value="0.010">
+          </div>
+
+          <!-- 6. Epsilon Decay -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Epsilon Decay</span>
+              <span class="control-val" id="valEpsDecay">0.9950</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderEpsDecay" min="0.950" max="0.9999" step="0.0005" value="0.9950">
+          </div>
+
+          <!-- 7. Food Reward -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Food Reward</span>
+              <span class="control-val" id="valFoodReward">+10.0</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderFoodReward" min="1" max="30" step="1" value="10">
+          </div>
+
+          <!-- 8. Death Penalty -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Death Penalty</span>
+              <span class="control-val" id="valDeathPenalty">-10.0</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderDeathPenalty" min="1" max="30" step="1" value="10">
+          </div>
+
+          <!-- 9. Step Penalty -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Step Penalty</span>
+              <span class="control-val" id="valStepPenalty">-0.010</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderStepPenalty" min="0.000" max="0.050" step="0.002" value="0.010">
+          </div>
+
+          <!-- 10. Shaping Reward -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Shaping Reward</span>
+              <span class="control-val" id="valShapingReward">&plusmn;0.10</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderShapingReward" min="0.00" max="0.50" step="0.02" value="0.10">
+          </div>
+
+          <!-- 11. Starvation Limit -->
+          <div class="control-row">
+            <div class="control-header">
+              <span class="control-label">Starvation Limit</span>
+              <span class="control-val" id="valStarveLimit">100 /len</span>
+            </div>
+            <input type="range" class="slider-input" id="sliderStarveLimit" min="20" max="300" step="10" value="100">
+          </div>
+
+          <!-- Distance Shaping Checkbox -->
+          <label class="checkbox-row" for="chkDistanceShaping">
+            <input type="checkbox" id="chkDistanceShaping" checked>
+            <span class="checkbox-label">Distance Shaping</span>
+          </label>
+        </div>
+
+        <div class="sliders-footer">
+          <button class="btn-reset-params" id="btnResetParams">Reset to Optimal Values</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MIDDLE PANEL: 12 BOARDS & PLAYBACK CONTROLS -->
+    <section class="middle-column">
+      <!-- TOP STATUS & TOOLBAR -->
+      <div class="sim-toolbar">
+        <div class="stat-pills">
+          <div class="stat-pill">
+            <span class="label">Episodes</span>
+            <span class="value" id="dispEpisodes">0</span>
+          </div>
+          <div class="stat-pill alive">
+            <span class="label">Still Alive</span>
+            <span class="value" id="dispAlive">12 / 12</span>
+          </div>
+          <div class="stat-pill">
+            <span class="label">Epoch</span>
+            <span class="value" id="dispEpoch">1</span>
+          </div>
+        </div>
+
+        <div class="sim-controls">
+          <div class="speed-group" title="Simulation Speed (Steps per Frame)">
+            <button class="btn-speed" data-speed="1">1&times;</button>
+            <button class="btn-speed" data-speed="5">5&times;</button>
+            <button class="btn-speed active" data-speed="10">10&times;</button>
+            <button class="btn-speed" data-speed="20">20&times;</button>
+            <button class="btn-speed" data-speed="40">40&times;</button>
+            <button class="btn-speed" data-speed="80">80&times;</button>
+          </div>
+
+          <button class="btn-sim" id="btnPause" title="Pause / Resume">
+            <svg id="iconPause" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            <span id="textPause">Pause</span>
+          </button>
+
+          <button class="btn-sim" id="btnRestart" title="Respawn all snakes">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path><path d="M3 21v-5h5"></path></svg>
+            Restart
+          </button>
+
+          <button class="btn-sim btn-danger-hover" id="btnForget" title="Reset shared Q-table & start fresh">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+            Forget
+          </button>
+        </div>
+      </div>
+
+      <!-- 4x3 BOARDS GRID -->
+      <div class="boards-container" id="boardsGrid">
+        <!-- Generated dynamically in JavaScript -->
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: METRICS, EXPLORATION METER & GRAPH -->
+    <aside class="right-column">
+      <!-- SUMMARY METRICS -->
+      <div class="metrics-summary">
+        <div class="metric-box epoch">
+          <span class="metric-name">Epoch</span>
+          <span class="metric-digit" id="metricEpoch">0</span>
+        </div>
+        <div class="metric-box best">
+          <span class="metric-name">Last Best</span>
+          <span class="metric-digit" id="metricBest">0</span>
+        </div>
+        <div class="metric-box avg">
+          <span class="metric-name">Average</span>
+          <span class="metric-digit" id="metricAvg">0.0</span>
+        </div>
+      </div>
+
+      <!-- EXPLORATION METER -->
+      <div class="meter-card">
+        <div class="meter-header">
+          <span class="meter-title">Exploration Rate (&epsilon;)</span>
+          <span class="meter-val" id="dispEpsilon">100.0%</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="meterFill" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- SLIDING WINDOW GRAPH -->
+      <div class="panel graph-panel">
+        <div class="panel-header">
+          <div class="panel-title">Score Trajectory (Last 30 Epochs)</div>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-item"><div class="legend-dot best"></div> Best Score</div>
+          <div class="legend-item"><div class="legend-dot avg"></div> Average Score (50 eps)</div>
+        </div>
+        <div class="graph-body" id="graphContainer">
+          <canvas id="graphCanvas"></canvas>
+          <div class="graph-tooltip" id="graphTooltip"></div>
+        </div>
+      </div>
+
+      <!-- EDITORIAL READING GUIDE -->
+      <div class="explainer-card">
+        <h3>Reading the Graph</h3>
+        <p>
+          Each epoch aggregates 50 finished games. The blue-grey line tracks the average score, rising from random stumbling (~0.3) to purposeful navigation as epsilon decays. The amber line shows peak scores from lucky or efficient runs. When the average score reaches 15, basic food-tracking and danger avoidance are fully stabilized.
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- HOW IT WORKS POPUP MODAL -->
+  <div class="modal-backdrop" id="howItWorksModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2>How Tabular Q-Learning Works in Slither</h2>
+        <button class="modal-close" id="btnCloseModal" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-content">
+        <!-- 4-STEP PIPELINE DIAGRAM WITH LIVE VALUES -->
+        <div class="diagram-pipeline">
+          <!-- Step 1 -->
+          <div class="diagram-step">
+            <span class="diagram-step-num">Step 1 &middot; Sense</span>
+            <span class="diagram-step-title">Surroundings &rarr; State</span>
+            <div class="diagram-box-live" id="diagStep1">
+              <div>Danger S/L/R: <span id="diagDanger" style="color:var(--amber);">0, 0, 0</span></div>
+              <div>Heading: <span id="diagHeading" style="color:var(--text);">UP (0)</span></div>
+              <div>Food L/R/U/D: <span id="diagFood" style="color:var(--text);">0, 1, 1, 0</span></div>
+              <div style="margin-top:2px; font-weight:700;">State: <span id="diagStateIndex" style="color:var(--amber-bright);">#160</span> / 511</div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="diagram-step">
+            <span class="diagram-step-num">Step 2 &middot; Lookup</span>
+            <span class="diagram-step-title">Q-Table Row</span>
+            <div class="diagram-box-live" id="diagStep2">
+              <div class="q-bar-row">
+                <span class="q-bar-label">Straight</span>
+                <div class="q-bar-track"><div class="q-bar-fill" id="barQ0"></div></div>
+                <span class="q-bar-val" id="valQ0">0.00</span>
+              </div>
+              <div class="q-bar-row">
+                <span class="q-bar-label">Left</span>
+                <div class="q-bar-track"><div class="q-bar-fill" id="barQ1"></div></div>
+                <span class="q-bar-val" id="valQ1">0.00</span>
+              </div>
+              <div class="q-bar-row">
+                <span class="q-bar-label">Right</span>
+                <div class="q-bar-track"><div class="q-bar-fill" id="barQ2"></div></div>
+                <span class="q-bar-val" id="valQ2">0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="diagram-step">
+            <span class="diagram-step-num">Step 3 &middot; Choose</span>
+            <span class="diagram-step-title">&epsilon;-Greedy Action</span>
+            <div class="diagram-box-live" id="diagStep3">
+              <div>Mode: <span id="diagMode" style="color:var(--amber-bright); font-weight:700;">Exploiting</span></div>
+              <div>Current &epsilon;: <span id="diagEpsVal">1.0%</span></div>
+              <div style="margin-top:4px; font-size:11px;">Chosen: <strong id="diagActionChosen" style="color:var(--text);">Straight</strong></div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="diagram-step">
+            <span class="diagram-step-num">Step 4 &middot; Learn</span>
+            <span class="diagram-step-title">Bellman Update</span>
+            <div class="diagram-box-live" id="diagStep4">
+              <div>Reward (r): <span id="diagReward" style="color:var(--amber);">+0.09</span></div>
+              <div>max Q(s'): <span id="diagNextMax" style="color:var(--text);">+2.41</span></div>
+              <div>&Delta;Q: <span id="diagDeltaQ" style="color:var(--success);">+0.021</span></div>
+              <div style="font-size:9px; color:var(--text-dim); margin-top:2px;">Q &larr; Q + &alpha;[r+&gamma;maxQ'-Q]</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-prose">
+          <p>
+            The state space is strictly partitioned into <strong>512 states</strong> ($2^9$): 3 danger sensors (straight, left, right), 4 directional headings (0: UP, 1: RIGHT, 2: DOWN, 3: LEFT), and 4 relative food flags (is food left, right, above, or below the snake's head).
+          </p>
+          <p style="margin-top:8px;">
+            All 12 snakes concurrently read from and update the same flat <strong>1,536-float Q-table</strong> ($512 \times 3$ actions: Straight, Turn Left, Turn Right). Because experiences are pooled into one table, exploration accelerates by a factor of 12.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPLETE INLINE JAVASCRIPT -->
+  <script>
+    /* ==========================================================================
+       SECTION 1: CONSTANTS & PRNG
+       ========================================================================== */
+    const DIR = [
+      { dx: 0, dy: -1, name: 'UP' },    // 0
+      { dx: 1, dy: 0,  name: 'RIGHT' }, // 1
+      { dx: 0, dy: 1,  name: 'DOWN' },  // 2
+      { dx: -1, dy: 0, name: 'LEFT' }   // 3
+    ];
+
+    const ACTION_NAMES = ['Straight', 'Turn Left', 'Turn Right'];
+
+    // Seeded PRNG (Mulberry32) for reproducible, non-skewed pseudo-randomness
+    function createPRNG(seed = 42) {
+      let s = seed >>> 0;
+      return function() {
+        s = (s + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rng = createPRNG(Date.now() & 0xFFFFFF);
+
+    /* ==========================================================================
+       SECTION 2: CONFIGURATION & DEFAULT HYPERPARAMETERS
+       ========================================================================== */
+    const DEFAULTS = {
+      snakes: 12,
+      gridSize: 12,
+      alpha: 0.1,
+      gamma: 0.9,
+      epsilonStart: 1.0,
+      epsilonFloor: 0.01,
+      epsilonDecay: 0.995,
+      foodReward: 10.0,
+      deathPenalty: 10.0,
+      stepPenalty: 0.01,
+      shapingReward: 0.1,
+      starvationLimit: 100, // steps per current snake length
+      distanceShaping: true
+    };
+
+    const config = { ...DEFAULTS };
+
+    /* ==========================================================================
+       SECTION 3: STATE VARIABLES & DATA ARRAYS
+       (CRITICAL RULE: Initialize EVERY variable and array before anything calls them!)
+       ========================================================================== */
+    // 512 states * 3 actions = 1536 floats
+    const Q_TABLE_SIZE = 512 * 3;
+    const qTable = new Float32Array(Q_TABLE_SIZE);
+
+    let epsilon = config.epsilonStart;
+    let totalEpisodes = 0;
+    let currentEpochEpisodes = [];
+    const epochHistory = []; // { epoch, avg, best, epsilon }
+    let allTimeBest = 0;
+    let hasLearned = false;
+
+    // Simulation Execution State
+    let isPaused = false;
+    let speed = 10; // steps per animation frame
+    let boards = []; // array of board objects
+
+    // Live decision capture for the "How It Works" diagram
+    let lastDecision = {
+      dangerStraight: 0,
+      dangerLeft: 0,
+      dangerRight: 0,
+      heading: 0,
+      foodLeft: 0,
+      foodRight: 0,
+      foodUp: 0,
+      foodDown: 0,
+      state: 0,
+      qValues: [0, 0, 0],
+      isExploration: false,
+      chosenAction: 0,
+      reward: 0,
+      nextMaxQ: 0,
+      deltaQ: 0,
+      epsilonVal: 1.0
+    };
+
+    /* ==========================================================================
+       SECTION 4: STATE ENCODING & COLLISION LOGIC
+       ========================================================================== */
+    function isCellDanger(x, y, snake, gridSize) {
+      // Wall collision
+      if (x < 0 || x >= gridSize || y < 0 || y >= gridSize) return true;
+      // Body collision (check all segments except the current tail if it won't grow)
+      const body = snake.body;
+      const len = body.length;
+      for (let i = 0; i < len - 1; i++) {
+        if (body[i].x === x && body[i].y === y) return true;
+      }
+      return false;
+    }
+
+    // Encodes full board situation into integer [0..511]
+    function encodeState(snake, food, gridSize) {
+      const head = snake.body[0];
+      const H = snake.heading;
+
+      // Straight cell
+      const sH = H;
+      const sX = head.x + DIR[sH].dx;
+      const sY = head.y + DIR[sH].dy;
+      const dangerStraight = isCellDanger(sX, sY, snake, gridSize) ? 1 : 0;
+
+      // Left cell
+      const lH = (H + 3) % 4;
+      const lX = head.x + DIR[lH].dx;
+      const lY = head.y + DIR[lH].dy;
+      const dangerLeft = isCellDanger(lX, lY, snake, gridSize) ? 1 : 0;
+
+      // Right cell
+      const rH = (H + 1) % 4;
+      const rX = head.x + DIR[rH].dx;
+      const rY = head.y + DIR[rH].dy;
+      const dangerRight = isCellDanger(rX, rY, snake, gridSize) ? 1 : 0;
+
+      // Absolute food flags
+      const foodLeft = (food.x < head.x) ? 1 : 0;
+      const foodRight = (food.x > head.x) ? 1 : 0;
+      const foodUp = (food.y < head.y) ? 1 : 0;
+      const foodDown = (food.y > head.y) ? 1 : 0;
+
+      // Pack 9 bits:
+      // Bit 0: Danger Straight
+      // Bit 1: Danger Left
+      // Bit 2: Danger Right
+      // Bits 3-4: Heading (0..3)
+      // Bit 5: Food Left
+      // Bit 6: Food Right
+      // Bit 7: Food Up
+      // Bit 8: Food Down
+      const state = dangerStraight |
+                    (dangerLeft << 1) |
+                    (dangerRight << 2) |
+                    (H << 3) |
+                    (foodLeft << 5) |
+                    (foodRight << 6) |
+                    (foodUp << 7) |
+                    (foodDown << 8);
+
+      return {
+        state,
+        dangerStraight,
+        dangerLeft,
+        dangerRight,
+        heading: H,
+        foodLeft,
+        foodRight,
+        foodUp,
+        foodDown
+      };
+    }
+
+    /* ==========================================================================
+       SECTION 5: BOARD & SNAKE MANAGEMENT
+       ========================================================================== */
+    function spawnFood(snake, gridSize) {
+      const occupied = new Set();
+      for (let i = 0; i < snake.body.length; i++) {
+        occupied.add(snake.body[i].x + ',' + snake.body[i].y);
+      }
+      const emptyCells = [];
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          if (!occupied.has(x + ',' + y)) {
+            emptyCells.push({ x, y });
+          }
+        }
+      }
+      if (emptyCells.length === 0) return { x: 0, y: 0 };
+      const idx = Math.floor(rng() * emptyCells.length);
+      return emptyCells[idx];
+    }
+
+    function createSnake(gridSize) {
+      const midX = Math.floor(gridSize / 2);
+      const midY = Math.floor(gridSize / 2);
+      const heading = Math.floor(rng() * 4);
+      const dx = DIR[heading].dx;
+      const dy = DIR[heading].dy;
+
+      return {
+        body: [
+          { x: midX, y: midY },
+          { x: midX - dx, y: midY - dy },
+          { x: midX - 2 * dx, y: midY - 2 * dy }
+        ],
+        heading: heading,
+        score: 0,
+        stepsSinceLastFood: 0,
+        trail: [] // Stores recent positions for rendering the leader trail
+      };
+    }
+
+    function createBoard(id) {
+      const snake = createSnake(config.gridSize);
+      const food = spawnFood(snake, config.gridSize);
+      return {
+        id,
+        snake,
+        food,
+        flashAlpha: 0.0,      // Dying flash
+        foodPop: null,        // { x, y, progress: 0..1 }
+        canvas: null,
+        ctx: null,
+        cellEl: null
+      };
+    }
+
+    function initBoards() {
+      const boardsGrid = document.getElementById('boardsGrid');
+      if (!boardsGrid) return;
+      boardsGrid.innerHTML = '';
+      boards.length = 0;
+
+      for (let i = 0; i < config.snakes; i++) {
+        const board = createBoard(i);
+
+        const cell = document.createElement('div');
+        cell.className = 'board-cell';
+        cell.id = `boardCell_${i}`;
+
+        const meta = document.createElement('div');
+        meta.className = 'board-meta';
+        meta.innerHTML = `<span>#${i + 1}</span><span class="tag-leader">LEADER</span><span id="scoreBadge_${i}">0</span>`;
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'board-canvas';
+        canvas.width = 160;
+        canvas.height = 160;
+
+        cell.appendChild(meta);
+        cell.appendChild(canvas);
+        boardsGrid.appendChild(cell);
+
+        board.cellEl = cell;
+        board.canvas = canvas;
+        board.ctx = canvas.getContext('2d');
+        boards.push(board);
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 6: Q-LEARNING CORE SIMULATION STEP
+       ========================================================================== */
+    function simulateStep() {
+      // Find current leader for visual highlight & live diagram tracking
+      let maxLen = -1;
+      let leaderBoardIdx = 0;
+      for (let i = 0; i < boards.length; i++) {
+        const len = boards[i].snake.body.length;
+        if (len > maxLen) {
+          maxLen = len;
+          leaderBoardIdx = i;
+        }
+      }
+
+      for (let b = 0; b < boards.length; b++) {
+        const board = boards[b];
+        const snake = board.snake;
+        const food = board.food;
+        const isTracked = (b === leaderBoardIdx);
+
+        // 1. Encode current state
+        const stateInfo = encodeState(snake, food, config.gridSize);
+        const s = stateInfo.state;
+        const sOffset = s * 3;
+
+        const q0 = qTable[sOffset];
+        const q1 = qTable[sOffset + 1];
+        const q2 = qTable[sOffset + 2];
+
+        // 2. Select Action (Epsilon-greedy with randomized tie-breaking)
+        let action = 0;
+        let isExploration = false;
+        if (rng() < epsilon) {
+          isExploration = true;
+          action = Math.floor(rng() * 3);
+        } else {
+          const maxQ = Math.max(q0, q1, q2);
+          const ties = [];
+          if (Math.abs(q0 - maxQ) < 1e-6) ties.push(0);
+          if (Math.abs(q1 - maxQ) < 1e-6) ties.push(1);
+          if (Math.abs(q2 - maxQ) < 1e-6) ties.push(2);
+          action = ties[Math.floor(rng() * ties.length)];
+        }
+
+        // 3. Resolve movement & relative heading
+        let newHeading = snake.heading;
+        if (action === 1) newHeading = (snake.heading + 3) % 4; // Turn Left
+        else if (action === 2) newHeading = (snake.heading + 1) % 4; // Turn Right
+
+        const head = snake.body[0];
+        const nextX = head.x + DIR[newHeading].dx;
+        const nextY = head.y + DIR[newHeading].dy;
+
+        // Distance shaping calculation
+        const prevDist = Math.abs(head.x - food.x) + Math.abs(head.y - food.y);
+        const nextDist = Math.abs(nextX - food.x) + Math.abs(nextY - food.y);
+
+        let reward = -config.stepPenalty;
+        if (config.distanceShaping) {
+          if (nextDist < prevDist) reward += config.shapingReward;
+          else if (nextDist > prevDist) reward -= config.shapingReward;
+        }
+
+        // 4. Collision & Starvation check
+        let dead = false;
+        let starved = false;
+
+        if (nextX < 0 || nextX >= config.gridSize || nextY < 0 || nextY >= config.gridSize) {
+          dead = true;
+        } else {
+          for (let i = 0; i < snake.body.length - 1; i++) {
+            if (snake.body[i].x === nextX && snake.body[i].y === nextY) {
+              dead = true;
+              break;
+            }
+          }
+        }
+
+        snake.stepsSinceLastFood++;
+        if (!dead && snake.stepsSinceLastFood >= config.starvationLimit * snake.body.length) {
+          dead = true;
+          starved = true;
+        }
+
+        // 5. Apply Q-Update
+        const curQ = qTable[sOffset + action];
+        let nextMaxQ = 0;
+        let deltaQ = 0;
+
+        if (dead) {
+          reward += (starved ? -5.0 : -config.deathPenalty);
+          const target = reward;
+          deltaQ = config.alpha * (target - curQ);
+          qTable[sOffset + action] = curQ + deltaQ;
+
+          // Record episode end
+          totalEpisodes++;
+          currentEpochEpisodes.push(snake.score);
+          epsilon = Math.max(config.epsilonFloor, epsilon * config.epsilonDecay);
+
+          // Trigger flash
+          board.flashAlpha = 1.0;
+
+          // Check if an Epoch (50 episodes) is complete
+          if (currentEpochEpisodes.length >= 50) {
+            recordEpoch();
+          }
+
+          // Respawn snake
+          board.snake = createSnake(config.gridSize);
+          board.food = spawnFood(board.snake, config.gridSize);
+        } else {
+          // Snake lives: update body
+          snake.heading = newHeading;
+          snake.body.unshift({ x: nextX, y: nextY });
+
+          // Keep recent trail positions
+          snake.trail.unshift({ x: head.x, y: head.y });
+          if (snake.trail.length > 5) snake.trail.pop();
+
+          let ateFood = false;
+          if (nextX === food.x && nextY === food.y) {
+            snake.score++;
+            snake.stepsSinceLastFood = 0;
+            reward += config.foodReward;
+            board.food = spawnFood(snake, config.gridSize);
+            board.foodPop = { x: nextX, y: nextY, progress: 0 };
+            ateFood = true;
+          } else {
+            snake.body.pop();
+          }
+
+          // Next state lookup
+          const nextStateInfo = encodeState(snake, board.food, config.gridSize);
+          const sNextOffset = nextStateInfo.state * 3;
+          const nQ0 = qTable[sNextOffset];
+          const nQ1 = qTable[sNextOffset + 1];
+          const nQ2 = qTable[sNextOffset + 2];
+          nextMaxQ = Math.max(nQ0, nQ1, nQ2);
+
+          const target = reward + config.gamma * nextMaxQ;
+          deltaQ = config.alpha * (target - curQ);
+          qTable[sOffset + action] = curQ + deltaQ;
+        }
+
+        // If this board is tracked, record live decision for modal
+        if (isTracked) {
+          lastDecision = {
+            dangerStraight: stateInfo.dangerStraight,
+            dangerLeft: stateInfo.dangerLeft,
+            dangerRight: stateInfo.dangerRight,
+            heading: stateInfo.heading,
+            foodLeft: stateInfo.foodLeft,
+            foodRight: stateInfo.foodRight,
+            foodUp: stateInfo.foodUp,
+            foodDown: stateInfo.foodDown,
+            state: s,
+            qValues: [q0, q1, q2],
+            isExploration,
+            chosenAction: action,
+            reward,
+            nextMaxQ,
+            deltaQ,
+            epsilonVal: epsilon
+          };
+        }
+      }
+    }
+
+    function recordEpoch() {
+      const count = currentEpochEpisodes.length;
+      if (count === 0) return;
+      const sum = currentEpochEpisodes.reduce((a, b) => a + b, 0);
+      const avg = sum / count;
+      const best = Math.max(...currentEpochEpisodes);
+      const epochNum = epochHistory.length + 1;
+
+      const epochObj = {
+        epoch: epochNum,
+        avg: avg,
+        best: best,
+        epsilon: epsilon
+      };
+      epochHistory.push(epochObj);
+      currentEpochEpisodes = [];
+
+      // Check for new best
+      if (best > allTimeBest) {
+        allTimeBest = best;
+        const metricBestEl = document.getElementById('metricBest');
+        if (metricBestEl) {
+          metricBestEl.classList.remove('celebrate-pulse');
+          void metricBestEl.offsetWidth; // retrigger reflow
+          metricBestEl.classList.add('celebrate-pulse');
+        }
+      }
+
+      // Check for "Learned" milestone (Avg score >= 15)
+      if (!hasLearned && avg >= 15.0) {
+        hasLearned = true;
+        const banner = document.getElementById('learnedBanner');
+        if (banner) {
+          banner.classList.add('visible');
+          banner.classList.add('celebrate-pulse');
+        }
+      }
+
+      triggerGraphSlide();
+    }
+
+    /* ==========================================================================
+       SECTION 7: RENDERING (BOARDS & GRAPH)
+       ========================================================================== */
+    function renderBoard(board, isLeader) {
+      const ctx = board.ctx;
+      const canvas = board.canvas;
+      if (!ctx || !canvas) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const gridSize = config.gridSize;
+      const cellSize = w / gridSize;
+
+      // Update card visual leader state
+      if (board.cellEl) {
+        board.cellEl.classList.toggle('is-leader', isLeader);
+        const badge = document.getElementById(`scoreBadge_${board.id}`);
+        if (badge) badge.textContent = board.snake.score;
+      }
+
+      // Clear background
+      ctx.fillStyle = '#080a0f';
+      ctx.fillRect(0, 0, w, h);
+
+      // Fine grid dots
+      ctx.fillStyle = '#141824';
+      const dotRad = 1.0;
+      for (let y = 0; y <= gridSize; y++) {
+        for (let x = 0; x <= gridSize; x++) {
+          ctx.beginPath();
+          ctx.arc(x * cellSize, y * cellSize, dotRad, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Draw Leader Trail
+      if (isLeader && board.snake.trail.length > 0) {
+        for (let t = 0; t < board.snake.trail.length; t++) {
+          const pt = board.snake.trail[t];
+          const alpha = 0.22 * (1 - t / board.snake.trail.length);
+          ctx.fillStyle = `rgba(245, 158, 11, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(
+            (pt.x + 0.5) * cellSize,
+            (pt.y + 0.5) * cellSize,
+            cellSize * 0.35,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+      }
+
+      // Draw Food (Gentle pulsing)
+      const food = board.food;
+      const now = performance.now();
+      const pulse = Math.sin(now * 0.006 + board.id) * 0.15 + 0.85;
+      const foodRadius = (cellSize * 0.38) * pulse;
+
+      // Outer glow
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.beginPath();
+      ctx.arc((food.x + 0.5) * cellSize, (food.y + 0.5) * cellSize, foodRadius * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Food orb
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc((food.x + 0.5) * cellSize, (food.y + 0.5) * cellSize, foodRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Food Pop Animation if active
+      if (board.foodPop) {
+        board.foodPop.progress += 0.08;
+        const popRad = cellSize * (0.4 + board.foodPop.progress * 1.2);
+        const popAlpha = Math.max(0, 1 - board.foodPop.progress);
+        ctx.strokeStyle = `rgba(251, 191, 36, ${popAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc((board.foodPop.x + 0.5) * cellSize, (board.foodPop.y + 0.5) * cellSize, popRad, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (board.foodPop.progress >= 1.0) {
+          board.foodPop = null;
+        }
+      }
+
+      // Draw Snake Body
+      const snake = board.snake;
+      const body = snake.body;
+      const len = body.length;
+
+      for (let i = len - 1; i >= 0; i--) {
+        const seg = body[i];
+        const isHead = (i === 0);
+
+        if (isLeader) {
+          if (isHead) {
+            ctx.fillStyle = '#fbbf24'; // Bright amber
+          } else {
+            // Gradient down from amber to dark amber
+            const ratio = i / len;
+            const r = Math.round(245 - ratio * 40);
+            const g = Math.round(158 - ratio * 60);
+            const b = Math.round(11 + ratio * 10);
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          }
+        } else {
+          // Dimmer non-leader snake
+          if (isHead) {
+            ctx.fillStyle = '#94a3b8'; // Slate light
+          } else {
+            ctx.fillStyle = '#475569'; // Slate dark
+          }
+        }
+
+        const pad = cellSize * 0.08;
+        const segW = cellSize - pad * 2;
+        const segH = cellSize - pad * 2;
+        const rx = seg.x * cellSize + pad;
+        const ry = seg.y * cellSize + pad;
+        const radius = cellSize * 0.22;
+
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, segW, segH, radius);
+        ctx.fill();
+
+        // Directional eyes on head
+        if (isHead) {
+          ctx.fillStyle = '#090a0f';
+          const H = snake.heading;
+          const eyeSize = cellSize * 0.12;
+          let e1x, e1y, e2x, e2y;
+
+          if (H === 0) { // UP
+            e1x = rx + segW * 0.25; e1y = ry + segH * 0.25;
+            e2x = rx + segW * 0.75; e2y = ry + segH * 0.25;
+          } else if (H === 1) { // RIGHT
+            e1x = rx + segW * 0.75; e1y = ry + segH * 0.25;
+            e2x = rx + segW * 0.75; e2y = ry + segH * 0.75;
+          } else if (H === 2) { // DOWN
+            e1x = rx + segW * 0.25; e1y = ry + segH * 0.75;
+            e2x = rx + segW * 0.75; e2y = ry + segH * 0.75;
+          } else { // LEFT
+            e1x = rx + segW * 0.25; e1y = ry + segH * 0.25;
+            e2x = rx + segW * 0.25; e2y = ry + segH * 0.75;
+          }
+
+          ctx.beginPath();
+          ctx.arc(e1x, e1y, eyeSize, 0, Math.PI * 2);
+          ctx.arc(e2x, e2y, eyeSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Dying flash overlay
+      if (board.flashAlpha > 0.01) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${board.flashAlpha * 0.4})`;
+        ctx.fillRect(0, 0, w, h);
+        board.flashAlpha *= 0.85; // decay
+      }
+    }
+
+    // SLIDING GRAPH RENDERING
+    let graphSlideOffset = 0.0; // 0..1 smooth glide interpolation
+    function triggerGraphSlide() {
+      graphSlideOffset = 1.0;
+    }
+
+    function renderGraph() {
+      const canvas = document.getElementById('graphCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      const displayW = rect.width;
+      const displayH = rect.height;
+      if (displayW <= 0 || displayH <= 0) return;
+
+      if (canvas.width !== Math.floor(displayW * dpr) || canvas.height !== Math.floor(displayH * dpr)) {
+        canvas.width = Math.floor(displayW * dpr);
+        canvas.height = Math.floor(displayH * dpr);
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, displayW, displayH);
+
+      // Smooth decay of graph glide
+      if (graphSlideOffset > 0.01) {
+        graphSlideOffset *= 0.82;
+      } else {
+        graphSlideOffset = 0;
+      }
+
+      const padLeft = 32;
+      const padRight = 14;
+      const padTop = 14;
+      const padBottom = 22;
+      const graphW = displayW - padLeft - padRight;
+      const graphH = displayH - padTop - padBottom;
+
+      // Sliding window: last 30 epochs
+      const WINDOW_SIZE = 30;
+      const totalEpochs = epochHistory.length;
+      let startIndex = Math.max(0, totalEpochs - WINDOW_SIZE);
+      const visibleData = epochHistory.slice(startIndex);
+
+      // Determine Y scale (minimum ceiling of 20 for readability)
+      let maxY = 20;
+      for (let i = 0; i < visibleData.length; i++) {
+        if (visibleData[i].best > maxY) maxY = Math.ceil(visibleData[i].best * 1.15);
+      }
+
+      // Coordinate transformers
+      function getX(i) {
+        // Apply smooth glide offset when new data arrives
+        const shift = graphSlideOffset * (graphW / (WINDOW_SIZE - 1));
+        return padLeft + (i / (WINDOW_SIZE - 1)) * graphW - shift;
+      }
+      function getY(val) {
+        return padTop + graphH - (val / maxY) * graphH;
+      }
+
+      // Grid Lines & Ticks
+      ctx.strokeStyle = '#1b2030';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'right';
+
+      const yTicks = [0, 5, 10, 15, 20];
+      if (maxY > 20) yTicks.push(Math.floor(maxY));
+
+      for (let yVal of yTicks) {
+        if (yVal > maxY) continue;
+        const y = getY(yVal);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(padLeft + graphW, y);
+        ctx.stroke();
+        ctx.fillText(yVal, padLeft - 6, y + 3);
+      }
+
+      // Target Benchmark Line (Learned = 15)
+      const targetY = getY(15);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, targetY);
+      ctx.lineTo(padLeft + graphW, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Baseline Line (Random play = 0.5)
+      const baselineY = getY(0.5);
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(padLeft, baselineY);
+      ctx.lineTo(padLeft + graphW, baselineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (visibleData.length === 0) {
+        ctx.fillStyle = '#4a5266';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Accumulating first epoch (50 episodes)...', displayW / 2, displayH / 2);
+        ctx.restore();
+        return;
+      }
+
+      // Clip data drawing to graph inner area
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(padLeft, padTop - 4, graphW, graphH + 8);
+      ctx.clip();
+
+      // 1. Draw Average Score Area Fill
+      ctx.beginPath();
+      for (let i = 0; i < visibleData.length; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].avg);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(getX(visibleData.length - 1), getY(0));
+      ctx.lineTo(getX(0), getY(0));
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, padTop, 0, padTop + graphH);
+      grad.addColorStop(0, 'rgba(100, 116, 139, 0.22)');
+      grad.addColorStop(1, 'rgba(100, 116, 139, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 2. Draw Average Score Line (Blue-grey)
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < visibleData.length; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].avg);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // 3. Draw Best Score Line (Amber)
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      for (let i = 0; i < visibleData.length; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].best);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // 4. Draw Point Dots
+      for (let i = 0; i < visibleData.length; i++) {
+        const x = getX(i);
+        const yBest = getY(visibleData[i].best);
+        const yAvg = getY(visibleData[i].avg);
+
+        // Best Dot
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(x, yBest, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Avg Dot
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.arc(x, yAvg, 2.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore(); // unclip
+
+      // X-Axis Label
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'left';
+      const firstEp = visibleData[0].epoch;
+      const lastEp = visibleData[visibleData.length - 1].epoch;
+      ctx.fillText(`Epoch ${firstEp}`, padLeft, displayH - 6);
+      ctx.textAlign = 'right';
+      ctx.fillText(`Epoch ${lastEp}`, padLeft + graphW, displayH - 6);
+
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       SECTION 8: LIVE DIAGRAM & UI UPDATE LOOP
+       ========================================================================== */
+    function updateLiveDiagram() {
+      const modal = document.getElementById('howItWorksModal');
+      if (!modal || !modal.classList.contains('open')) return;
+
+      const d = lastDecision;
+      // Step 1
+      const dangerEl = document.getElementById('diagDanger');
+      if (dangerEl) dangerEl.textContent = `${d.dangerStraight}, ${d.dangerLeft}, ${d.dangerRight}`;
+
+      const headingEl = document.getElementById('diagHeading');
+      if (headingEl) headingEl.textContent = `${DIR[d.heading].name} (${d.heading})`;
+
+      const foodEl = document.getElementById('diagFood');
+      if (foodEl) foodEl.textContent = `${d.foodLeft}, ${d.foodRight}, ${d.foodUp}, ${d.foodDown}`;
+
+      const stateIndexEl = document.getElementById('diagStateIndex');
+      if (stateIndexEl) stateIndexEl.textContent = `#${d.state}`;
+
+      // Step 2: Q-bars
+      const maxAbs = Math.max(0.1, Math.abs(d.qValues[0]), Math.abs(d.qValues[1]), Math.abs(d.qValues[2]));
+      for (let a = 0; a < 3; a++) {
+        const val = d.qValues[a];
+        const bar = document.getElementById(`barQ${a}`);
+        const valText = document.getElementById(`valQ${a}`);
+        if (bar && valText) {
+          const pct = Math.min(100, Math.round((Math.abs(val) / maxAbs) * 100));
+          bar.style.width = `${pct}%`;
+          bar.classList.toggle('negative', val < 0);
+          valText.textContent = (val >= 0 ? '+' : '') + val.toFixed(2);
+        }
+      }
+
+      // Step 3
+      const modeEl = document.getElementById('diagMode');
+      if (modeEl) {
+        modeEl.textContent = d.isExploration ? 'Exploring (Random)' : 'Exploiting (Argmax)';
+        modeEl.style.color = d.isExploration ? 'var(--amber)' : 'var(--success)';
+      }
+      const epsValEl = document.getElementById('diagEpsVal');
+      if (epsValEl) epsValEl.textContent = (d.epsilonVal * 100).toFixed(1) + '%';
+
+      const actionChosenEl = document.getElementById('diagActionChosen');
+      if (actionChosenEl) {
+        actionChosenEl.textContent = ACTION_NAMES[d.chosenAction];
+      }
+
+      // Step 4
+      const rewardEl = document.getElementById('diagReward');
+      if (rewardEl) rewardEl.textContent = (d.reward >= 0 ? '+' : '') + d.reward.toFixed(2);
+
+      const nextMaxEl = document.getElementById('diagNextMax');
+      if (nextMaxEl) nextMaxEl.textContent = (d.nextMaxQ >= 0 ? '+' : '') + d.nextMaxQ.toFixed(2);
+
+      const deltaQEl = document.getElementById('diagDeltaQ');
+      if (deltaQEl) deltaQEl.textContent = (d.deltaQ >= 0 ? '+' : '') + d.deltaQ.toFixed(4);
+    }
+
+    function updateUIIndicators() {
+      // Episodes & Alive
+      const dispEpisodes = document.getElementById('dispEpisodes');
+      if (dispEpisodes) dispEpisodes.textContent = totalEpisodes.toLocaleString();
+
+      const dispAlive = document.getElementById('dispAlive');
+      if (dispAlive) dispAlive.textContent = `${boards.length} / ${config.snakes}`;
+
+      const dispEpoch = document.getElementById('dispEpoch');
+      if (dispEpoch) dispEpoch.textContent = epochHistory.length + 1;
+
+      // Right column cards
+      const metricEpoch = document.getElementById('metricEpoch');
+      if (metricEpoch) metricEpoch.textContent = epochHistory.length;
+
+      const metricBest = document.getElementById('metricBest');
+      if (metricBest) {
+        const latestBest = epochHistory.length > 0 ? epochHistory[epochHistory.length - 1].best : 0;
+        metricBest.textContent = latestBest;
+      }
+
+      const metricAvg = document.getElementById('metricAvg');
+      if (metricAvg) {
+        const latestAvg = epochHistory.length > 0 ? epochHistory[epochHistory.length - 1].avg.toFixed(1) : '0.0';
+        metricAvg.textContent = latestAvg;
+      }
+
+      // Epsilon Meter
+      const dispEpsilon = document.getElementById('dispEpsilon');
+      if (dispEpsilon) dispEpsilon.textContent = (epsilon * 100).toFixed(1) + '%';
+
+      const meterFill = document.getElementById('meterFill');
+      if (meterFill) {
+        const pct = Math.max(0, Math.min(100, (epsilon / 1.0) * 100));
+        meterFill.style.width = pct + '%';
+      }
+    }
+
+    // MAIN ANIMATION / TICK LOOP
+    function animationLoop() {
+      if (!isPaused) {
+        for (let s = 0; s < speed; s++) {
+          simulateStep();
+        }
+      }
+
+      // Find longest snake for visual highlight
+      let maxLen = -1;
+      let leaderIdx = 0;
+      for (let i = 0; i < boards.length; i++) {
+        const len = boards[i].snake.body.length;
+        if (len > maxLen) {
+          maxLen = len;
+          leaderIdx = i;
+        }
+      }
+
+      // Render each board
+      for (let i = 0; i < boards.length; i++) {
+        renderBoard(boards[i], i === leaderIdx);
+      }
+
+      // Render score trajectory graph
+      renderGraph();
+
+      // Update text stats & live diagram
+      updateUIIndicators();
+      updateLiveDiagram();
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    /* ==========================================================================
+       SECTION 9: USER INTERACTION & CONTROLS BINDING
+       ========================================================================== */
+    function syncSliderDisplays() {
+      document.getElementById('valSnakes').textContent = config.snakes;
+      document.getElementById('valGridSize').textContent = `${config.gridSize}\u00D7${config.gridSize}`;
+      document.getElementById('valAlpha').textContent = config.alpha.toFixed(2);
+      document.getElementById('valGamma').textContent = config.gamma.toFixed(2);
+      document.getElementById('valEpsFloor').textContent = config.epsilonFloor.toFixed(3);
+      document.getElementById('valEpsDecay').textContent = config.epsilonDecay.toFixed(4);
+      document.getElementById('valFoodReward').textContent = `+${config.foodReward.toFixed(1)}`;
+      document.getElementById('valDeathPenalty').textContent = `-${config.deathPenalty.toFixed(1)}`;
+      document.getElementById('valStepPenalty').textContent = `-${config.stepPenalty.toFixed(3)}`;
+      document.getElementById('valShapingReward').textContent = `\u00B1${config.shapingReward.toFixed(2)}`;
+      document.getElementById('valStarveLimit').textContent = `${config.starvationLimit} /len`;
+
+      document.getElementById('sliderSnakes').value = config.snakes;
+      document.getElementById('sliderGridSize').value = config.gridSize;
+      document.getElementById('sliderAlpha').value = config.alpha;
+      document.getElementById('sliderGamma').value = config.gamma;
+      document.getElementById('sliderEpsFloor').value = config.epsilonFloor;
+      document.getElementById('sliderEpsDecay').value = config.epsilonDecay;
+      document.getElementById('sliderFoodReward').value = config.foodReward;
+      document.getElementById('sliderDeathPenalty').value = config.deathPenalty;
+      document.getElementById('sliderStepPenalty').value = config.stepPenalty;
+      document.getElementById('sliderShapingReward').value = config.shapingReward;
+      document.getElementById('sliderStarveLimit').value = config.starvationLimit;
+      document.getElementById('chkDistanceShaping').checked = config.distanceShaping;
+    }
+
+    function setupControls() {
+      // 1. Snakes Slider (restarts boards, keeps Q-table)
+      const slSnakes = document.getElementById('sliderSnakes');
+      slSnakes.addEventListener('input', (e) => {
+        config.snakes = parseInt(e.target.value, 10);
+        document.getElementById('valSnakes').textContent = config.snakes;
+        initBoards();
+      });
+
+      // 2. Grid Size Slider (restarts boards, keeps Q-table)
+      const slGrid = document.getElementById('sliderGridSize');
+      slGrid.addEventListener('input', (e) => {
+        config.gridSize = parseInt(e.target.value, 10);
+        document.getElementById('valGridSize').textContent = `${config.gridSize}\u00D7${config.gridSize}`;
+        initBoards();
+      });
+
+      // 3. Learning Rate
+      document.getElementById('sliderAlpha').addEventListener('input', (e) => {
+        config.alpha = parseFloat(e.target.value);
+        document.getElementById('valAlpha').textContent = config.alpha.toFixed(2);
+      });
+
+      // 4. Gamma
+      document.getElementById('sliderGamma').addEventListener('input', (e) => {
+        config.gamma = parseFloat(e.target.value);
+        document.getElementById('valGamma').textContent = config.gamma.toFixed(2);
+      });
+
+      // 5. Epsilon Floor
+      document.getElementById('sliderEpsFloor').addEventListener('input', (e) => {
+        config.epsilonFloor = parseFloat(e.target.value);
+        document.getElementById('valEpsFloor').textContent = config.epsilonFloor.toFixed(3);
+        if (epsilon < config.epsilonFloor) epsilon = config.epsilonFloor;
+      });
+
+      // 6. Epsilon Decay
+      document.getElementById('sliderEpsDecay').addEventListener('input', (e) => {
+        config.epsilonDecay = parseFloat(e.target.value);
+        document.getElementById('valEpsDecay').textContent = config.epsilonDecay.toFixed(4);
+      });
+
+      // 7. Food Reward
+      document.getElementById('sliderFoodReward').addEventListener('input', (e) => {
+        config.foodReward = parseFloat(e.target.value);
+        document.getElementById('valFoodReward').textContent = `+${config.foodReward.toFixed(1)}`;
+      });
+
+      // 8. Death Penalty
+      document.getElementById('sliderDeathPenalty').addEventListener('input', (e) => {
+        config.deathPenalty = parseFloat(e.target.value);
+        document.getElementById('valDeathPenalty').textContent = `-${config.deathPenalty.toFixed(1)}`;
+      });
+
+      // 9. Step Penalty
+      document.getElementById('sliderStepPenalty').addEventListener('input', (e) => {
+        config.stepPenalty = parseFloat(e.target.value);
+        document.getElementById('valStepPenalty').textContent = `-${config.stepPenalty.toFixed(3)}`;
+      });
+
+      // 10. Shaping Reward
+      document.getElementById('sliderShapingReward').addEventListener('input', (e) => {
+        config.shapingReward = parseFloat(e.target.value);
+        document.getElementById('valShapingReward').textContent = `\u00B1${config.shapingReward.toFixed(2)}`;
+      });
+
+      // 11. Starvation Limit
+      document.getElementById('sliderStarveLimit').addEventListener('input', (e) => {
+        config.starvationLimit = parseInt(e.target.value, 10);
+        document.getElementById('valStarveLimit').textContent = `${config.starvationLimit} /len`;
+      });
+
+      // Distance Shaping Checkbox
+      document.getElementById('chkDistanceShaping').addEventListener('change', (e) => {
+        config.distanceShaping = e.target.checked;
+      });
+
+      // Reset Hyperparameters Button
+      document.getElementById('btnResetParams').addEventListener('click', () => {
+        Object.assign(config, DEFAULTS);
+        syncSliderDisplays();
+        document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+      });
+
+      // Presets
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const p = btn.dataset.preset;
+
+          if (p === 'never-stop') {
+            config.epsilonDecay = 1.0;
+            config.epsilonFloor = 1.0;
+            epsilon = 1.0;
+          } else if (p === 'greedy') {
+            config.epsilonFloor = 0.0;
+            epsilon = 0.0;
+          } else if (p === 'shortsighted') {
+            config.gamma = 0.10;
+          } else if (p === 'big-board') {
+            config.gridSize = 20;
+            initBoards();
+          }
+          syncSliderDisplays();
+        });
+      });
+
+      // Playback Controls
+      const btnPause = document.getElementById('btnPause');
+      btnPause.addEventListener('click', () => {
+        isPaused = !isPaused;
+        document.getElementById('textPause').textContent = isPaused ? 'Resume' : 'Pause';
+      });
+
+      document.getElementById('btnRestart').addEventListener('click', () => {
+        for (let b of boards) {
+          b.snake = createSnake(config.gridSize);
+          b.food = spawnFood(b.snake, config.gridSize);
+          b.flashAlpha = 0;
+          b.foodPop = null;
+        }
+      });
+
+      // Forget Everything (Resets Q-Table and history)
+      document.getElementById('btnForget').addEventListener('click', () => {
+        qTable.fill(0.0);
+        epsilon = config.epsilonStart;
+        totalEpisodes = 0;
+        currentEpochEpisodes = [];
+        epochHistory.length = 0;
+        allTimeBest = 0;
+        hasLearned = false;
+
+        const banner = document.getElementById('learnedBanner');
+        if (banner) banner.classList.remove('visible');
+
+        for (let b of boards) {
+          b.snake = createSnake(config.gridSize);
+          b.food = spawnFood(b.snake, config.gridSize);
+          b.flashAlpha = 0;
+          b.foodPop = null;
+        }
+        updateUIIndicators();
+      });
+
+      // Speed Buttons (1x .. 80x)
+      document.querySelectorAll('.btn-speed').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          speed = parseInt(btn.dataset.speed, 10);
+        });
+      });
+
+      // Modal Triggers
+      const modal = document.getElementById('howItWorksModal');
+      document.getElementById('btnHowItWorks').addEventListener('click', () => {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      });
+
+      document.getElementById('btnCloseModal').addEventListener('click', () => {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+      });
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) {
+          modal.classList.remove('open');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+      });
+
+      // Tooltip on Graph Hover
+      const graphCanvas = document.getElementById('graphCanvas');
+      const tooltip = document.getElementById('graphTooltip');
+      graphCanvas.addEventListener('mousemove', (e) => {
+        if (epochHistory.length === 0) return;
+        const rect = graphCanvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const padLeft = 32;
+        const padRight = 14;
+        const graphW = rect.width - padLeft - padRight;
+        const WINDOW_SIZE = 30;
+        const startIndex = Math.max(0, epochHistory.length - WINDOW_SIZE);
+        const visibleData = epochHistory.slice(startIndex);
+
+        const relX = mouseX - padLeft;
+        if (relX < 0 || relX > graphW || visibleData.length === 0) {
+          tooltip.style.display = 'none';
+          return;
+        }
+
+        const idx = Math.round((relX / graphW) * (WINDOW_SIZE - 1));
+        if (idx >= 0 && idx < visibleData.length) {
+          const item = visibleData[idx];
+          tooltip.style.display = 'block';
+          tooltip.style.left = `${Math.min(rect.width - 120, Math.max(10, mouseX + 10))}px`;
+          tooltip.style.top = `${Math.max(10, mouseY - 40)}px`;
+          tooltip.innerHTML = `<div><strong>Epoch ${item.epoch}</strong></div><div>Best: <span style="color:var(--amber-bright);">${item.best}</span> | Avg: <span style="color:var(--blue-grey-bright);">${item.avg.toFixed(1)}</span></div>`;
+        } else {
+          tooltip.style.display = 'none';
+        }
+      });
+
+      graphCanvas.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+    }
+
+    /* ==========================================================================
+       SECTION 10: INITIALIZATION & BOOTSTRAP
+       ========================================================================== */
+    // Expose core objects to window for inspectability & headless testing
+    window.qTable = qTable;
+    window.config = config;
+    window.DEFAULTS = DEFAULTS;
+    window.boards = boards;
+    window.epochHistory = epochHistory;
+    window.encodeState = encodeState;
+    window.simulateStep = simulateStep;
+    window.initBoards = initBoards;
+    window.createSnake = createSnake;
+    window.spawnFood = spawnFood;
+    window.recordEpoch = recordEpoch;
+    Object.defineProperty(window, 'epsilon', {
+      get: () => epsilon,
+      set: (v) => { epsilon = v; }
+    });
+    Object.defineProperty(window, 'hasLearned', {
+      get: () => hasLearned,
+      set: (v) => { hasLearned = v; }
+    });
+    Object.defineProperty(window, 'totalEpisodes', {
+      get: () => totalEpisodes,
+      set: (v) => { totalEpisodes = v; }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      syncSliderDisplays();
+      initBoards();
+      setupControls();
+      requestAnimationFrame(animationLoop);
+    });
+  </script>
+</body>
+</html>
