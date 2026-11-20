@@ -11,7 +11,8 @@ No server. No backend. No API key. No "please sign in to continue training." Jus
 | # | Name | What's learning | Time to competence |
 |---|------|-----------------|--------------------|
 | 01 | [**Catch**](experiments/catch/) | 40 tiny neural nets evolve paddles to catch a ball | ~10 seconds (faster than my last relationship) |
-| 02 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
+| 02 | [**NeuroFlap**](experiments/neuroflap/) | 50 birds evolve neural nets to flap through pipes | a few generations |
+| 03 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
 
 ## 🔒 Privacy Policy
 
@@ -41,7 +42,8 @@ Don't double-click `index.html`. Some browsers get weird about `file://`. They h
 │       └── home.js         # renders the list + the sad-then-happy loss curve
 └── experiments/
     ├── _template/          # copy me to start a new one
-    └── catch/              # experiment 01
+    ├── catch/              # experiment 01
+    └── neuroflap/          # experiment 02
 ```
 
 Each experiment lives in its own folder and is **fully self-contained**. If one breaks, the others carry on, like siblings at a wedding.

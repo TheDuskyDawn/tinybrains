@@ -1,0 +1,2840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEUROFLAP — Avian Neuroevolution Laboratory</title>
+  <meta name="description" content="Watch 50 birds evolve neural networks in real time to navigate an endless obstacle course.">
+
+  <!-- Google Fonts: Bricolage Grotesque (headings/labels) & Newsreader (body text) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* DESIGN TOKENS */
+    :root {
+      --bg: #0a0c10;
+      --surface: #11141c;
+      --surface-elevated: #161b26;
+      --surface-hover: #1d2332;
+      --border: #222838;
+      --border-subtle: #191f2c;
+      --border-focus: #3a445c;
+      --text: #ebe8e1;
+      --text-muted: #8b93a4;
+      --text-dim: #545c6e;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --slate: #64748b;
+      --slate-light: #94a3b8;
+      --slate-dim: rgba(100, 116, 139, 0.18);
+      --red-dim: rgba(239, 68, 68, 0.2);
+      
+      --font-display: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-body: 'Newsreader', Georgia, Cambria, "Times New Roman", serif;
+      
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --transition-fast: 150ms ease;
+      --transition-smooth: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* BASE RESET */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden; /* One screen on desktop */
+    }
+
+    /* ACCESSIBILITY & MOTION PREFERENCE */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    /* APP SHELL */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      flex-shrink: 0;
+      height: 52px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      z-index: 10;
+    }
+
+    .header-branding {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .app-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .app-title .tag-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: var(--amber-dim);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 1px 5px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.06em;
+    }
+
+    .app-tagline {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* MAIN THREE-COLUMN VIEWPORT LAYOUT */
+    .main-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 290px 1fr 310px;
+      gap: 12px;
+      padding: 12px 14px;
+      min-height: 0; /* Critical for inner scrolling */
+      overflow: hidden;
+    }
+
+    /* PANELS & STAGGERED ENTRANCE */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+      animation: panelSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .panel-left { animation-delay: 0.05s; }
+    .panel-center { animation-delay: 0.12s; }
+    .panel-right { animation-delay: 0.19s; }
+
+    @keyframes panelSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* LEFT COLUMN: PRESETS & SLIDERS */
+    .panel-left {
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px;
+    }
+
+    .panel-left::-webkit-scrollbar {
+      width: 5px;
+    }
+    .panel-left::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .panel-left::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* EXPERIMENT PRESET BUTTONS */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .preset-btn {
+      font-family: var(--font-display);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      padding: 7px 6px;
+      text-align: center;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .preset-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+    }
+
+    .preset-btn.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .preset-description {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+      min-height: 34px;
+      margin-bottom: 14px;
+      padding: 6px 8px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      border-left: 2px solid var(--amber);
+    }
+
+    /* SLIDERS LIST */
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .slider-value {
+      color: var(--text);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .slider-input:hover {
+      background: var(--border-focus);
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      transition: transform var(--transition-fast), background var(--transition-fast);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+      background: var(--amber);
+    }
+
+    .slider-input::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border: none;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    /* CHECKBOX & ACTIONS */
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-input {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border-focus);
+      border-radius: 3px;
+      background: var(--surface-elevated);
+      cursor: pointer;
+      display: grid;
+      place-content: center;
+      transition: background var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .checkbox-input:checked {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .checkbox-input:checked::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: var(--bg);
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+
+    .checkbox-label {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .btn-reset {
+      width: 100%;
+      padding: 8px;
+      font-family: var(--font-display);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+      letter-spacing: 0.02em;
+    }
+
+    .btn-reset:hover {
+      background: var(--surface-hover);
+      color: var(--amber-bright);
+      border-color: var(--amber);
+    }
+
+    /* CENTER COLUMN: CANVAS & CONTROLS */
+    .panel-center {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: #080a0e;
+    }
+
+    .canvas-viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+      background: #07090c;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* HUD OVERLAYS */
+    .hud-overlay {
+      position: absolute;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hud-top-left {
+      top: 14px;
+      left: 16px;
+    }
+
+    .hud-top-right {
+      top: 14px;
+      right: 16px;
+      align-items: flex-end;
+    }
+
+    .hud-stat-title {
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .hud-stat-big {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      line-height: 1.05;
+      color: var(--text);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-stat-sub {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .hud-alive-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+      font-weight: 700;
+      background: rgba(11, 14, 20, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .hud-alive-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+    }
+
+    /* HUD AI THOUGHT & ACTION STREAM BOX */
+    .hud-thought-box {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      background: rgba(10, 13, 18, 0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: none;
+      z-index: 6;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      transition: border-color var(--transition-fast);
+    }
+
+    .thought-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+    }
+
+    .thought-badge {
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 1px 7px;
+      border-radius: var(--radius-sm);
+      text-transform: uppercase;
+      font-size: 0.66rem;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .thought-badge.flap {
+      background: var(--amber);
+      color: #0a0c10;
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+    }
+
+    .thought-badge.glide {
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .thought-badge.regen {
+      background: var(--slate-dim);
+      color: var(--slate-light);
+      border: 1px solid var(--slate);
+    }
+
+    .thought-leader-tag {
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .thought-output {
+      margin-left: auto;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thought-body {
+      font-size: 0.78rem;
+      color: var(--text);
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* CENTER TRANSPORT CONTROLS BAR */
+    .transport-bar {
+      height: 48px;
+      flex-shrink: 0;
+      padding: 0 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .transport-speed {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      max-width: 280px;
+    }
+
+    .transport-speed-label {
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .speed-badge {
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: var(--amber-bright);
+      background: var(--amber-dim);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 1px 6px;
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .transport-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      font-family: var(--font-display);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+      pointer-events: none;
+    }
+
+    .btn:hover::before {
+      opacity: 0.08;
+    }
+
+    .btn-primary {
+      border-color: var(--border-focus);
+      background: var(--surface-elevated);
+    }
+
+    .btn-primary:hover {
+      border-color: var(--text-muted);
+      background: var(--surface-hover);
+    }
+
+    .btn-accent {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+      background: var(--amber-dim);
+    }
+
+    .btn-accent:hover {
+      background: rgba(245, 158, 11, 0.25);
+    }
+
+    /* RIGHT COLUMN: NUMBERS, CHART, EXPLANATION */
+    .panel-right {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .panel-right::-webkit-scrollbar {
+      width: 5px;
+    }
+    .panel-right::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .stat-cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-card-title {
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .stat-card-num {
+      font-family: var(--font-display);
+      font-size: 1.55rem;
+      font-weight: 800;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-card-num.best {
+      color: var(--amber-bright);
+    }
+
+    .stat-card-num.avg {
+      color: var(--slate-light);
+    }
+
+    .stat-card-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    /* SHORT GRAPH CONTAINER */
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      flex-shrink: 0;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-display);
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 3px;
+      border-radius: 1px;
+    }
+
+    .legend-dot.best { background: var(--amber); }
+    .legend-dot.avg { background: var(--slate); }
+
+    .chart-canvas-box {
+      width: 100%;
+      height: 155px; /* Short graph: max ~1/3 screen */
+      position: relative;
+    }
+
+    #historyChart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* READING THE GRAPH & TELEMETRY */
+    .graph-explanation {
+      background: var(--bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+    }
+
+    .explanation-title {
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .explanation-body {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .explanation-body strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .telemetry-tray {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 10px;
+      font-family: var(--font-display);
+      font-size: 0.74rem;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .telemetry-name {
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .telemetry-val {
+      color: var(--text);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* MODAL POPUP: HOW IT WORKS */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 5, 8, 0.78);
+      backdrop-filter: blur(5px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background: var(--surface);
+      border: 1px solid var(--border-focus);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.7);
+      animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+      overflow: hidden;
+    }
+
+    @keyframes modalPop {
+      from {
+        opacity: 0;
+        transform: scale(0.94) translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color var(--transition-fast);
+    }
+
+    .modal-close-btn:hover {
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .modal-body h3 {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .modal-network-wrap {
+      background: #080a0e;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    #networkCanvas {
+      width: 100%;
+      height: 180px;
+      display: block;
+    }
+
+    .network-caption {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    .modal-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .modal-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    /* RESPONSIVE BREAKPOINT: STACK BELOW 980px */
+    @media (max-width: 980px) {
+      html, body {
+        overflow: auto; /* Allow natural scrolling on mobile/tablets */
+      }
+      .app-container {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+      }
+      .header-branding {
+        flex-direction: column;
+        gap: 2px;
+      }
+      .main-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+      }
+      .panel-center {
+        min-height: 480px;
+      }
+      .panel-left, .panel-right {
+        overflow: visible;
+      }
+      .modal-grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- TOP HEADER -->
+    <header class="header">
+      <div class="header-branding">
+        <div class="app-title">
+          NEUROFLAP <span class="tag-badge">AI LAB</span>
+        </div>
+        <div class="app-tagline">
+          Watch a flock of 50 neural agents learn to fly through pipes via real-time natural selection.
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btnHowItWorks" class="btn btn-primary" title="Open Neural Network and Evolution Architecture Guide">
+          How it works
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN THREE-COLUMN VIEWPORT -->
+    <main class="main-layout">
+      
+      <!-- LEFT COLUMN: PRESETS & SLIDERS -->
+      <aside class="panel panel-left" aria-label="Simulation Hyperparameters and Presets">
+        <div class="section-label">
+          <span>Experiment Presets</span>
+        </div>
+
+        <div class="presets-grid">
+          <button class="preset-btn" id="presetReckless" data-preset="reckless">Reckless Mutation</button>
+          <button class="preset-btn" id="presetNoElites" data-preset="noelites">No Elites</button>
+          <button class="preset-btn" id="presetTiny" data-preset="tiny">Tiny Population</button>
+          <button class="preset-btn" id="presetHard" data-preset="hard">Hard World</button>
+        </div>
+
+        <div id="presetDesc" class="preset-description">
+          Default baseline: balanced population, 4 elites preserved, and adaptive mutation annealing.
+        </div>
+
+        <div class="section-label">
+          <span>Hyperparameters</span>
+          <span style="font-size: 0.65rem; color: var(--text-dim);">LIVE TUNING</span>
+        </div>
+
+        <div class="slider-group">
+          <!-- Population (10 to 120) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Population (next gen)</span>
+              <span class="slider-value" id="valPopulation">50</span>
+            </div>
+            <input type="range" class="slider-input" id="slPopulation" min="10" max="120" step="1" value="50">
+          </div>
+
+          <!-- Elites Kept -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Elites Kept</span>
+              <span class="slider-value" id="valElites">4</span>
+            </div>
+            <input type="range" class="slider-input" id="slElites" min="0" max="10" step="1" value="4">
+          </div>
+
+          <!-- Parent Pool -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Parent Pool</span>
+              <span class="slider-value" id="valParentPool">10</span>
+            </div>
+            <input type="range" class="slider-input" id="slParentPool" min="2" max="25" step="1" value="10">
+          </div>
+
+          <!-- Mutation Chance -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Chance</span>
+              <span class="slider-value" id="valMutationChance">20%</span>
+            </div>
+            <input type="range" class="slider-input" id="slMutationChance" min="1" max="100" step="1" value="20">
+          </div>
+
+          <!-- Mutation Size -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Size</span>
+              <span class="slider-value" id="valMutationSize">0.30</span>
+            </div>
+            <input type="range" class="slider-input" id="slMutationSize" min="0.05" max="1.50" step="0.05" value="0.30">
+          </div>
+
+          <!-- Big-Jump Chance -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Big-Jump Chance</span>
+              <span class="slider-value" id="valBigJumpChance">5%</span>
+            </div>
+            <input type="range" class="slider-input" id="slBigJumpChance" min="0" max="30" step="1" value="5">
+          </div>
+
+          <!-- Pipe Gap -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Pipe Gap</span>
+              <span class="slider-value" id="valPipeGap">130px</span>
+            </div>
+            <input type="range" class="slider-input" id="slPipeGap" min="70" max="220" step="5" value="130">
+          </div>
+
+          <!-- Pipe Speed -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Pipe Speed</span>
+              <span class="slider-value" id="valPipeSpeed">3.0</span>
+            </div>
+            <input type="range" class="slider-input" id="slPipeSpeed" min="1.5" max="7.0" step="0.1" value="3.0">
+          </div>
+
+          <!-- Gravity -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Gravity</span>
+              <span class="slider-value" id="valGravity">0.40</span>
+            </div>
+            <input type="range" class="slider-input" id="slGravity" min="0.15" max="0.90" step="0.02" value="0.40">
+          </div>
+
+          <!-- Flap Strength -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Flap Strength</span>
+              <span class="slider-value" id="valFlapStrength">7.5</span>
+            </div>
+            <input type="range" class="slider-input" id="slFlapStrength" min="4.0" max="12.0" step="0.2" value="7.5">
+          </div>
+
+          <!-- Pipe Cap -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Pipe Cap (Target)</span>
+              <span class="slider-value" id="valPipeCap">60</span>
+            </div>
+            <input type="range" class="slider-input" id="slPipeCap" min="20" max="200" step="5" value="60">
+          </div>
+        </div>
+
+        <!-- Dynamic Annealing Checkbox -->
+        <label class="checkbox-container" title="Scale down weight mutations as current fitness nears the pipe cap for fine-tuning">
+          <input type="checkbox" id="chkShrinkMutation" class="checkbox-input" checked>
+          <span class="checkbox-label">Shrink mutation near perfect</span>
+        </label>
+
+        <!-- Hard Stop Checkbox -->
+        <label class="checkbox-container" title="If checked, terminates generation immediately at pipe cap. Unchecked (recommended), surviving birds continue flying endlessly to achieve high scores.">
+          <input type="checkbox" id="chkHardStopCap" class="checkbox-input">
+          <span class="checkbox-label">Hard stop at pipe cap</span>
+        </label>
+
+        <!-- Reset Button -->
+        <button id="btnResetOptimal" class="btn-reset" title="Restore default optimal parameters and restart from Generation 1">
+          Reset to optimal values
+        </button>
+      </aside>
+
+      <!-- MIDDLE COLUMN: GAME CANVAS & SIMULATION TRANSPORT -->
+      <section class="panel panel-center" aria-label="Neuroevolution Simulation World">
+        <div class="canvas-viewport" id="canvasViewport">
+          <canvas id="gameCanvas"></canvas>
+
+          <!-- OVERLAYS IN CORNERS -->
+          <div class="hud-overlay hud-top-left">
+            <div class="hud-stat-title">Generation</div>
+            <div class="hud-stat-big" id="hudGenNum">1</div>
+            <div class="hud-stat-sub" id="hudCurrentPipes">Pipes: 0</div>
+          </div>
+
+          <div class="hud-overlay hud-top-right">
+            <div class="hud-alive-badge">
+              <span class="hud-alive-dot"></span>
+              <span id="hudAliveCount">50</span> / <span id="hudTotalCount">50</span> ALIVE
+            </div>
+          </div>
+
+          <!-- AI REAL-TIME THOUGHT & ACTION STREAM -->
+          <div class="hud-thought-box" id="hudThoughtBox" aria-live="polite">
+            <div class="thought-header">
+              <span class="thought-badge glide" id="thoughtActionBadge">GLIDE</span>
+              <span class="thought-leader-tag">Leader AI Thought Stream</span>
+              <span class="thought-output" id="thoughtOutputVal">Output: 0.00</span>
+            </div>
+            <div class="thought-body" id="thoughtBodyText">
+              Initializing neural sensory inputs...
+            </div>
+          </div>
+        </div>
+
+        <!-- TRANSPORT BAR UNDER CANVAS -->
+        <div class="transport-bar">
+          <div class="transport-speed">
+            <span class="transport-speed-label">Speed</span>
+            <input type="range" class="slider-input" id="slSpeed" min="1" max="80" step="1" value="1">
+            <span class="speed-badge" id="valSpeedBadge">1x</span>
+          </div>
+
+          <div class="transport-buttons">
+            <button id="btnPause" class="btn btn-primary">Pause</button>
+            <button id="btnNextGen" class="btn btn-primary" title="Advance to next generation immediately with current high score">Next Gen</button>
+            <button id="btnRestart" class="btn btn-primary">Restart</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: STATS, SHORT GRAPH, PLAIN EXPLANATION -->
+      <aside class="panel panel-right" aria-label="Evolutionary Telemetry & Analytics">
+        <div class="section-label">
+          <span>Generational Telemetry</span>
+        </div>
+
+        <div class="stat-cards-row">
+          <div class="stat-card">
+            <div class="stat-card-title">Last Gen Best</div>
+            <div class="stat-card-num best" id="statLastBest">—</div>
+            <div class="stat-card-sub" id="statRecordScore">All-time record: 0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-title">Last Gen Avg</div>
+            <div class="stat-card-num avg" id="statLastAvg">—</div>
+            <div class="stat-card-sub">Flock mean score</div>
+          </div>
+        </div>
+
+        <!-- SHORT GRAPH (MAX ~1/3 OF SCREEN HEIGHT) -->
+        <div class="chart-container">
+          <div class="chart-header">
+            <span class="section-label" style="margin: 0;">Fitness History</span>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot best"></span>Best</div>
+              <div class="legend-item"><span class="legend-dot avg"></span>Avg</div>
+            </div>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="historyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- READING THE GRAPH IN PLAIN LANGUAGE -->
+        <div class="graph-explanation">
+          <div class="explanation-title">Reading the Graph</div>
+          <p class="explanation-body">
+            The <strong>amber line</strong> tracks the top-performing bird's score; the <strong>slate line</strong> records the flock average across a sliding 30-generation window.
+            Sudden spikes reveal breakthrough neural mutations. As the slate average climbs upward toward the amber peak, the gene pool is achieving consensus and conquering the course.
+          </p>
+        </div>
+
+        <!-- LIVE TELEMETRY DRAWER -->
+        <div class="telemetry-tray">
+          <div class="telemetry-row">
+            <span class="telemetry-name">Active Mutation Scale:</span>
+            <span class="telemetry-val" id="telemActiveMutation">0.30</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-name">Generations Elapsed:</span>
+            <span class="telemetry-val" id="telemGenElapsed">0</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-name">Total Flaps Registered:</span>
+            <span class="telemetry-val" id="telemTotalFlaps">0</span>
+          </div>
+          <div class="telemetry-row">
+            <span class="telemetry-name">Course Progress:</span>
+            <span class="telemetry-val" id="telemProgress">0%</span>
+          </div>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <!-- HOW IT WORKS MODAL -->
+  <div class="modal-backdrop" id="howItWorksModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">How Neuroevolution Works</h2>
+        <button class="modal-close-btn" id="modalCloseBtn" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p>
+          Instead of hard-coded flight rules or backpropagation with pre-labeled data, each bird is governed by a lightweight artificial neural network that evolves through Darwinian natural selection.
+        </p>
+
+        <!-- LIVE ANIMATED NETWORK DIAGRAM -->
+        <div class="modal-network-wrap">
+          <canvas id="networkCanvas"></canvas>
+          <div class="network-caption">
+            5 Inputs &bull; 6 Hidden Units (tanh) &bull; 1 Output (&gt;0 flaps) &bull; Live pulses from flock leader
+          </div>
+        </div>
+
+        <div class="modal-grid-2">
+          <div class="modal-card">
+            <h3>1. Sensory Inputs</h3>
+            <p>Every frame, each bird samples 5 normalized geometric variables: its altitude, vertical velocity, distance to the approaching pipe, relative height of the gap center, and gap aperture size.</p>
+          </div>
+
+          <div class="modal-card">
+            <h3>2. Neural Decision</h3>
+            <p>Inputs feed forward through a 6-node hidden layer with hyperbolic tangent (<code>tanh</code>) activation. If the output neuron exceeds 0, the bird triggers an upward flap impulse.</p>
+          </div>
+
+          <div class="modal-card">
+            <h3>3. Elitism &amp; Breeding</h3>
+            <p>When all birds perish or the pipe cap is reached, birds are ranked by fitness (frames survived + pipe clearance bonuses). The top 4 elites survive verbatim; the rest are bred from the top 10 parent pool.</p>
+          </div>
+
+          <div class="modal-card">
+            <h3>4. Adaptive Annealing</h3>
+            <p>Synaptic weights are perturbed by Gaussian noise. As the best bird approaches the pipe cap, mutation size dynamically shrinks to fine-tune precision reflexes without corrupting mastery.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT: COMPLETE SELF-CONTAINED ENGINE -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* =========================================================================
+         1. VARIABLE INITIALIZATION & HYPERPARAMETER STATE
+         Initialized at top-level before any function invocation to prevent crashes.
+         ========================================================================= */
+
+      const OPTIMAL_CONFIG = {
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 0.20,
+        mutationSize: 0.30,
+        bigJumpChance: 0.05,
+        pipeGap: 130,
+        pipeSpeed: 3.0,
+        gravity: 0.40,
+        flapStrength: 7.5,
+        pipeCap: 60,
+        shrinkMutationNearPerfect: true,
+        hardStopAtCap: false
+      };
+
+      const PRESETS = {
+        reckless: {
+          name: "Reckless Mutation",
+          desc: "High mutation chance (60%) and aggressive perturbation (0.80) spur chaotic exploration at the cost of stability.",
+          population: 50,
+          elites: 2,
+          parentPool: 10,
+          mutationChance: 0.60,
+          mutationSize: 0.80,
+          bigJumpChance: 0.20,
+          pipeGap: 135,
+          pipeSpeed: 3.0,
+          gravity: 0.40,
+          flapStrength: 7.5,
+          pipeCap: 60,
+          shrinkMutationNearPerfect: false,
+          hardStopAtCap: false
+        },
+        noelites: {
+          name: "No Elites",
+          desc: "Zero elites preserved. The top performers must regenerate every round, exposing the flock to catastrophic regression.",
+          population: 50,
+          elites: 0,
+          parentPool: 10,
+          mutationChance: 0.25,
+          mutationSize: 0.35,
+          bigJumpChance: 0.05,
+          pipeGap: 130,
+          pipeSpeed: 3.0,
+          gravity: 0.40,
+          flapStrength: 7.5,
+          pipeCap: 60,
+          shrinkMutationNearPerfect: true,
+          hardStopAtCap: false
+        },
+        tiny: {
+          name: "Tiny Population",
+          desc: "Only 12 birds. A constrained gene pool prone to inbreeding bottlenecks, genetic drift, and stagnant learning.",
+          population: 12,
+          elites: 2,
+          parentPool: 4,
+          mutationChance: 0.25,
+          mutationSize: 0.35,
+          bigJumpChance: 0.08,
+          pipeGap: 140,
+          pipeSpeed: 3.0,
+          gravity: 0.40,
+          flapStrength: 7.5,
+          pipeCap: 60,
+          shrinkMutationNearPerfect: true,
+          hardStopAtCap: false
+        },
+        hard: {
+          name: "Hard World",
+          desc: "Tight 85px pipe gaps and swift 4.5px/frame obstacles demand razor-sharp reflexes and precise trajectory calculation.",
+          population: 50,
+          elites: 4,
+          parentPool: 10,
+          mutationChance: 0.18,
+          mutationSize: 0.25,
+          bigJumpChance: 0.04,
+          pipeGap: 85,
+          pipeSpeed: 4.5,
+          gravity: 0.48,
+          flapStrength: 8.2,
+          pipeCap: 60,
+          shrinkMutationNearPerfect: true,
+          hardStopAtCap: false
+        }
+      };
+
+      // Live config state
+      const config = Object.assign({}, OPTIMAL_CONFIG);
+      let nextGenPopulation = OPTIMAL_CONFIG.population;
+      let currentPresetKey = null;
+
+      // Simulation control state
+      let speedMultiplier = 1;
+      let isPaused = false;
+      let generation = 1;
+      let allTimeRecord = 0;
+      let totalFlapsRegistered = 0;
+      let lastBestScore = 0;
+      let lastAvgScore = 0;
+
+      // History of past generations (always initialized)
+      const history = []; // array of { gen: number, best: number, avg: number }
+      const CHART_WINDOW_SIZE = 30;
+
+      // Mathematical utilities
+      function randomGaussian() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      function clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
+      }
+
+      /* =========================================================================
+         2. NEURAL NETWORK ARCHITECTURE
+         5 inputs -> 6 hidden (tanh) -> 1 output (tanh)
+         ========================================================================= */
+
+      class NeuralNetwork {
+        constructor(w1, b1, w2, b2) {
+          this.inputSize = 5;
+          this.hiddenSize = 6;
+          this.outputSize = 1;
+
+          if (w1 && b1 && w2 && b2) {
+            this.w1 = w1.map(row => row.slice());
+            this.b1 = b1.slice();
+            this.w2 = w2.map(row => row.slice());
+            this.b2 = b2.slice();
+          } else {
+            // Xavier / He initialization
+            this.w1 = Array.from({ length: this.inputSize }, () =>
+              Array.from({ length: this.hiddenSize }, () => (Math.random() * 2 - 1) * Math.sqrt(2 / this.inputSize))
+            );
+            this.b1 = Array.from({ length: this.hiddenSize }, () => 0);
+            this.w2 = Array.from({ length: this.hiddenSize }, () =>
+              Array.from({ length: this.outputSize }, () => (Math.random() * 2 - 1) * Math.sqrt(2 / this.hiddenSize))
+            );
+            this.b2 = Array.from({ length: this.outputSize }, () => 0);
+          }
+
+          // Activations cache for visualization
+          this.lastInputs = [0, 0, 0, 0, 0];
+          this.lastHidden = [0, 0, 0, 0, 0, 0];
+          this.lastOutput = [0];
+        }
+
+        predict(inputs) {
+          this.lastInputs = inputs.slice();
+          const hidden = new Array(this.hiddenSize);
+
+          for (let j = 0; j < this.hiddenSize; j++) {
+            let sum = this.b1[j];
+            for (let i = 0; i < this.inputSize; i++) {
+              sum += inputs[i] * this.w1[i][j];
+            }
+            hidden[j] = Math.tanh(sum);
+          }
+          this.lastHidden = hidden.slice();
+
+          const output = new Array(this.outputSize);
+          for (let k = 0; k < this.outputSize; k++) {
+            let sum = this.b2[k];
+            for (let j = 0; j < this.hiddenSize; j++) {
+              sum += hidden[j] * this.w2[j][k];
+            }
+            output[k] = Math.tanh(sum);
+          }
+          this.lastOutput = output.slice();
+
+          return output[0];
+        }
+
+        clone() {
+          return new NeuralNetwork(this.w1, this.b1, this.w2, this.b2);
+        }
+
+        mutate(rate, size) {
+          for (let i = 0; i < this.inputSize; i++) {
+            for (let j = 0; j < this.hiddenSize; j++) {
+              if (Math.random() < rate) {
+                this.w1[i][j] += randomGaussian() * size;
+                this.w1[i][j] = clamp(this.w1[i][j], -6, 6);
+              }
+            }
+          }
+          for (let j = 0; j < this.hiddenSize; j++) {
+            if (Math.random() < rate) {
+              this.b1[j] += randomGaussian() * size;
+              this.b1[j] = clamp(this.b1[j], -6, 6);
+            }
+          }
+          for (let j = 0; j < this.hiddenSize; j++) {
+            for (let k = 0; k < this.outputSize; k++) {
+              if (Math.random() < rate) {
+                this.w2[j][k] += randomGaussian() * size;
+                this.w2[j][k] = clamp(this.w2[j][k], -6, 6);
+              }
+            }
+          }
+          for (let k = 0; k < this.outputSize; k++) {
+            if (Math.random() < rate) {
+              this.b2[k] += randomGaussian() * size;
+              this.b2[k] = clamp(this.b2[k], -6, 6);
+            }
+          }
+        }
+      }
+
+      /* =========================================================================
+         3. BIRD ENTITY
+         ========================================================================= */
+
+      class Bird {
+        constructor(brain) {
+          this.brain = brain || new NeuralNetwork();
+          this.reset();
+        }
+
+        reset() {
+          this.x = 80;
+          this.y = 240;
+          this.vy = 0;
+          this.radius = 12;
+          this.alive = true;
+          this.fitness = 0;
+          this.framesSurvived = 0;
+          this.pipesPassed = 0;
+          this.fadeAlpha = 1.0;
+          this.isLeader = false;
+          this.flapCooldown = 0;
+        }
+
+        update(worldWidth, worldHeight, nextPipe) {
+          if (!this.alive) {
+            if (this.fadeAlpha > 0) {
+              this.fadeAlpha -= 0.035;
+              this.y += 1.2; // gentle drop when dead
+            }
+            return;
+          }
+
+          this.framesSurvived++;
+
+          // Prepare 5 normalized sensory inputs
+          // 1. bird height [0, 1]
+          const inY = clamp(this.y / worldHeight, 0, 1);
+          // 2. bird vertical speed [-1, 1]
+          const inVy = clamp(this.vy / 12, -1, 1);
+          // 3. horizontal distance to pipe [0, 1]
+          let inDist = 1;
+          // 4. relative height of next gap center [-1, 1]
+          let inGapRelY = 0;
+          // 5. gap size relative to world [0, 1]
+          let inGapSize = 0.3;
+
+          if (nextPipe) {
+            inDist = clamp((nextPipe.x + nextPipe.width - this.x) / worldWidth, 0, 1);
+            inGapRelY = clamp((nextPipe.gapCenter - this.y) / worldHeight, -1, 1);
+            inGapSize = clamp(nextPipe.gapSize / worldHeight, 0, 1);
+          }
+
+          const action = this.brain.predict([inY, inVy, inDist, inGapRelY, inGapSize]);
+
+          if (this.flapCooldown > 0) {
+            this.flapCooldown--;
+          }
+
+          // If output is above 0, the bird flaps
+          if (action > 0 && this.flapCooldown === 0) {
+            this.vy = -config.flapStrength;
+            this.flapCooldown = 2; // slight refractory period to prevent flutter
+            totalFlapsRegistered++;
+          }
+
+          // Apply gravity
+          this.vy += config.gravity;
+          this.vy = clamp(this.vy, -14, 14);
+          this.y += this.vy;
+
+          // Check ceiling and floor
+          if (this.y - this.radius <= 0) {
+            this.die();
+            return;
+          }
+          if (this.y + this.radius >= worldHeight) {
+            this.y = worldHeight - this.radius;
+            this.die();
+            return;
+          }
+
+          // Check pipe collision
+          if (nextPipe) {
+            if (
+              this.x + this.radius > nextPipe.x &&
+              this.x - this.radius < nextPipe.x + nextPipe.width
+            ) {
+              const topBoundary = nextPipe.gapCenter - nextPipe.gapSize / 2;
+              const bottomBoundary = nextPipe.gapCenter + nextPipe.gapSize / 2;
+
+              if (this.y - this.radius < topBoundary || this.y + this.radius > bottomBoundary) {
+                this.die();
+                return;
+              }
+            }
+          }
+        }
+
+        die() {
+          this.alive = false;
+          // Fitness is frames survived plus a bonus for each pipe passed
+          this.fitness = this.framesSurvived + (this.pipesPassed * 60);
+        }
+      }
+
+      /* =========================================================================
+         4. PIPE OBSTACLE & WORLD MANAGEMENT
+         ========================================================================= */
+
+      class Pipe {
+        constructor(x, gapCenter, gapSize) {
+          this.x = x;
+          this.width = 54;
+          this.gapCenter = gapCenter;
+          this.gapSize = gapSize;
+          this.passed = false;
+        }
+
+        update(speed) {
+          this.x -= speed;
+        }
+      }
+
+      class World {
+        constructor() {
+          this.width = 600;
+          this.height = 460;
+          this.pipes = [];
+          this.pipeSpawnTimer = 0;
+          this.totalPipesSpawned = 0;
+          this.maxPipesPassedThisGen = 0;
+        }
+
+        reset() {
+          this.pipes = [];
+          this.pipeSpawnTimer = 0;
+          this.totalPipesSpawned = 0;
+          this.maxPipesPassedThisGen = 0;
+          // Spawn first pipe at comfortable offset
+          this.spawnPipe(this.width + 120);
+        }
+
+        spawnPipe(xPos) {
+          const gapSize = config.pipeGap;
+          const margin = 50;
+          const minCenter = margin + gapSize / 2;
+          const maxCenter = this.height - margin - gapSize / 2;
+          const gapCenter = minCenter + Math.random() * (maxCenter - minCenter);
+
+          this.pipes.push(new Pipe(xPos, gapCenter, gapSize));
+          this.totalPipesSpawned++;
+        }
+
+        update(speed) {
+          // Move pipes
+          for (let i = 0; i < this.pipes.length; i++) {
+            this.pipes[i].update(speed);
+          }
+
+          // Remove off-screen pipes
+          if (this.pipes.length > 0 && this.pipes[0].x + this.pipes[0].width < -20) {
+            this.pipes.shift();
+          }
+
+          // Spawn new pipes periodically based on distance
+          const lastPipe = this.pipes[this.pipes.length - 1];
+          const pipeSpacing = 220;
+          if (lastPipe && (this.width - lastPipe.x) >= pipeSpacing) {
+            this.spawnPipe(this.width + 20);
+          }
+        }
+
+        getNextPipe(birdX) {
+          for (let i = 0; i < this.pipes.length; i++) {
+            if (this.pipes[i].x + this.pipes[i].width > birdX - 10) {
+              return this.pipes[i];
+            }
+          }
+          return null;
+        }
+      }
+
+      /* =========================================================================
+         5. EVOLUTION ENGINE & NATURAL SELECTION
+         ========================================================================= */
+
+      class EvolutionEngine {
+        constructor() {
+          this.population = [];
+          this.world = new World();
+          this.initPopulation(config.population);
+        }
+
+        initPopulation(size) {
+          this.population = [];
+          for (let i = 0; i < size; i++) {
+            this.population.push(new Bird());
+          }
+          this.world.reset();
+        }
+
+        restart() {
+          generation = 1;
+          allTimeRecord = 0;
+          history.length = 0; // reset history cleanly
+          lastBestScore = 0;
+          lastAvgScore = 0;
+          this.initPopulation(nextGenPopulation);
+          updateUIElements();
+          chartDrawer.draw();
+        }
+
+        step() {
+          const nextPipe = this.world.getNextPipe(80);
+
+          // Update pipes
+          this.world.update(config.pipeSpeed);
+
+          let aliveCount = 0;
+          let currentLeadingBird = null;
+          let bestFitnessSoFar = -1;
+
+          // Check if any bird passed a pipe
+          for (let p = 0; p < this.world.pipes.length; p++) {
+            const pipe = this.world.pipes[p];
+            if (!pipe.passed && pipe.x + pipe.width < 80) {
+              pipe.passed = true;
+              for (let b = 0; b < this.population.length; b++) {
+                if (this.population[b].alive) {
+                  this.population[b].pipesPassed++;
+                  if (this.population[b].pipesPassed > this.world.maxPipesPassedThisGen) {
+                    this.world.maxPipesPassedThisGen = this.population[b].pipesPassed;
+                  }
+                }
+              }
+            }
+          }
+
+          // Update birds
+          for (let i = 0; i < this.population.length; i++) {
+            const bird = this.population[i];
+            bird.update(this.world.width, this.world.height, nextPipe);
+
+            if (bird.alive) {
+              aliveCount++;
+              const currentScore = bird.framesSurvived + (bird.pipesPassed * 60);
+              if (currentScore > bestFitnessSoFar) {
+                bestFitnessSoFar = currentScore;
+                currentLeadingBird = bird;
+              }
+            }
+          }
+
+          // Mark current leader for visual highlight
+          for (let i = 0; i < this.population.length; i++) {
+            this.population[i].isLeader = (this.population[i] === currentLeadingBird);
+          }
+
+          // Check generation termination conditions:
+          // 1. Every bird is dead (natural selection termination)
+          // 2. Optionally, if user explicitly checked "Hard stop at pipe cap"
+          const capReached = config.hardStopAtCap && (this.world.maxPipesPassedThisGen >= config.pipeCap);
+
+          if (aliveCount === 0 || capReached) {
+            this.evolveNextGeneration();
+          }
+
+          return {
+            aliveCount,
+            leader: currentLeadingBird || this.population[0],
+            pipesPassed: this.world.maxPipesPassedThisGen
+          };
+        }
+
+        evolveNextGeneration() {
+          // Finalize fitness calculation for any still-alive birds
+          for (let i = 0; i < this.population.length; i++) {
+            const bird = this.population[i];
+            if (bird.alive) {
+              bird.die();
+            }
+          }
+
+          // Sort birds by fitness descending
+          this.population.sort((a, b) => b.fitness - a.fitness);
+
+          const genBestScore = this.population[0].pipesPassed;
+          let totalScore = 0;
+          for (let i = 0; i < this.population.length; i++) {
+            totalScore += this.population[i].pipesPassed;
+          }
+          const genAvgScore = parseFloat((totalScore / this.population.length).toFixed(1));
+
+          lastBestScore = genBestScore;
+          lastAvgScore = genAvgScore;
+
+          if (genBestScore > allTimeRecord) {
+            allTimeRecord = genBestScore;
+          }
+
+          // Append to history
+          history.push({
+            gen: generation,
+            best: genBestScore,
+            avg: genAvgScore
+          });
+
+          // Compute adaptive mutation annealing
+          let effectiveMutationSize = config.mutationSize;
+          if (config.shrinkMutationNearPerfect) {
+            // Shrink mutation size as best bird approaches pipe cap
+            const completionRatio = clamp(genBestScore / config.pipeCap, 0, 1);
+            const annealFactor = 1.0 - (0.75 * completionRatio); // scales down to 25% of baseline
+            effectiveMutationSize = config.mutationSize * annealFactor;
+          }
+
+          const targetPopSize = nextGenPopulation;
+          const newPopulation = [];
+
+          // 1. Keep the top elites unchanged
+          const elitesCount = Math.min(config.elites, this.population.length);
+          for (let i = 0; i < elitesCount; i++) {
+            const eliteChild = new Bird(this.population[i].brain.clone());
+            newPopulation.push(eliteChild);
+          }
+
+          // 2. Fill the rest with children of the top parent pool
+          const poolSize = Math.max(2, Math.min(config.parentPool, this.population.length));
+          const parentCandidates = this.population.slice(0, poolSize);
+
+          while (newPopulation.length < targetPopSize) {
+            // Select parent from top candidate pool (fitness-biased)
+            const parent = parentCandidates[Math.floor(Math.random() * parentCandidates.length)];
+            const childBrain = parent.brain.clone();
+
+            // Check if this child receives an exploratory "big jump"
+            const isBigJump = Math.random() < config.bigJumpChance;
+            const mutationScale = isBigJump ? effectiveMutationSize * 3.5 : effectiveMutationSize;
+
+            childBrain.mutate(config.mutationChance, mutationScale);
+            newPopulation.push(new Bird(childBrain));
+          }
+
+          this.population = newPopulation;
+          generation++;
+          this.world.reset();
+
+          updateUIElements(effectiveMutationSize);
+          chartDrawer.draw();
+        }
+      }
+
+      /* =========================================================================
+         6. CANVAS RENDERER: FLAPPY BIRD WORLD & MOTION TRAILS
+         ========================================================================= */
+
+      class WorldRenderer {
+        constructor(canvas, world, engine) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.world = world;
+          this.engine = engine;
+          this.dpr = window.devicePixelRatio || 1;
+        }
+
+        resize() {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+
+          this.canvas.width = rect.width * this.dpr;
+          this.canvas.height = rect.height * this.dpr;
+          this.ctx.resetTransform?.();
+          this.ctx.scale(this.dpr, this.dpr);
+
+          this.world.width = rect.width;
+          this.world.height = rect.height;
+        }
+
+        draw() {
+          const ctx = this.ctx;
+          const w = this.world.width;
+          const h = this.world.height;
+
+          // Motion trails: clear with slight translucency to leave luminous bird paths
+          ctx.fillStyle = 'rgba(7, 9, 12, 0.32)';
+          ctx.fillRect(0, 0, w, h);
+
+          // Draw subtle background grid/stars
+          this.drawAesthetics(ctx, w, h);
+
+          // Draw pipes
+          this.drawPipes(ctx, h);
+
+          // Draw birds
+          this.drawBirds(ctx);
+        }
+
+        drawAesthetics(ctx, w, h) {
+          // Subtle floor boundary line
+          ctx.strokeStyle = 'rgba(34, 40, 56, 0.6)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, h - 1);
+          ctx.lineTo(w, h - 1);
+          ctx.stroke();
+
+          // Subtle dashed target line for pipe cap
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.08)';
+          ctx.setLineDash([4, 6]);
+          ctx.beginPath();
+          ctx.moveTo(0, 16);
+          ctx.lineTo(w, 16);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        drawPipes(ctx, worldHeight) {
+          for (let i = 0; i < this.world.pipes.length; i++) {
+            const pipe = this.world.pipes[i];
+            const topHeight = pipe.gapCenter - pipe.gapSize / 2;
+            const bottomY = pipe.gapCenter + pipe.gapSize / 2;
+            const bottomHeight = worldHeight - bottomY;
+
+            // Pipe Body Style (Dark architectural aesthetic)
+            ctx.fillStyle = '#131823';
+            ctx.strokeStyle = '#273042';
+            ctx.lineWidth = 1.5;
+
+            // Top Pipe
+            if (topHeight > 0) {
+              ctx.fillRect(pipe.x, 0, pipe.width, topHeight);
+              ctx.strokeRect(pipe.x, 0, pipe.width, topHeight);
+
+              // Pipe rim / cap
+              ctx.fillStyle = '#19202f';
+              ctx.fillRect(pipe.x - 3, topHeight - 16, pipe.width + 6, 16);
+              ctx.strokeRect(pipe.x - 3, topHeight - 16, pipe.width + 6, 16);
+            }
+
+            // Bottom Pipe
+            if (bottomHeight > 0) {
+              ctx.fillStyle = '#131823';
+              ctx.fillRect(pipe.x, bottomY, pipe.width, bottomHeight);
+              ctx.strokeRect(pipe.x, bottomY, pipe.width, bottomHeight);
+
+              // Pipe rim / cap
+              ctx.fillStyle = '#19202f';
+              ctx.fillRect(pipe.x - 3, bottomY, pipe.width + 6, 16);
+              ctx.strokeRect(pipe.x - 3, bottomY, pipe.width + 6, 16);
+            }
+
+            // Subtle gap guide illumination
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.02)';
+            ctx.fillRect(pipe.x, topHeight, pipe.width, pipe.gapSize);
+          }
+        }
+
+        drawBirds(ctx) {
+          const birds = this.engine.population;
+
+          // Pass 1: Draw dead fading birds
+          for (let i = 0; i < birds.length; i++) {
+            const bird = birds[i];
+            if (!bird.alive && bird.fadeAlpha > 0.02) {
+              ctx.save();
+              ctx.globalAlpha = bird.fadeAlpha * 0.35;
+              ctx.fillStyle = '#545c6e';
+              ctx.beginPath();
+              ctx.arc(bird.x, bird.y, bird.radius * 0.9, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+
+          // Pass 2: Draw alive follower birds (subtle warm off-white)
+          for (let i = 0; i < birds.length; i++) {
+            const bird = birds[i];
+            if (bird.alive && !bird.isLeader) {
+              ctx.save();
+              ctx.globalAlpha = 0.45;
+              ctx.fillStyle = '#eceae4';
+              ctx.beginPath();
+              ctx.arc(bird.x, bird.y, bird.radius * 0.85, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Subtle eye
+              ctx.fillStyle = '#10141d';
+              ctx.beginPath();
+              ctx.arc(bird.x + 4, bird.y - 2, 2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+
+          // Pass 3: Draw leader bird (highlighted in AMBER accent)
+          for (let i = 0; i < birds.length; i++) {
+            const bird = birds[i];
+            if (bird.alive && bird.isLeader) {
+              ctx.save();
+
+              // Subtle glowing halo around leader
+              ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+              ctx.beginPath();
+              ctx.arc(bird.x, bird.y, bird.radius + 6, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Amber Bird Body
+              ctx.fillStyle = '#f59e0b';
+              ctx.beginPath();
+              ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Crisp border
+              ctx.strokeStyle = '#fbbf24';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+
+              // Beak
+              ctx.fillStyle = '#fbbf24';
+              ctx.beginPath();
+              ctx.moveTo(bird.x + bird.radius - 2, bird.y - 3);
+              ctx.lineTo(bird.x + bird.radius + 6, bird.y);
+              ctx.lineTo(bird.x + bird.radius - 2, bird.y + 3);
+              ctx.closePath();
+              ctx.fill();
+
+              // Eye
+              ctx.fillStyle = '#0a0c10';
+              ctx.beginPath();
+              ctx.arc(bird.x + 4, bird.y - 3, 2.5, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = '#ffffff';
+              ctx.beginPath();
+              ctx.arc(bird.x + 4.5, bird.y - 3.5, 0.8, 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.restore();
+            }
+          }
+        }
+      }
+
+      /* =========================================================================
+         7. TELEMETRY CHART: SLIDING WINDOW OF LAST 30 GENERATIONS
+         Glides left as new generations arrive. Dot on latest value.
+         ========================================================================= */
+
+      class TelemetryChart {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.dpr = window.devicePixelRatio || 1;
+        }
+
+        resize() {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+
+          this.canvas.width = rect.width * this.dpr;
+          this.canvas.height = rect.height * this.dpr;
+          this.ctx.resetTransform?.();
+          this.ctx.scale(this.dpr, this.dpr);
+          this.width = rect.width;
+          this.height = rect.height;
+          this.draw();
+        }
+
+        draw() {
+          const ctx = this.ctx;
+          const w = this.width;
+          const h = this.height;
+          if (!w || !h) return;
+
+          ctx.clearRect(0, 0, w, h);
+
+          // Margins for clean labels
+          const padLeft = 28;
+          const padRight = 14;
+          const padTop = 14;
+          const padBottom = 24;
+
+          const plotW = w - padLeft - padRight;
+          const plotH = h - padTop - padBottom;
+
+          // Extract sliding window of last 30 generations
+          const windowData = history.slice(-CHART_WINDOW_SIZE);
+
+          // Find max value for Y-scale
+          let maxVal = 10;
+          for (let i = 0; i < windowData.length; i++) {
+            if (windowData[i].best > maxVal) maxVal = windowData[i].best;
+          }
+          maxVal = Math.ceil(maxVal * 1.15); // headroom
+
+          // Draw horizontal background grid lines & Y labels
+          ctx.font = '9px "Bricolage Grotesque", sans-serif';
+          ctx.fillStyle = '#545c6e';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+
+          const ySteps = 3;
+          for (let s = 0; s <= ySteps; s++) {
+            const yVal = Math.round((maxVal / ySteps) * s);
+            const py = padTop + plotH - (s / ySteps) * plotH;
+
+            ctx.strokeStyle = 'rgba(34, 40, 56, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, py);
+            ctx.lineTo(padLeft + plotW, py);
+            ctx.stroke();
+
+            ctx.fillText(yVal.toString(), padLeft - 6, py);
+          }
+
+          if (windowData.length < 2) {
+            // Initial status message if not enough history yet
+            ctx.fillStyle = '#545c6e';
+            ctx.font = 'italic 11px "Newsreader", serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Awaiting generation data...', padLeft + plotW / 2, padTop + plotH / 2);
+            return;
+          }
+
+          // X coordinate calculator
+          const getX = (idx) => padLeft + (idx / (windowData.length - 1)) * plotW;
+          const getY = (val) => padTop + plotH - (val / maxVal) * plotH;
+
+          // Draw Average score line (Slate)
+          ctx.strokeStyle = '#64748b';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          for (let i = 0; i < windowData.length; i++) {
+            const px = getX(i);
+            const py = getY(windowData[i].avg);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+
+          // Dot on latest Average value
+          const lastIdx = windowData.length - 1;
+          const lastAvgX = getX(lastIdx);
+          const lastAvgY = getY(windowData[lastIdx].avg);
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.arc(lastAvgX, lastAvgY, 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw Best score line (Amber)
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          for (let i = 0; i < windowData.length; i++) {
+            const px = getX(i);
+            const py = getY(windowData[i].best);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+
+          // Dot on latest Best value
+          const lastBestX = getX(lastIdx);
+          const lastBestY = getY(windowData[lastIdx].best);
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(lastBestX, lastBestY, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#0a0c10';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // X-Axis generation labels (start, middle, end)
+          ctx.fillStyle = '#8b93a4';
+          ctx.font = '9px "Bricolage Grotesque", sans-serif';
+          ctx.textBaseline = 'top';
+
+          ctx.textAlign = 'left';
+          ctx.fillText(`Gen ${windowData[0].gen}`, padLeft, padTop + plotH + 6);
+
+          if (windowData.length > 5) {
+            const mid = Math.floor(windowData.length / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText(`Gen ${windowData[mid].gen}`, getX(mid), padTop + plotH + 6);
+          }
+
+          ctx.textAlign = 'right';
+          ctx.fillText(`Gen ${windowData[lastIdx].gen}`, padLeft + plotW, padTop + plotH + 6);
+        }
+      }
+
+      /* =========================================================================
+         8. ANIMATED NETWORK VISUALIZER (IN MODAL)
+         Flowing signal lines, pulsing nodes, live leader weights
+         ========================================================================= */
+
+      class NetworkVisualizer {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.particles = [];
+          this.pulsePhase = 0;
+          this.dpr = window.devicePixelRatio || 1;
+        }
+
+        resize() {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+
+          this.canvas.width = rect.width * this.dpr;
+          this.canvas.height = 180 * this.dpr;
+          this.ctx.resetTransform?.();
+          this.ctx.scale(this.dpr, this.dpr);
+          this.width = rect.width;
+          this.height = 180;
+        }
+
+        draw(leader) {
+          const ctx = this.ctx;
+          const w = this.width;
+          const h = this.height;
+          if (!w || !h) return;
+
+          ctx.clearRect(0, 0, w, h);
+
+          this.pulsePhase += 0.05;
+
+          const brain = leader && leader.brain ? leader.brain : null;
+
+          // Layer layout geometry
+          const inputX = 45;
+          const hiddenX = w / 2;
+          const outputX = w - 45;
+
+          const inputLabels = ["Y", "Vy", "Dist", "GapY", "GapH"];
+          const inputY = [25, 55, 85, 115, 145];
+          const hiddenY = [20, 48, 76, 104, 132, 160];
+          const outputY = [90];
+
+          // 1. Draw Synaptic Connections (w1: input -> hidden)
+          for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 6; j++) {
+              const weight = brain ? brain.w1[i][j] : 0.5;
+              const alpha = clamp(Math.abs(weight) * 0.35 + 0.08, 0.05, 0.8);
+              ctx.strokeStyle = weight > 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+              ctx.lineWidth = clamp(Math.abs(weight) * 1.5, 0.6, 2.8);
+              ctx.beginPath();
+              ctx.moveTo(inputX, inputY[i]);
+              ctx.lineTo(hiddenX, hiddenY[j]);
+              ctx.stroke();
+            }
+          }
+
+          // 2. Draw Synaptic Connections (w2: hidden -> output)
+          for (let j = 0; j < 6; j++) {
+            const weight = brain ? brain.w2[j][0] : 0.5;
+            const alpha = clamp(Math.abs(weight) * 0.4 + 0.1, 0.05, 0.85);
+            ctx.strokeStyle = weight > 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+            ctx.lineWidth = clamp(Math.abs(weight) * 1.8, 0.6, 3.2);
+            ctx.beginPath();
+            ctx.moveTo(hiddenX, hiddenY[j]);
+            ctx.lineTo(outputX, outputY[0]);
+            ctx.stroke();
+          }
+
+          // 3. Flowing Signal Particles
+          if (Math.random() < 0.35) {
+            const i = Math.floor(Math.random() * 5);
+            const j = Math.floor(Math.random() * 6);
+            this.particles.push({
+              x1: inputX, y1: inputY[i],
+              x2: hiddenX, y2: hiddenY[j],
+              progress: 0,
+              speed: 0.04 + Math.random() * 0.03
+            });
+          }
+
+          ctx.fillStyle = '#fbbf24';
+          for (let p = this.particles.length - 1; p >= 0; p--) {
+            const part = this.particles[p];
+            part.progress += part.speed;
+            if (part.progress >= 1) {
+              this.particles.splice(p, 1);
+              continue;
+            }
+            const px = part.x1 + (part.x2 - part.x1) * part.progress;
+            const py = part.y1 + (part.y2 - part.y1) * part.progress;
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // 4. Draw Input Nodes
+          for (let i = 0; i < 5; i++) {
+            const act = brain && brain.lastInputs ? (brain.lastInputs[i] + 1) / 2 : 0.5;
+            this.drawNode(ctx, inputX, inputY[i], 8, act, '#eceae4', inputLabels[i], 'right');
+          }
+
+          // 5. Draw Hidden Nodes (pulsing with tanh)
+          for (let j = 0; j < 6; j++) {
+            const act = brain && brain.lastHidden ? (brain.lastHidden[j] + 1) / 2 : 0.5;
+            this.drawNode(ctx, hiddenX, hiddenY[j], 9, act, '#f59e0b', `h${j+1}`, 'none');
+          }
+
+          // 6. Draw Output Node
+          const outAct = brain && brain.lastOutput ? (brain.lastOutput[0] + 1) / 2 : 0.5;
+          const isFlapping = brain && brain.lastOutput && brain.lastOutput[0] > 0;
+          this.drawNode(ctx, outputX, outputY[0], 11, outAct, isFlapping ? '#fbbf24' : '#64748b', 'Flap > 0', 'left');
+        }
+
+        drawNode(ctx, x, y, radius, activation, accentColor, label, labelAlign) {
+          ctx.save();
+
+          // Outer pulse glow
+          const glowAlpha = clamp(activation * 0.4, 0.1, 0.6);
+          ctx.fillStyle = accentColor;
+          ctx.globalAlpha = glowAlpha;
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node body
+          ctx.globalAlpha = 1.0;
+          ctx.fillStyle = '#11141c';
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node rim
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+
+          // Core activation fill
+          ctx.fillStyle = accentColor;
+          ctx.beginPath();
+          ctx.arc(x, y, radius * clamp(activation, 0.2, 0.9), 0, Math.PI * 2);
+          ctx.fill();
+
+          // Node Label
+          if (label && labelAlign !== 'none') {
+            ctx.fillStyle = '#8b93a4';
+            ctx.font = '8px "Bricolage Grotesque", sans-serif';
+            ctx.textBaseline = 'middle';
+            if (labelAlign === 'right') {
+              ctx.textAlign = 'right';
+              ctx.fillText(label, x - radius - 5, y);
+            } else if (labelAlign === 'left') {
+              ctx.textAlign = 'left';
+              ctx.fillText(label, x + radius + 5, y);
+            }
+          }
+
+          ctx.restore();
+        }
+      }
+
+      /* =========================================================================
+         9. UI BINDING & EVENT HANDLERS
+         ========================================================================= */
+
+      // Cache DOM references
+      const elGameCanvas = document.getElementById('gameCanvas');
+      const elHistoryChart = document.getElementById('historyChart');
+      const elNetworkCanvas = document.getElementById('networkCanvas');
+      const elCanvasViewport = document.getElementById('canvasViewport');
+
+      // Sliders & Live values
+      const slPopulation = document.getElementById('slPopulation');
+      const valPopulation = document.getElementById('valPopulation');
+      const slElites = document.getElementById('slElites');
+      const valElites = document.getElementById('valElites');
+      const slParentPool = document.getElementById('slParentPool');
+      const valParentPool = document.getElementById('valParentPool');
+      const slMutationChance = document.getElementById('slMutationChance');
+      const valMutationChance = document.getElementById('valMutationChance');
+      const slMutationSize = document.getElementById('slMutationSize');
+      const valMutationSize = document.getElementById('valMutationSize');
+      const slBigJumpChance = document.getElementById('slBigJumpChance');
+      const valBigJumpChance = document.getElementById('valBigJumpChance');
+      const slPipeGap = document.getElementById('slPipeGap');
+      const valPipeGap = document.getElementById('valPipeGap');
+      const slPipeSpeed = document.getElementById('slPipeSpeed');
+      const valPipeSpeed = document.getElementById('valPipeSpeed');
+      const slGravity = document.getElementById('slGravity');
+      const valGravity = document.getElementById('valGravity');
+      const slFlapStrength = document.getElementById('slFlapStrength');
+      const valFlapStrength = document.getElementById('valFlapStrength');
+      const slPipeCap = document.getElementById('slPipeCap');
+      const valPipeCap = document.getElementById('valPipeCap');
+      const chkShrinkMutation = document.getElementById('chkShrinkMutation');
+      const chkHardStopCap = document.getElementById('chkHardStopCap');
+      const btnResetOptimal = document.getElementById('btnResetOptimal');
+
+      // Transport controls
+      const slSpeed = document.getElementById('slSpeed');
+      const valSpeedBadge = document.getElementById('valSpeedBadge');
+      const btnPause = document.getElementById('btnPause');
+      const btnNextGen = document.getElementById('btnNextGen');
+      const btnRestart = document.getElementById('btnRestart');
+
+      // HUD & Telemetry
+      const hudGenNum = document.getElementById('hudGenNum');
+      const hudCurrentPipes = document.getElementById('hudCurrentPipes');
+      const hudAliveCount = document.getElementById('hudAliveCount');
+      const hudTotalCount = document.getElementById('hudTotalCount');
+      const statLastBest = document.getElementById('statLastBest');
+      const statLastAvg = document.getElementById('statLastAvg');
+      const statRecordScore = document.getElementById('statRecordScore');
+      const telemActiveMutation = document.getElementById('telemActiveMutation');
+      const telemGenElapsed = document.getElementById('telemGenElapsed');
+      const telemTotalFlaps = document.getElementById('telemTotalFlaps');
+      const telemProgress = document.getElementById('telemProgress');
+      const presetDesc = document.getElementById('presetDesc');
+
+      // AI Thought Stream Box elements
+      const thoughtActionBadge = document.getElementById('thoughtActionBadge');
+      const thoughtOutputVal = document.getElementById('thoughtOutputVal');
+      const thoughtBodyText = document.getElementById('thoughtBodyText');
+
+      // Modal elements
+      const btnHowItWorks = document.getElementById('btnHowItWorks');
+      const modalBackdrop = document.getElementById('howItWorksModal');
+      const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+      // Initialize System Subsystems
+      const engine = new EvolutionEngine();
+      const worldRenderer = new WorldRenderer(elGameCanvas, engine.world, engine);
+      const chartDrawer = new TelemetryChart(elHistoryChart);
+      const networkVisualizer = new NetworkVisualizer(elNetworkCanvas);
+
+      // Synchronize slider UI elements with current config
+      function syncSlidersToConfig() {
+        slPopulation.value = nextGenPopulation;
+        valPopulation.textContent = nextGenPopulation.toString();
+
+        slElites.value = config.elites;
+        valElites.textContent = config.elites.toString();
+
+        slParentPool.value = config.parentPool;
+        valParentPool.textContent = config.parentPool.toString();
+
+        slMutationChance.value = Math.round(config.mutationChance * 100);
+        valMutationChance.textContent = `${Math.round(config.mutationChance * 100)}%`;
+
+        slMutationSize.value = config.mutationSize.toFixed(2);
+        valMutationSize.textContent = config.mutationSize.toFixed(2);
+
+        slBigJumpChance.value = Math.round(config.bigJumpChance * 100);
+        valBigJumpChance.textContent = `${Math.round(config.bigJumpChance * 100)}%`;
+
+        slPipeGap.value = config.pipeGap;
+        valPipeGap.textContent = `${config.pipeGap}px`;
+
+        slPipeSpeed.value = config.pipeSpeed.toFixed(1);
+        valPipeSpeed.textContent = config.pipeSpeed.toFixed(1);
+
+        slGravity.value = config.gravity.toFixed(2);
+        valGravity.textContent = config.gravity.toFixed(2);
+
+        slFlapStrength.value = config.flapStrength.toFixed(1);
+        valFlapStrength.textContent = config.flapStrength.toFixed(1);
+
+        slPipeCap.value = config.pipeCap;
+        valPipeCap.textContent = config.pipeCap.toString();
+
+        chkShrinkMutation.checked = config.shrinkMutationNearPerfect;
+        chkHardStopCap.checked = !!config.hardStopAtCap;
+
+        slSpeed.value = speedMultiplier;
+        valSpeedBadge.textContent = `${speedMultiplier}x`;
+      }
+
+      function updateUIElements(currentEffectiveMutation) {
+        hudGenNum.textContent = generation.toString();
+        hudTotalCount.textContent = engine.population.length.toString();
+
+        statLastBest.textContent = history.length > 0 ? `${lastBestScore}` : '—';
+        statLastAvg.textContent = history.length > 0 ? `${lastAvgScore}` : '—';
+        statRecordScore.textContent = `All-time record: ${allTimeRecord}`;
+
+        const activeMut = currentEffectiveMutation !== undefined ? currentEffectiveMutation : config.mutationSize;
+        telemActiveMutation.textContent = activeMut.toFixed(3);
+        telemGenElapsed.textContent = (generation - 1).toString();
+        telemTotalFlaps.textContent = totalFlapsRegistered.toLocaleString();
+
+        const progressPercent = Math.round((engine.world.maxPipesPassedThisGen / config.pipeCap) * 100);
+        telemProgress.textContent = engine.world.maxPipesPassedThisGen >= config.pipeCap ? `${progressPercent}% (Mastered)` : `${progressPercent}%`;
+      }
+
+      function applyPreset(presetKey) {
+        const preset = PRESETS[presetKey];
+        if (!preset) return;
+
+        currentPresetKey = presetKey;
+        Object.assign(config, preset);
+        nextGenPopulation = preset.population;
+
+        // Update preset button active classes
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.preset === presetKey);
+        });
+
+        presetDesc.textContent = preset.desc;
+        syncSlidersToConfig();
+      }
+
+      function resetToOptimal() {
+        currentPresetKey = null;
+        Object.assign(config, OPTIMAL_CONFIG);
+        nextGenPopulation = OPTIMAL_CONFIG.population;
+
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        presetDesc.textContent = "Default baseline: balanced population, 4 elites preserved, and adaptive mutation annealing.";
+
+        syncSlidersToConfig();
+        engine.restart();
+      }
+
+      // Slider event listeners (live tuning)
+      slPopulation.addEventListener('input', (e) => {
+        nextGenPopulation = parseInt(e.target.value, 10);
+        valPopulation.textContent = nextGenPopulation.toString();
+      });
+
+      slElites.addEventListener('input', (e) => {
+        config.elites = parseInt(e.target.value, 10);
+        valElites.textContent = config.elites.toString();
+      });
+
+      slParentPool.addEventListener('input', (e) => {
+        config.parentPool = parseInt(e.target.value, 10);
+        valParentPool.textContent = config.parentPool.toString();
+      });
+
+      slMutationChance.addEventListener('input', (e) => {
+        config.mutationChance = parseInt(e.target.value, 10) / 100;
+        valMutationChance.textContent = `${e.target.value}%`;
+      });
+
+      slMutationSize.addEventListener('input', (e) => {
+        config.mutationSize = parseFloat(e.target.value);
+        valMutationSize.textContent = config.mutationSize.toFixed(2);
+      });
+
+      slBigJumpChance.addEventListener('input', (e) => {
+        config.bigJumpChance = parseInt(e.target.value, 10) / 100;
+        valBigJumpChance.textContent = `${e.target.value}%`;
+      });
+
+      slPipeGap.addEventListener('input', (e) => {
+        config.pipeGap = parseInt(e.target.value, 10);
+        valPipeGap.textContent = `${config.pipeGap}px`;
+      });
+
+      slPipeSpeed.addEventListener('input', (e) => {
+        config.pipeSpeed = parseFloat(e.target.value);
+        valPipeSpeed.textContent = config.pipeSpeed.toFixed(1);
+      });
+
+      slGravity.addEventListener('input', (e) => {
+        config.gravity = parseFloat(e.target.value);
+        valGravity.textContent = config.gravity.toFixed(2);
+      });
+
+      slFlapStrength.addEventListener('input', (e) => {
+        config.flapStrength = parseFloat(e.target.value);
+        valFlapStrength.textContent = config.flapStrength.toFixed(1);
+      });
+
+      slPipeCap.addEventListener('input', (e) => {
+        config.pipeCap = parseInt(e.target.value, 10);
+        valPipeCap.textContent = config.pipeCap.toString();
+      });
+
+      chkShrinkMutation.addEventListener('change', (e) => {
+        config.shrinkMutationNearPerfect = e.target.checked;
+      });
+
+      chkHardStopCap.addEventListener('change', (e) => {
+        config.hardStopAtCap = e.target.checked;
+      });
+
+      btnResetOptimal.addEventListener('click', resetToOptimal);
+
+      // Preset button clicks
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+      });
+
+      // Transport: Speed slider
+      slSpeed.addEventListener('input', (e) => {
+        speedMultiplier = parseInt(e.target.value, 10);
+        valSpeedBadge.textContent = `${speedMultiplier}x`;
+      });
+
+      // Transport: Pause, Next Gen & Restart
+      btnPause.addEventListener('click', () => {
+        isPaused = !isPaused;
+        btnPause.textContent = isPaused ? 'Resume' : 'Pause';
+      });
+
+      btnNextGen.addEventListener('click', () => {
+        engine.evolveNextGeneration();
+      });
+
+      btnRestart.addEventListener('click', () => {
+        engine.restart();
+      });
+
+      // Modal Dialog Open/Close
+      btnHowItWorks.addEventListener('click', () => {
+        modalBackdrop.classList.add('open');
+        networkVisualizer.resize();
+      });
+
+      modalCloseBtn.addEventListener('click', () => {
+        modalBackdrop.classList.remove('open');
+      });
+
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) {
+          modalBackdrop.classList.remove('open');
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) {
+          modalBackdrop.classList.remove('open');
+        }
+      });
+
+      /* =========================================================================
+         10. AI THOUGHT & ACTION STREAM MONOLOGUE
+         Translates real neural inputs and outputs into real-time human explanations
+         ========================================================================= */
+
+      function computeAIThought(leader, nextPipe, worldHeight) {
+        if (!leader || !leader.alive) {
+          return {
+            action: 'REGEN',
+            output: 0,
+            text: 'Flock perished. Selecting elites and breeding next generation...'
+          };
+        }
+
+        const out = leader.brain.lastOutput ? leader.brain.lastOutput[0] : 0;
+        const isFlap = out > 0;
+        const vy = leader.vy;
+        const y = leader.y;
+
+        // Real world pixel delta to gap center
+        let distY = 0;
+        let distNextPipe = 200;
+        let insidePipe = false;
+
+        if (nextPipe) {
+          distY = nextPipe.gapCenter - y; // positive if gap is below bird, negative if gap is above
+          distNextPipe = Math.round(nextPipe.x - leader.x);
+          if (leader.x + leader.radius >= nextPipe.x && leader.x - leader.radius <= nextPipe.x + nextPipe.width) {
+            insidePipe = true;
+          }
+        }
+
+        let explanation = '';
+
+        if (isFlap) {
+          if (y + leader.radius >= worldHeight - 35) {
+            explanation = 'Critical altitude! Firing emergency recovery flap near ground.';
+          } else if (insidePipe) {
+            explanation = 'Inside obstacle gap. Firing micro-flap to maintain trajectory clearance.';
+          } else if (distY < -15) {
+            explanation = `Gap is ${Math.round(Math.abs(distY))}px above. Flapping upward to climb toward aperture.`;
+          } else if (vy > 2.0) {
+            explanation = `Sinking at ${vy.toFixed(1)} px/frame. Flapping to arrest downward momentum.`;
+          } else if (distNextPipe < 85 && Math.abs(distY) < 20) {
+            explanation = `Approaching gap in ${distNextPipe}px. Pulsing flap to stabilize entry elevation.`;
+          } else {
+            explanation = `Neural impulse fired (+${out.toFixed(2)} > 0). Executing upward wing flap.`;
+          }
+        } else {
+          if (y - leader.radius <= 35) {
+            explanation = 'Near ceiling boundary! Suppressing flap to avoid upper barrier.';
+          } else if (insidePipe) {
+            explanation = 'Inside obstacle aperture. Holding glide to coast cleanly through.';
+          } else if (distY > 20) {
+            explanation = `Upcoming gap is ${Math.round(distY)}px below. Gliding downward under gravity toward center.`;
+          } else if (vy < -2.0) {
+            explanation = `Ascending at ${Math.abs(vy).toFixed(1)} px/frame. Holding glide to avoid overshooting gap.`;
+          } else if (Math.abs(distY) <= 20) {
+            explanation = `Altitude well-centered in gap (offset ${Math.round(distY)}px). Coasting to conserve momentum.`;
+          } else {
+            explanation = `Neural output (${out.toFixed(2)} ≤ 0). Holding glide, letting gravity carry downward.`;
+          }
+        }
+
+        return {
+          action: isFlap ? 'FLAP' : 'GLIDE',
+          output: out,
+          text: explanation
+        };
+      }
+
+      let thoughtTick = 0;
+      function updateThoughtBox(leader, nextPipe, worldHeight) {
+        thoughtTick++;
+        if (speedMultiplier > 2 && thoughtTick % 3 !== 0) return;
+
+        const thought = computeAIThought(leader, nextPipe, worldHeight);
+        thoughtActionBadge.textContent = thought.action;
+        thoughtActionBadge.className = `thought-badge ${thought.action.toLowerCase()}`;
+        thoughtOutputVal.textContent = `Output: ${thought.output >= 0 ? '+' : ''}${thought.output.toFixed(2)}`;
+        thoughtBodyText.textContent = thought.text;
+      }
+
+      /* =========================================================================
+         11. ANIMATION & SIMULATION LOOP
+         Fixed timestep with fast-forward support (1x to 80x)
+         ========================================================================= */
+
+      function handleResize() {
+        worldRenderer.resize();
+        chartDrawer.resize();
+        if (modalBackdrop.classList.contains('open')) {
+          networkVisualizer.resize();
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+
+      let lastLeaderBird = null;
+
+      function loop() {
+        if (!isPaused) {
+          // Execute 'speedMultiplier' physics steps per animation frame
+          for (let step = 0; step < speedMultiplier; step++) {
+            const result = engine.step();
+            lastLeaderBird = result.leader;
+
+            // HUD updates on every sub-step or batch
+            hudAliveCount.textContent = result.aliveCount.toString();
+            if (result.pipesPassed >= config.pipeCap) {
+              hudCurrentPipes.textContent = `Pipes: ${result.pipesPassed} ★ (Target Cleared)`;
+            } else {
+              hudCurrentPipes.textContent = `Pipes: ${result.pipesPassed} / ${config.pipeCap}`;
+            }
+          }
+        }
+
+        // Render game world (drawn once per display refresh frame)
+        worldRenderer.draw();
+
+        // Update AI thought box with leader's current real-time decision stream
+        const currentNextPipe = engine.world.getNextPipe(80);
+        updateThoughtBox(lastLeaderBird, currentNextPipe, engine.world.height);
+
+        // Render network diagram inside modal if open
+        if (modalBackdrop.classList.contains('open')) {
+          networkVisualizer.draw(lastLeaderBird);
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      // Initial layout setup & kick off
+      syncSlidersToConfig();
+      updateUIElements();
+      handleResize();
+      chartDrawer.draw();
+      requestAnimationFrame(loop);
+
+    })();
+  </script>
+</body>
+</html>
