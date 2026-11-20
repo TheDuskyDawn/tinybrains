@@ -1140,14 +1140,14 @@
             Each cart is governed by a compact feedforward neural network evaluated every 0.02s physics tick:
           </p>
           <ul>
-            <li><strong>4 Normalized Inputs:</strong> Cart position ($x / 2.4$), cart velocity ($\dot{x} / 3.0$), pole angle ($\theta / 0.21$), and pole angular velocity ($\dot{\theta} / 3.0$).</li>
-            <li><strong>8 Hidden Neurons:</strong> Hyperbolic tangent ($\tanh$) non-linearities synthesizing angular momentum with track centering.</li>
-            <li><strong>1 Output ($\tanh$):</strong> Scaled by the force parameter (default 10 N) applied directly to the cart chassis.</li>
-            <li><strong>Weight Matrix:</strong> $4 \times 8 + 8 \text{ (biases)} + 8 \times 1 + 1 \text{ (bias)} = 49$ total synaptic parameters.</li>
+            <li><strong>4 Normalized Inputs:</strong> Cart position (x / 2.4), cart velocity (ẋ / 3.0), pole angle (θ / 0.21), and pole angular velocity (θ̇ / 3.0).</li>
+            <li><strong>8 Hidden Neurons:</strong> Hyperbolic tangent (tanh) non-linearities synthesizing angular momentum with track centering.</li>
+            <li><strong>1 Output (tanh):</strong> Scaled by the force parameter (default 10 N) applied directly to the cart chassis.</li>
+            <li><strong>Weight Matrix:</strong> 4 × 8 + 8 (biases) + 8 × 1 + 1 (bias) = 49 total synaptic parameters.</li>
           </ul>
           <h4>Fairness & Non-Interacting Swarm</h4>
           <p>
-            All 50 cart-poles share the same physical rail without colliding. Within a generation, every cart begins from identical initial conditions (a random tilt up to $\pm 0.05\text{ rad}$) and experiences the exact same periodic wind impulses (every 3 seconds). A seeded random sequence ensures fair evolutionary competition within each generation while preventing simple memorization across generations.
+            All 50 cart-poles share the same physical rail without colliding. Within a generation, every cart begins from identical initial conditions (a random tilt up to ±0.05 rad) and experiences the exact same periodic wind impulses (every 3 seconds). A seeded random sequence ensures fair evolutionary competition within each generation while preventing simple memorization across generations.
           </p>
         </div>
       </div>
