@@ -1,0 +1,3042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Touchdown — Lunar Lander Neuroevolution</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080b;
+      --bg-panel: #0d0f15;
+      --bg-card: #131720;
+      --bg-card-hover: #181d28;
+      --border: #1e2433;
+      --border-subtle: #181d2a;
+      --border-focus: #3b465c;
+      --text: #edebe6;
+      --text-muted: #8b93a5;
+      --text-dim: #5c6475;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.16);
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --blue-grey: #64748b;
+      --blue-grey-bright: #94a3b8;
+      --blue-grey-dim: rgba(148, 163, 184, 0.14);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --crimson: #ef4444;
+      --font-ui: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    /* Staggered entrance animations */
+    @keyframes panelEntrance {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 8px var(--amber-glow); }
+      50% { box-shadow: 0 0 20px var(--amber-glow), 0 0 6px var(--amber-bright); }
+    }
+
+    @keyframes statFlash {
+      0% { color: #ffffff; text-shadow: 0 0 10px var(--amber-bright); }
+      100% { color: var(--amber-bright); text-shadow: none; }
+    }
+
+    .pulse-flash {
+      animation: statFlash 0.7s ease-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* Main App Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      padding: 10px 14px 12px 14px;
+      gap: 10px;
+    }
+
+    /* Header Bar */
+    header.app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      padding: 0 10px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      flex-shrink: 0;
+      animation: panelEntrance 0.35s ease-out;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title .badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--amber-dim);
+      color: var(--amber-bright);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      letter-spacing: 0.04em;
+    }
+
+    .brand-desc {
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .header-milestones {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .milestone-pill {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: var(--bg);
+      transition: all 0.3s ease;
+    }
+
+    .milestone-pill.achieved {
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.12);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .milestone-pill.reliable-achieved {
+      color: var(--amber-bright);
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.14);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-header {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-header:hover {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* 3-Column Layout */
+    .main-workspace {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Left Sidebar: Presets & Live Controls */
+    .sidebar-controls {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      animation: panelEntrance 0.4s ease-out;
+    }
+
+    .sidebar-controls::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar-controls::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .sidebar-controls::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Presets Grid */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .btn-preset {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-preset:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--blue-grey-bright);
+    }
+
+    .btn-preset.active {
+      border-color: var(--amber);
+      background: var(--amber-dim);
+      color: var(--amber-bright);
+    }
+
+    /* Sliders List */
+    .sliders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .control-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .control-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .control-value {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .range-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      margin: 4px 0 2px 0;
+    }
+
+    .range-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--blue-grey-bright);
+      cursor: pointer;
+      border: 2px solid var(--bg-panel);
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .range-input:hover::-webkit-slider-thumb {
+      background: var(--amber-bright);
+      transform: scale(1.15);
+    }
+
+    .range-input:focus::-webkit-slider-thumb {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber-glow);
+    }
+
+    /* Checkbox & Reset Button */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      padding: 4px 0;
+    }
+
+    .custom-checkbox {
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border-focus);
+      background: var(--bg-card);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .checkbox-row input {
+      display: none;
+    }
+
+    .checkbox-row input:checked + .custom-checkbox {
+      background: var(--amber);
+      border-color: var(--amber-bright);
+    }
+
+    .checkbox-row input:checked + .custom-checkbox::after {
+      content: '';
+      width: 4px;
+      height: 7px;
+      border: solid var(--bg);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-bottom: 2px;
+    }
+
+    .checkbox-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn-reset-defaults {
+      width: 100%;
+      margin-top: 4px;
+      padding: 7px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-reset-defaults:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    /* Middle Simulation Viewport */
+    .simulation-viewport {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      animation: panelEntrance 0.45s ease-out;
+    }
+
+    /* HUD Bar atop world */
+    .sim-hud-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: rgba(13, 15, 21, 0.95);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 5;
+    }
+
+    .hud-metrics {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hud-metric-item {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .hud-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+    }
+
+    .hud-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-val.amber {
+      color: var(--amber-bright);
+    }
+
+    .hud-val.green {
+      color: #34d399;
+    }
+
+    .hud-val.red {
+      color: #f87171;
+    }
+
+    /* World Canvas Container */
+    .canvas-wrapper {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 25%, #0d1017 0%, #07080b 100%);
+      overflow: hidden;
+    }
+
+    #worldCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Milestone Celebratory Notification Overlay */
+    .celebration-toast {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(13, 17, 24, 0.96);
+      border: 1px solid var(--amber);
+      box-shadow: 0 0 24px var(--amber-glow);
+      padding: 9px 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10;
+    }
+
+    .celebration-toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .celebration-toast .toast-icon {
+      font-size: 18px;
+      color: var(--amber-bright);
+    }
+
+    .celebration-toast .toast-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+
+    .celebration-toast .toast-sub {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 12px;
+      color: var(--amber-bright);
+    }
+
+    /* Sim Controls Bar at Bottom */
+    .sim-controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      z-index: 5;
+    }
+
+    .playback-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-playback {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-playback:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--blue-grey-bright);
+    }
+
+    .btn-playback.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .speed-selector {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .btn-speed {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-speed:hover {
+      color: var(--text);
+    }
+
+    .btn-speed.active {
+      background: var(--blue-grey-dim);
+      color: var(--amber-bright);
+    }
+
+    /* Right Sidebar: Telemetry & Graph */
+    .sidebar-telemetry {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      animation: panelEntrance 0.5s ease-out;
+    }
+
+    .sidebar-telemetry::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar-telemetry::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* Stats Grid */
+    .stats-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-row-dual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      transition: color 0.3s ease;
+    }
+
+    .stat-value.amber {
+      color: var(--amber-bright);
+    }
+
+    .stat-value.blue-grey {
+      color: var(--blue-grey-bright);
+    }
+
+    .stat-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Graph Card */
+    .graph-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .graph-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .graph-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.amber {
+      background: var(--amber);
+      box-shadow: 0 0 4px var(--amber);
+    }
+
+    .legend-dot.blue-grey {
+      background: var(--blue-grey-bright);
+    }
+
+    .graph-canvas-container {
+      width: 100%;
+      height: 140px;
+      position: relative;
+    }
+
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Explanatory Reading Card */
+    .explainer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .explainer-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .explainer-text {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    .explainer-text strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* How It Works Modal Dialog */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 5, 8, 0.82);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 920px;
+      max-width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75);
+      transform: scale(0.97);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.open .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      transition: color 0.15s ease;
+    }
+
+    .modal-close-btn:hover {
+      color: var(--amber-bright);
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-diagram-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .network-canvas-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      height: 260px;
+      position: relative;
+    }
+
+    #networkCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .mini-lander-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mini-canvas-container {
+      width: 100%;
+      height: 110px;
+      border-radius: 4px;
+      background: #090b10;
+      border: 1px solid var(--border-subtle);
+    }
+
+    #miniLanderCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .meters-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .meter-bar-track {
+      width: 100px;
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .meter-bar-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 3px;
+      transition: width 0.08s ease;
+    }
+
+    .meter-bar-fill.thruster {
+      background: #38bdf8;
+    }
+
+    .modal-narrative {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .narrative-block {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .narrative-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--amber-bright);
+    }
+
+    .narrative-text {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    .narrative-text strong {
+      color: var(--text);
+    }
+
+    /* Small Screen Graceful Degradation */
+    @media (max-width: 1120px) {
+      .main-workspace {
+        grid-template-columns: 250px 1fr 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-group">
+        <h1 class="brand-title">
+          TOUCHDOWN
+          <span class="badge">NEUROEVOLUTION</span>
+        </h1>
+        <span class="brand-desc">Lunar module autonomous soft-landing swarm</span>
+      </div>
+
+      <div class="header-milestones">
+        <div id="badgeTouchdown" class="milestone-pill" title="Awarded when any lander makes a verified soft touchdown">Touchdown: --</div>
+        <div id="badgeReliable" class="milestone-pill" title="Awarded when at least 80% of the swarm lands softly">Reliable (80%+): --</div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnHowItWorks" class="btn-header" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          How It Works
+        </button>
+      </div>
+    </header>
+
+    <!-- 3-Column Workspace -->
+    <main class="main-workspace">
+      <!-- Left Column: Presets & Live Controls -->
+      <aside class="sidebar-controls">
+        <!-- Presets -->
+        <section>
+          <div class="section-title">
+            <span>Experiment Presets</span>
+          </div>
+          <div class="presets-grid">
+            <button class="btn-preset active" data-preset="optimal" type="button">Optimal (Default)</button>
+            <button class="btn-preset" data-preset="reckless" type="button">Reckless Mutation</button>
+            <button class="btn-preset" data-preset="noelites" type="button">No Elites</button>
+            <button class="btn-preset" data-preset="tiny" type="button">Tiny Population</button>
+            <button class="btn-preset" data-preset="hard" style="grid-column: span 2;" type="button">Hard World (High G, Narrow Pad)</button>
+          </div>
+        </section>
+
+        <!-- Live Sliders -->
+        <section>
+          <div class="section-title">
+            <span>Live Parameters</span>
+          </div>
+          <div class="sliders-list">
+            <!-- 1. Population -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Population</span>
+                <span class="control-value" id="val_population">50</span>
+              </div>
+              <input type="range" class="range-input" id="sl_population" min="10" max="150" step="1" value="50">
+            </div>
+
+            <!-- 2. Elites -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Elites</span>
+                <span class="control-value" id="val_elites">4</span>
+              </div>
+              <input type="range" class="range-input" id="sl_elites" min="0" max="12" step="1" value="4">
+            </div>
+
+            <!-- 3. Parent Pool -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Parent Pool</span>
+                <span class="control-value" id="val_parentPool">10</span>
+              </div>
+              <input type="range" class="range-input" id="sl_parentPool" min="2" max="25" step="1" value="10">
+            </div>
+
+            <!-- 4. Mutation Chance -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Mutation Chance</span>
+                <span class="control-value" id="val_mutationChance">0.10</span>
+              </div>
+              <input type="range" class="range-input" id="sl_mutationChance" min="0.01" max="0.50" step="0.01" value="0.10">
+            </div>
+
+            <!-- 5. Mutation Size -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Mutation Size</span>
+                <span class="control-value" id="val_mutationSize">0.25</span>
+              </div>
+              <input type="range" class="range-input" id="sl_mutationSize" min="0.05" max="0.80" step="0.01" value="0.25">
+            </div>
+
+            <!-- 6. Big Jump Chance -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Big Jump Chance</span>
+                <span class="control-value" id="val_bigJumpChance">0.05</span>
+              </div>
+              <input type="range" class="range-input" id="sl_bigJumpChance" min="0.00" max="0.25" step="0.01" value="0.05">
+            </div>
+
+            <!-- 7. Gravity -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Gravity</span>
+                <span class="control-value" id="val_gravity">0.020 px/f²</span>
+              </div>
+              <input type="range" class="range-input" id="sl_gravity" min="0.005" max="0.060" step="0.001" value="0.020">
+            </div>
+
+            <!-- 8. Main Thrust -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Main Thrust</span>
+                <span class="control-value" id="val_mainThrust">0.060 px/f²</span>
+              </div>
+              <input type="range" class="range-input" id="sl_mainThrust" min="0.020" max="0.120" step="0.002" value="0.060">
+            </div>
+
+            <!-- 9. Starting Fuel -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Starting Fuel</span>
+                <span class="control-value" id="val_startingFuel">500 units</span>
+              </div>
+              <input type="range" class="range-input" id="sl_startingFuel" min="100" max="1000" step="20" value="500">
+            </div>
+
+            <!-- 10. Start Height -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Start Height</span>
+                <span class="control-value" id="val_startHeight">500 px</span>
+              </div>
+              <input type="range" class="range-input" id="sl_startHeight" min="200" max="650" step="10" value="500">
+            </div>
+
+            <!-- 11. Pad Width -->
+            <div class="control-row">
+              <div class="control-label-row">
+                <span class="control-label">Pad Width</span>
+                <span class="control-value" id="val_padWidth">90 px</span>
+              </div>
+              <input type="range" class="range-input" id="sl_padWidth" min="30" max="200" step="5" value="90">
+            </div>
+          </div>
+        </section>
+
+        <!-- Checkbox & Reset -->
+        <section style="margin-top: -2px;">
+          <label class="checkbox-row" for="chk_shrinkMutation">
+            <input type="checkbox" id="chk_shrinkMutation" checked>
+            <div class="custom-checkbox"></div>
+            <span class="checkbox-label">Shrink mutation near perfect</span>
+          </label>
+
+          <button id="btnResetDefaults" class="btn-reset-defaults" type="button">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset to optimal values
+          </button>
+        </section>
+      </aside>
+
+      <!-- Middle: World Canvas & Playback -->
+      <section class="simulation-viewport">
+        <!-- Top HUD metrics -->
+        <div class="sim-hud-bar">
+          <div class="hud-metrics">
+            <div class="hud-metric-item">
+              <span class="hud-label">Gen</span>
+              <span class="hud-val amber" id="hudGen">1</span>
+            </div>
+            <div class="hud-metric-item">
+              <span class="hud-label">Frame</span>
+              <span class="hud-val" id="hudFrame">0 / 1200</span>
+            </div>
+            <div class="hud-metric-item">
+              <span class="hud-label">Still Flying</span>
+              <span class="hud-val" id="hudFlying">50</span>
+            </div>
+            <div class="hud-metric-item">
+              <span class="hud-label">Landed</span>
+              <span class="hud-val green" id="hudLanded">0</span>
+            </div>
+            <div class="hud-metric-item">
+              <span class="hud-label">Crashed</span>
+              <span class="hud-val red" id="hudCrashed">0</span>
+            </div>
+          </div>
+
+          <div style="font-size: 11px; color: var(--text-dim);">
+            Leader: <strong style="color: var(--amber-bright);">Amber</strong> &bull; Swarm: Translucent
+          </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-wrapper" id="canvasWrapper">
+          <canvas id="worldCanvas"></canvas>
+
+          <!-- Toast Milestone -->
+          <div id="celebrationToast" class="celebration-toast">
+            <span class="toast-icon">&#x2728;</span>
+            <div>
+              <div class="toast-title" id="toastTitle">MILESTONE ACHIEVED</div>
+              <div class="toast-sub" id="toastSub">Touchdown reached!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Playback Controls -->
+        <div class="sim-controls-bar">
+          <div class="playback-group">
+            <button id="btnPause" class="btn-playback" type="button">
+              <svg id="iconPlayPause" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              <span id="labelPause">Pause</span>
+            </button>
+            <button id="btnNextGen" class="btn-playback" type="button" title="Fast-forward current generation to completion">
+              Skip Gen &rarr;
+            </button>
+            <button id="btnRestart" class="btn-playback" type="button" title="Restart simulation from Generation 1">
+              Restart
+            </button>
+          </div>
+
+          <div class="speed-selector">
+            <span style="font-size: 10px; font-weight: 700; color: var(--text-dim); padding-left: 6px; padding-right: 4px;">SPEED</span>
+            <button class="btn-speed active" data-speed="1" type="button">1x</button>
+            <button class="btn-speed" data-speed="2" type="button">2x</button>
+            <button class="btn-speed" data-speed="5" type="button">5x</button>
+            <button class="btn-speed" data-speed="10" type="button">10x</button>
+            <button class="btn-speed" data-speed="25" type="button">25x</button>
+            <button class="btn-speed" data-speed="80" type="button">80x</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Telemetry & Graph -->
+      <aside class="sidebar-telemetry">
+        <!-- Telemetry Cards -->
+        <div class="stats-card">
+          <div class="section-title">
+            <span>Generation Telemetry</span>
+          </div>
+          <div class="stat-row-dual">
+            <div class="stat-item">
+              <span class="stat-label">Last Best Fitness</span>
+              <span class="stat-value amber" id="statBestFit">--</span>
+              <span class="stat-sub" id="statBestDiff">Target &ge; 1000</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Average Fitness</span>
+              <span class="stat-value blue-grey" id="statAvgFit">--</span>
+              <span class="stat-sub" id="statAvgDiff">Swarm mean</span>
+            </div>
+          </div>
+          <div class="stat-row-dual" style="margin-top: 4px;">
+            <div class="stat-item">
+              <span class="stat-label">Soft Touchdowns</span>
+              <span class="stat-value" id="statLandedCount" style="color: #34d399;">0 / 50</span>
+              <span class="stat-sub" id="statLandingRate">0.0% landing rate</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Effective Mutation</span>
+              <span class="stat-value" id="statEffMut" style="color: var(--text-muted); font-size: 15px;">&sigma; = 0.250</span>
+              <span class="stat-sub" id="statMutStatus">Standard scaling</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sliding Graph -->
+        <div class="graph-card">
+          <div class="graph-header">
+            <span class="section-title" style="margin-bottom: 0;">Fitness History</span>
+            <div class="graph-legend">
+              <div class="legend-item"><span class="legend-dot amber"></span> Best</div>
+              <div class="legend-item"><span class="legend-dot blue-grey"></span> Avg</div>
+            </div>
+          </div>
+          <div class="graph-canvas-container">
+            <canvas id="graphCanvas"></canvas>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); font-variant-numeric: tabular-nums;">
+            <span id="graphRangeStart">Gen 1</span>
+            <span>Sliding 30-gen window</span>
+            <span id="graphRangeEnd">Gen 1</span>
+          </div>
+        </div>
+
+        <!-- Reading the Graph Explanation -->
+        <div class="explainer-card">
+          <div class="explainer-title">Reading the Graph</div>
+          <p class="explainer-text">
+            The <strong>amber line</strong> tracks the single best lander of each generation. The <strong>blue-grey line</strong> tracks the population average.
+          </p>
+          <p class="explainer-text">
+            Scores above <strong>1000</strong> denote verified soft landings on the pad. In early generations, landers crash quickly; the average steadily climbs as the top 10 parents propagate stable attitude control and throttle deceleration throughout the swarm.
+          </p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- "How It Works" Modal -->
+  <div id="howItWorksModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+          Inside the Pilot: 7-10-3 Neural Controller
+        </div>
+        <button id="btnCloseModal" class="modal-close-btn" type="button" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-diagram-grid">
+          <!-- Animated Neural Network Diagram -->
+          <div class="network-canvas-wrap">
+            <canvas id="networkCanvas"></canvas>
+          </div>
+
+          <!-- Live Mini Visualizer & Sensors -->
+          <div class="mini-lander-wrap">
+            <div class="section-title" style="margin-bottom: 2px;">
+              <span>Live Sensor Readout</span>
+            </div>
+            <div class="mini-canvas-container">
+              <canvas id="miniLanderCanvas"></canvas>
+            </div>
+            <div class="meters-list">
+              <div class="meter-row">
+                <span style="color: var(--text-dim);">Offset (dx)</span>
+                <span id="meter_dx" style="font-variant-numeric: tabular-nums;">+0.00</span>
+              </div>
+              <div class="meter-row">
+                <span style="color: var(--text-dim);">Altitude (h)</span>
+                <span id="meter_alt" style="font-variant-numeric: tabular-nums;">+0.00</span>
+              </div>
+              <div class="meter-row">
+                <span style="color: var(--text-dim);">Speed (vx, vy)</span>
+                <span id="meter_vel" style="font-variant-numeric: tabular-nums;">0.0, 0.0</span>
+              </div>
+              <div class="meter-row">
+                <span style="color: var(--text-dim);">Angle &amp; &omega;</span>
+                <span id="meter_ang" style="font-variant-numeric: tabular-nums;">0.00 rad</span>
+              </div>
+              <div class="meter-row" style="margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border-subtle);">
+                <span style="color: var(--amber-bright);">Main Engine</span>
+                <div class="meter-bar-track">
+                  <div class="meter-bar-fill" id="bar_tm" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="meter-row">
+                <span style="color: #38bdf8;">Left Thruster</span>
+                <div class="meter-bar-track">
+                  <div class="meter-bar-fill thruster" id="bar_tl" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="meter-row">
+                <span style="color: #38bdf8;">Right Thruster</span>
+                <div class="meter-bar-track">
+                  <div class="meter-bar-fill thruster" id="bar_tr" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-narrative">
+          <div class="narrative-block">
+            <div class="narrative-title">1. Architecture &amp; Representation</div>
+            <p class="narrative-text">
+              Each lander is driven by a feedforward network with <strong>7 inputs</strong>, <strong>10 tanh hidden neurons</strong>, and <strong>3 outputs</strong>. Total weights: 7&times;10 + 10 + 10&times;3 + 3 = <strong>113 parameters</strong> stored as a flat array.
+            </p>
+            <p class="narrative-text">
+              Outputs are clipped to <strong>[0, 1]</strong>: Output 0 throttles the main engine along the lander's vertical axis, while Outputs 1 &amp; 2 fire the lateral RCS thrusters to deliver precise counter-torque.
+            </p>
+          </div>
+          <div class="narrative-block">
+            <div class="narrative-title">2. Neuroevolutionary Selection</div>
+            <p class="narrative-text">
+              Every generation preserves the <strong>top 4 elites</strong> unchanged. The remaining population is bred from the top 10 parents via single-point crossover followed by 10% Gaussian mutation.
+            </p>
+            <p class="narrative-text">
+              When <em>Shrink mutation near perfect</em> is enabled, mutation step size scales with <strong>0.25 &times; (1 &minus; landingRate)</strong> down to a floor of 0.03, stabilizing the population as precision touchdowns proliferate.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulation & Controller Logic -->
+  <script>
+    /* ==========================================================================
+       TOUCHDOWN — NEUROEVOLUTION LUNAR LANDER SIMULATION
+       ========================================================================== */
+
+    // --- 1. CONFIGURATION & STATE DECLARATION ---
+    const OPTIMAL_DEFAULTS = {
+      population: 50,
+      elites: 4,
+      parentPool: 10,
+      mutationChance: 0.10,
+      mutationSize: 0.25,
+      bigJumpChance: 0.05,
+      gravity: 0.020,
+      mainThrust: 0.060,
+      sideTorque: 0.0015,
+      angularDamping: 0.988,
+      startingFuel: 500,
+      startHeight: 500,
+      padWidth: 90,
+      maxFrames: 1200,
+      shrinkMutation: true,
+      softLandingMaxVy: 1.2,
+      softLandingMaxVx: 0.8,
+      softLandingMaxAngle: 0.2
+    };
+
+    const config = Object.assign({}, OPTIMAL_DEFAULTS);
+
+    // World geometry
+    const WORLD = {
+      width: 760,
+      height: 480,
+      padX: 380,
+      padY: 440,
+      terrain: new Float32Array(800)
+    };
+
+    // Stars background
+    const STARS = [];
+    for (let i = 0; i < 75; i++) {
+      STARS.push({
+        x: Math.random() * 800,
+        y: Math.random() * 400,
+        r: Math.random() * 1.2 + 0.4,
+        alpha: Math.random() * 0.7 + 0.2,
+        twinkleSpeed: Math.random() * 0.03 + 0.01
+      });
+    }
+
+    // Milestones & Telemetry History
+    const milestones = {
+      touchdown: null,
+      reliable: null
+    };
+
+    let allTimeBestFitness = 0;
+    const history = []; // Stores: { gen, bestFitness, avgFitness, landedCount, crashedCount, timeoutCount, landingRate }
+
+    // Simulation runtime state
+    let population = [];
+    let generation = 1;
+    let simFrame = 0;
+    let isPaused = false;
+    let simSpeed = 1;
+    let activePreset = 'optimal';
+    let sharedStartState = null;
+    let particles = [];
+    let trails = [];
+    let masterSeed = 1337;
+
+    // Sliding graph animation state
+    let graphSlideOffset = 1.0;
+    let isSlidingGraph = false;
+
+    // --- 2. PRNG & GAUSSIAN UTILITIES ---
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    let rng = mulberry32(masterSeed);
+
+    function gaussianRandom(mean = 0, stdev = 1) {
+      const u1 = Math.max(1e-7, rng());
+      const u2 = rng();
+      return mean + stdev * Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    }
+
+    // --- 3. TERRAIN & ENVIRONMENT GENERATION ---
+    function generateLunarTerrain() {
+      const w = WORLD.width;
+      const padLeft = WORLD.padX - config.padWidth / 2;
+      const padRight = WORLD.padX + config.padWidth / 2;
+
+      for (let x = 0; x < 800; x++) {
+        if (x >= padLeft && x <= padRight) {
+          // Flat horizontal pad
+          WORLD.terrain[x] = WORLD.padY;
+        } else {
+          // Uneven cratered landscape flanking the pad
+          const distFromPad = x < padLeft ? padLeft - x : x - padRight;
+          const blend = Math.min(1, distFromPad / 35);
+          
+          const hill1 = Math.sin(x * 0.014) * 22;
+          const hill2 = Math.cos(x * 0.038) * 12;
+          const rockyCrater = Math.sin(x * 0.08) * 6;
+          
+          const rawHeight = WORLD.padY + (hill1 + hill2 + rockyCrater) * blend;
+          WORLD.terrain[x] = Math.max(WORLD.padY - 45, Math.min(WORLD.height - 12, rawHeight));
+        }
+      }
+    }
+
+    function getTerrainHeightAt(x) {
+      const ix = Math.floor(Math.max(0, Math.min(799, x)));
+      return WORLD.terrain[ix];
+    }
+
+    // --- 4. NEURAL NETWORK FORWARD INFERENCE ---
+    // 7 inputs, 10 tanh hidden units, 3 outputs (tanh clipped to 0..1)
+    // 7*10 + 10 + 10*3 + 3 = 113 weights flat array
+    function createWeights() {
+      const w = new Float32Array(113);
+      for (let i = 0; i < 113; i++) {
+        w[i] = gaussianRandom(0, 0.45);
+      }
+      return w;
+    }
+
+    function evaluateNetwork(weights, inputs, outActivations = null) {
+      // inputs: [normDx, normAlt, normVx, normVy, normTheta, normOmega, normFuel]
+      const hidden = new Float32Array(10);
+      
+      // Hidden layer (7 -> 10)
+      for (let j = 0; j < 10; j++) {
+        let sum = weights[70 + j]; // bias
+        for (let i = 0; i < 7; i++) {
+          sum += inputs[i] * weights[i * 10 + j];
+        }
+        hidden[j] = Math.tanh(sum);
+      }
+
+      // Output layer (10 -> 3)
+      const outputs = new Float32Array(3);
+      for (let k = 0; k < 3; k++) {
+        let sum = weights[110 + k]; // bias
+        for (let j = 0; j < 10; j++) {
+          sum += hidden[j] * weights[80 + j * 3 + k];
+        }
+        // Clipped to 0..1
+        outputs[k] = Math.max(0, Math.min(1, Math.tanh(sum)));
+      }
+
+      if (outActivations) {
+        outActivations.inputs = inputs;
+        outActivations.hidden = hidden;
+        outActivations.outputs = outputs;
+      }
+
+      return outputs;
+    }
+
+    // --- 5. LANDER INITIALIZATION & PHYSICS ---
+    function generateSharedStartState() {
+      // Regenerated each generation with seeded PRNG for reproducibility
+      const genRng = mulberry32((masterSeed + generation * 9973) >>> 0);
+      return {
+        x: WORLD.padX + (genRng() - 0.5) * 260,
+        y: WORLD.padY - config.startHeight,
+        vx: (genRng() - 0.5) * 0.7,
+        vy: genRng() * 0.15,
+        theta: (genRng() - 0.5) * 0.28,
+        omega: (genRng() - 0.5) * 0.006
+      };
+    }
+
+    function createLander(weights = null) {
+      return {
+        weights: weights || createWeights(),
+        x: sharedStartState ? sharedStartState.x : WORLD.padX,
+        y: sharedStartState ? sharedStartState.y : WORLD.padY - config.startHeight,
+        vx: sharedStartState ? sharedStartState.vx : 0,
+        vy: sharedStartState ? sharedStartState.vy : 0,
+        theta: sharedStartState ? sharedStartState.theta : 0,
+        omega: sharedStartState ? sharedStartState.omega : 0,
+        fuel: config.startingFuel,
+        done: false,
+        status: 'flying', // 'flying', 'landed', 'crashed', 'timeout'
+        fitness: 0,
+        impactFrame: config.maxFrames,
+        thrustMain: 0,
+        thrustLeft: 0,
+        thrustRight: 0,
+        trail: [],
+        activations: { inputs: null, hidden: null, outputs: null }
+      };
+    }
+
+    function initPopulation() {
+      sharedStartState = generateSharedStartState();
+      population = [];
+      trails = [];
+      for (let i = 0; i < config.population; i++) {
+        population.push(createLander());
+      }
+    }
+
+    function resetLanderToStart(lander) {
+      lander.x = sharedStartState.x;
+      lander.y = sharedStartState.y;
+      lander.vx = sharedStartState.vx;
+      lander.vy = sharedStartState.vy;
+      lander.theta = sharedStartState.theta;
+      lander.omega = sharedStartState.omega;
+      lander.fuel = config.startingFuel;
+      lander.done = false;
+      lander.status = 'flying';
+      lander.fitness = 0;
+      lander.impactFrame = config.maxFrames;
+      lander.thrustMain = 0;
+      lander.thrustLeft = 0;
+      lander.thrustRight = 0;
+      lander.trail = [];
+    }
+
+    // --- 6. PHYSICS & SENSOR TICK ---
+    function updateLanderPhysics(lander, isLeader = false) {
+      if (lander.done) return;
+
+      // 1. Gather 7 normalized inputs
+      const groundBelow = getTerrainHeightAt(lander.x);
+      const altitude = groundBelow - (lander.y + 10);
+      const dx = lander.x - WORLD.padX;
+
+      const normDx = Math.max(-1.5, Math.min(1.5, dx / 300));
+      const normAlt = Math.max(-0.5, Math.min(1.5, altitude / config.startHeight));
+      const normVx = Math.max(-2, Math.min(2, lander.vx / 3.0));
+      const normVy = Math.max(-2, Math.min(2, lander.vy / 3.0));
+      const normTheta = Math.max(-2, Math.min(2, lander.theta / 0.5));
+      const normOmega = Math.max(-2, Math.min(2, lander.omega / 0.05));
+      const normFuel = Math.max(-1, Math.min(1, (lander.fuel / config.startingFuel) * 2 - 1));
+
+      const inputs = [normDx, normAlt, normVx, normVy, normTheta, normOmega, normFuel];
+
+      // 2. Network forward evaluation
+      const outputs = evaluateNetwork(lander.weights, inputs, isLeader ? lander.activations : null);
+      let tm = outputs[0];
+      let tl = outputs[1];
+      let tr = outputs[2];
+
+      // 3. Fuel expenditure
+      if (lander.fuel <= 0) {
+        tm = 0; tl = 0; tr = 0;
+      } else {
+        const fuelBurn = tm * 1.0 + tl * 0.2 + tr * 0.2;
+        if (lander.fuel < fuelBurn) {
+          const ratio = lander.fuel / fuelBurn;
+          tm *= ratio;
+          tl *= ratio;
+          tr *= ratio;
+          lander.fuel = 0;
+        } else {
+          lander.fuel -= fuelBurn;
+        }
+      }
+
+      lander.thrustMain = tm;
+      lander.thrustLeft = tl;
+      lander.thrustRight = tr;
+
+      // 4. Forces & Integrations
+      // Main engine pushes along lander up axis: (sin(theta), -cos(theta))
+      const F = tm * config.mainThrust;
+      const ax = F * Math.sin(lander.theta);
+      const ay = -F * Math.cos(lander.theta) + config.gravity;
+
+      // Side thrusters torque
+      const torque = (tl - tr) * config.sideTorque;
+
+      lander.vx += ax;
+      lander.vy += ay;
+      lander.x += lander.vx;
+      lander.y += lander.vy;
+      lander.omega += torque;
+      lander.omega *= config.angularDamping;
+      lander.theta += lander.omega;
+
+      // Record trail
+      if (simFrame % 2 === 0) {
+        lander.trail.push({ x: lander.x, y: lander.y });
+        if (lander.trail.length > 18) lander.trail.shift();
+      }
+
+      // 5. Contact with ground
+      const bottomContactY = lander.y + 10 * Math.cos(lander.theta) + 8 * Math.abs(Math.sin(lander.theta));
+      const terrainAtX = getTerrainHeightAt(lander.x);
+
+      const offscreen = lander.x < -40 || lander.x > WORLD.width + 40 || lander.y < -120;
+
+      if (bottomContactY >= terrainAtX || offscreen) {
+        lander.done = true;
+        lander.impactFrame = simFrame;
+
+        const onPad = Math.abs(lander.x - WORLD.padX) <= config.padWidth / 2;
+        const softSpeedY = Math.abs(lander.vy) < config.softLandingMaxVy;
+        const softSpeedX = Math.abs(lander.vx) < config.softLandingMaxVx;
+        const softAngle = Math.abs(lander.theta) < config.softLandingMaxAngle;
+
+        if (onPad && softSpeedY && softSpeedX && softAngle && !offscreen) {
+          lander.status = 'landed';
+          spawnDustParticles(lander.x, terrainAtX, 28);
+        } else {
+          lander.status = 'crashed';
+          spawnCrashDebris(lander.x, Math.min(terrainAtX, lander.y), 18);
+        }
+      } else if (simFrame >= config.maxFrames) {
+        lander.done = true;
+        lander.status = 'timeout';
+        lander.impactFrame = simFrame;
+      }
+    }
+
+    // --- 7. EXPLICIT FITNESS FORMULA ---
+    function calculateFitness(lander) {
+      const dx = Math.abs(lander.x - WORLD.padX);
+      const impactSpeed = Math.sqrt(lander.vx * lander.vx + lander.vy * lander.vy);
+
+      if (lander.status === 'landed') {
+        // Soft landing: 1000 base + fuel bonus (up to 200) + centeredness (up to 100) + soft speed bonus (up to 150) + uprightness (up to 50)
+        const fuelBonus = (lander.fuel / config.startingFuel) * 200;
+        const centerBonus = Math.max(0, 1 - dx / (config.padWidth / 2)) * 100;
+        const vyBonus = Math.max(0, 1 - Math.abs(lander.vy) / config.softLandingMaxVy) * 100;
+        const vxBonus = Math.max(0, 1 - Math.abs(lander.vx) / config.softLandingMaxVx) * 50;
+        const angleBonus = Math.max(0, 1 - Math.abs(lander.theta) / config.softLandingMaxAngle) * 50;
+        
+        return 1000 + fuelBonus + centerBonus + vyBonus + vxBonus + angleBonus;
+      } else if (lander.status === 'crashed') {
+        // Crash: capped strictly below 650. Rewards proximity to pad, lower impact speed, and keeping upright
+        const distScore = Math.max(0, 1 - dx / 380) * 250;
+        const speedScore = Math.max(0, 1 - impactSpeed / 8.0) * 150;
+        const angleScore = Math.max(0, 1 - Math.abs(lander.theta) / Math.PI) * 100;
+        const survivalScore = Math.min(1, lander.impactFrame / 350) * 50;
+        
+        return Math.min(650, distScore + speedScore + angleScore + survivalScore);
+      } else {
+        // Timeout: small score based on how close it hovered near the pad
+        const distScore = Math.max(0, 1 - dx / 380) * 120;
+        return Math.min(180, distScore + 20);
+      }
+    }
+
+    // --- 8. BREEDING & NEUROEVOLUTION ---
+    function evolvePopulation() {
+      // 1. Calculate fitness and sort population descending
+      let landedCount = 0;
+      let crashedCount = 0;
+      let timeoutCount = 0;
+      let totalFitness = 0;
+
+      for (let i = 0; i < population.length; i++) {
+        const l = population[i];
+        l.fitness = calculateFitness(l);
+        totalFitness += l.fitness;
+        if (l.status === 'landed') landedCount++;
+        else if (l.status === 'crashed') crashedCount++;
+        else timeoutCount++;
+      }
+
+      population.sort((a, b) => b.fitness - a.fitness);
+
+      const bestFitness = population[0].fitness;
+      const avgFitness = totalFitness / population.length;
+      const landingRate = landedCount / population.length;
+
+      // Check all-time best celebratory pulse
+      let isNewAllTimeBest = false;
+      if (bestFitness > allTimeBestFitness) {
+        allTimeBestFitness = bestFitness;
+        isNewAllTimeBest = true;
+      }
+
+      // 2. Record generation history
+      history.push({
+        gen: generation,
+        bestFitness: bestFitness,
+        avgFitness: avgFitness,
+        landedCount: landedCount,
+        crashedCount: crashedCount,
+        timeoutCount: timeoutCount,
+        landingRate: landingRate,
+        populationSize: population.length
+      });
+
+      // 3. Check milestones
+      if (landedCount > 0 && milestones.touchdown === null) {
+        milestones.touchdown = generation;
+        triggerCelebration('touchdown', `Touchdown achieved in Gen ${generation}!`);
+      }
+      if (landingRate >= 0.80 && milestones.reliable === null) {
+        milestones.reliable = generation;
+        triggerCelebration('reliable', `Reliable fleet (80%+) in Gen ${generation}!`);
+      }
+
+      // 4. Update UI telemetry cards
+      updateTelemetryUI(bestFitness, avgFitness, landedCount, landingRate, isNewAllTimeBest);
+
+      // Trigger smooth graph slide
+      isSlidingGraph = true;
+      graphSlideOffset = 0.0;
+
+      // 5. Form next generation
+      const nextGen = [];
+      const numElites = Math.min(config.elites, population.length);
+      
+      // Preserve elites unchanged
+      for (let i = 0; i < numElites; i++) {
+        const eliteWeights = new Float32Array(population[i].weights);
+        nextGen.push(createLander(eliteWeights));
+      }
+
+      // Breeding pool from top N parents
+      const poolSize = Math.max(2, Math.min(config.parentPool, population.length));
+      
+      // Adaptive mutation size calculation
+      const effectiveMutSize = config.shrinkMutation
+        ? Math.max(0.03, config.mutationSize * (1.0 - landingRate))
+        : config.mutationSize;
+
+      while (nextGen.length < config.population) {
+        // Selection: pick two distinct parents from top pool
+        const p1Idx = Math.floor(rng() * poolSize);
+        let p2Idx = Math.floor(rng() * poolSize);
+        if (poolSize > 1 && p2Idx === p1Idx) {
+          p2Idx = (p2Idx + 1) % poolSize;
+        }
+
+        const parent1 = population[p1Idx].weights;
+        const parent2 = population[p2Idx].weights;
+        const childWeights = new Float32Array(113);
+
+        // Single-point crossover
+        const crossPoint = Math.floor(rng() * 112) + 1;
+        for (let j = 0; j < crossPoint; j++) childWeights[j] = parent1[j];
+        for (let j = crossPoint; j < 113; j++) childWeights[j] = parent2[j];
+
+        // Mutation
+        const isBigJump = rng() < config.bigJumpChance;
+        const mutSize = isBigJump ? 0.60 : effectiveMutSize;
+
+        for (let j = 0; j < 113; j++) {
+          if (rng() < config.mutationChance) {
+            childWeights[j] += gaussianRandom(0, mutSize);
+            // Clamp to avoid mathematical overflow in tanh
+            if (childWeights[j] > 4.5) childWeights[j] = 4.5;
+            else if (childWeights[j] < -4.5) childWeights[j] = -4.5;
+          }
+        }
+
+        nextGen.push(createLander(childWeights));
+      }
+
+      // Advance generation
+      generation++;
+      population = nextGen;
+      simFrame = 0;
+      sharedStartState = generateSharedStartState();
+
+      // Reset all landers to new shared start state
+      for (let i = 0; i < population.length; i++) {
+        resetLanderToStart(population[i]);
+      }
+    }
+
+    // --- 9. PARTICLES & VISUAL EFFECTS ---
+    function spawnDustParticles(x, y, count) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.PI + (Math.random() - 0.5) * 1.6;
+        const speed = Math.random() * 2.2 + 0.6;
+        particles.push({
+          x: x + (Math.random() - 0.5) * 10,
+          y: y - 2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed * 0.4 - 0.5,
+          alpha: 0.8,
+          radius: Math.random() * 3 + 1.5,
+          decay: Math.random() * 0.02 + 0.015,
+          color: '200, 210, 225'
+        });
+      }
+    }
+
+    function spawnCrashDebris(x, y, count) {
+      // Flash ring
+      particles.push({
+        x: x,
+        y: y,
+        vx: 0,
+        vy: 0,
+        alpha: 1.0,
+        radius: 4,
+        maxRadius: 28,
+        decay: 0.06,
+        isFlash: true,
+        color: '255, 230, 160'
+      });
+
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3.5 + 1.0;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.2,
+          alpha: 1.0,
+          radius: Math.random() * 2.5 + 1,
+          decay: Math.random() * 0.03 + 0.02,
+          color: Math.random() > 0.4 ? '245, 158, 11' : '239, 68, 68'
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        if (p.isFlash) {
+          p.radius += (p.maxRadius - p.radius) * 0.25;
+          p.alpha -= p.decay;
+        } else {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += config.gravity * 0.6;
+          p.vx *= 0.98;
+          p.alpha -= p.decay;
+        }
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    // --- 10. CANVAS RENDERING PIPELINE ---
+    const worldCanvas = document.getElementById('worldCanvas');
+    const worldCtx = worldCanvas ? worldCanvas.getContext('2d') : null;
+
+    const graphCanvas = document.getElementById('graphCanvas');
+    const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+    const networkCanvas = document.getElementById('networkCanvas');
+    const networkCtx = networkCanvas ? networkCanvas.getContext('2d') : null;
+
+    const miniLanderCanvas = document.getElementById('miniLanderCanvas');
+    const miniCtx = miniLanderCanvas ? miniLanderCanvas.getContext('2d') : null;
+
+    function resizeCanvases() {
+      const wrapper = document.getElementById('canvasWrapper');
+      if (wrapper && worldCanvas) {
+        const rect = wrapper.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          worldCanvas.width = rect.width;
+          worldCanvas.height = rect.height;
+          WORLD.width = rect.width;
+          WORLD.height = rect.height;
+          WORLD.padX = rect.width / 2;
+          WORLD.padY = rect.height - 38;
+          generateLunarTerrain();
+        }
+      }
+
+      if (graphCanvas) {
+        const gWrap = graphCanvas.parentElement;
+        if (gWrap) {
+          const gRect = gWrap.getBoundingClientRect();
+          graphCanvas.width = gRect.width || 250;
+          graphCanvas.height = gRect.height || 140;
+        }
+      }
+
+      if (networkCanvas) {
+        const nWrap = networkCanvas.parentElement;
+        if (nWrap) {
+          networkCanvas.width = nWrap.clientWidth || 500;
+          networkCanvas.height = nWrap.clientHeight || 260;
+        }
+      }
+
+      if (miniLanderCanvas) {
+        const mWrap = miniLanderCanvas.parentElement;
+        if (mWrap) {
+          miniLanderCanvas.width = mWrap.clientWidth || 240;
+          miniLanderCanvas.height = 110;
+        }
+      }
+    }
+
+    function renderStars(ctx) {
+      for (let i = 0; i < STARS.length; i++) {
+        const s = STARS[i];
+        // Slow starfield drift
+        s.x -= 0.035;
+        if (s.x < 0) s.x = WORLD.width;
+
+        const flicker = Math.sin(simFrame * s.twinkleSpeed) * 0.2;
+        ctx.fillStyle = `rgba(220, 230, 245, ${Math.max(0.1, Math.min(1, s.alpha + flicker))})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function renderTerrain(ctx) {
+      const w = WORLD.width;
+      const h = WORLD.height;
+      const padLeft = WORLD.padX - config.padWidth / 2;
+      const padRight = WORLD.padX + config.padWidth / 2;
+
+      // Draw terrain polygon
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(0, WORLD.terrain[0]);
+      for (let x = 1; x < w; x += 2) {
+        ctx.lineTo(x, getTerrainHeightAt(x));
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+
+      // Lunar rock fill
+      const rockGrad = ctx.createLinearGradient(0, WORLD.padY - 40, 0, h);
+      rockGrad.addColorStop(0, '#151922');
+      rockGrad.addColorStop(1, '#090b10');
+      ctx.fillStyle = rockGrad;
+      ctx.fill();
+
+      // Terrain ridge stroke
+      ctx.strokeStyle = '#333e52';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Landing Pad Rendering
+      ctx.save();
+      const padY = WORLD.padY;
+      
+      // Pad base structure
+      ctx.fillStyle = '#1c2230';
+      ctx.fillRect(padLeft, padY, config.padWidth, 8);
+      
+      // Pad top metal surface
+      ctx.fillStyle = '#2d3748';
+      ctx.fillRect(padLeft, padY - 2, config.padWidth, 3);
+      
+      // Pad hazard border
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, padY - 2);
+      ctx.lineTo(padRight, padY - 2);
+      ctx.stroke();
+
+      // Blinking navigation beacon lights on left & right pad edge
+      const blink = Math.sin(simFrame * 0.08) > 0;
+      const beaconColor = blink ? '#10b981' : '#f59e0b';
+      
+      ctx.fillStyle = beaconColor;
+      ctx.shadowColor = beaconColor;
+      ctx.shadowBlur = blink ? 8 : 2;
+
+      // Left beacon
+      ctx.fillRect(padLeft - 2, padY - 6, 4, 4);
+      // Right beacon
+      ctx.fillRect(padRight - 2, padY - 6, 4, 4);
+
+      // Pad target crosshair mark
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.fillRect(WORLD.padX - 8, padY - 2, 16, 2);
+
+      ctx.restore();
+    }
+
+    function drawLunarModule(ctx, lander, isLeader) {
+      ctx.save();
+      ctx.translate(lander.x, lander.y);
+      ctx.rotate(lander.theta);
+
+      const colorBody = isLeader ? '#f59e0b' : 'rgba(205, 215, 230, 0.35)';
+      const colorLegs = isLeader ? '#fbbf24' : 'rgba(148, 163, 184, 0.35)';
+      const colorCabin = isLeader ? '#d97706' : 'rgba(100, 116, 139, 0.35)';
+
+      // 1. Engine flames
+      if (lander.thrustMain > 0.04) {
+        const flameLen = lander.thrustMain * 22 + (Math.random() - 0.5) * 4;
+        const grad = ctx.createLinearGradient(0, 6, 0, 6 + flameLen);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, isLeader ? '#fbbf24' : 'rgba(251, 191, 36, 0.6)');
+        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(-3, 6);
+        ctx.lineTo(3, 6);
+        ctx.lineTo(0, 6 + flameLen);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Lateral RCS thruster plumes
+      if (lander.thrustLeft > 0.05) {
+        ctx.fillStyle = isLeader ? 'rgba(56, 189, 248, 0.8)' : 'rgba(56, 189, 248, 0.35)';
+        ctx.fillRect(-8 - lander.thrustLeft * 7, -2, lander.thrustLeft * 7, 2);
+      }
+      if (lander.thrustRight > 0.05) {
+        ctx.fillStyle = isLeader ? 'rgba(56, 189, 248, 0.8)' : 'rgba(56, 189, 248, 0.35)';
+        ctx.fillRect(8, -2, lander.thrustRight * 7, 2);
+      }
+
+      // 2. Landing Gear (Struts & Footpads)
+      ctx.strokeStyle = colorLegs;
+      ctx.lineWidth = isLeader ? 1.4 : 1.0;
+
+      // Left leg
+      ctx.beginPath();
+      ctx.moveTo(-5, 4);
+      ctx.lineTo(-9, 10);
+      ctx.lineTo(-12, 10);
+      ctx.stroke();
+
+      // Right leg
+      ctx.beginPath();
+      ctx.moveTo(5, 4);
+      ctx.lineTo(9, 10);
+      ctx.lineTo(12, 10);
+      ctx.stroke();
+
+      // Footpads
+      ctx.fillStyle = colorLegs;
+      ctx.fillRect(-12, 9, 4, 1.5);
+      ctx.fillRect(8, 9, 4, 1.5);
+
+      // 3. Octagonal Descent Stage Body
+      ctx.fillStyle = colorBody;
+      ctx.beginPath();
+      ctx.moveTo(-6, 0);
+      ctx.lineTo(-4, -5);
+      ctx.lineTo(4, -5);
+      ctx.lineTo(6, 0);
+      ctx.lineTo(6, 5);
+      ctx.lineTo(-6, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // 4. Ascent Stage Cabin (Cockpit)
+      ctx.fillStyle = colorCabin;
+      ctx.beginPath();
+      ctx.moveTo(-4, -5);
+      ctx.lineTo(-2, -9);
+      ctx.lineTo(2, -9);
+      ctx.lineTo(4, -5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Main engine nozzle bell
+      ctx.fillStyle = isLeader ? '#475569' : 'rgba(71, 85, 105, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(-3, 5);
+      ctx.lineTo(3, 5);
+      ctx.lineTo(4, 7);
+      ctx.lineTo(-4, 7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Leader glow aura
+      if (isLeader) {
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(-4, -5, 8, 10);
+      }
+
+      ctx.restore();
+    }
+
+    function renderTrails(ctx) {
+      for (let i = 0; i < population.length; i++) {
+        const l = population[i];
+        if (l.trail.length < 2) continue;
+
+        const isLead = (i === 0);
+        ctx.beginPath();
+        ctx.moveTo(l.trail[0].x, l.trail[0].y);
+        for (let t = 1; t < l.trail.length; t++) {
+          ctx.lineTo(l.trail[t].x, l.trail[t].y);
+        }
+
+        ctx.strokeStyle = isLead ? 'rgba(245, 158, 11, 0.4)' : 'rgba(148, 163, 184, 0.08)';
+        ctx.lineWidth = isLead ? 1.5 : 0.8;
+        ctx.stroke();
+      }
+    }
+
+    function renderParticles(ctx) {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        if (p.isFlash) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.color}, ${p.alpha * 0.6})`;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+          ctx.fill();
+        }
+      }
+    }
+
+    function renderWorld() {
+      if (!worldCtx) return;
+      const w = WORLD.width;
+      const h = WORLD.height;
+
+      worldCtx.clearRect(0, 0, w, h);
+
+      // 1. Stars background
+      renderStars(worldCtx);
+
+      // 2. Faint trails
+      renderTrails(worldCtx);
+
+      // 3. Translucent Swarm Landers (drawn back-to-front, leader last)
+      let leaderIdx = 0;
+      let bestEstScore = -9999;
+      for (let i = 0; i < population.length; i++) {
+        const l = population[i];
+        const dx = Math.abs(l.x - WORLD.padX);
+        const est = (WORLD.padY - l.y) - dx * 0.8 - Math.abs(l.theta) * 100;
+        if (est > bestEstScore) {
+          bestEstScore = est;
+          leaderIdx = i;
+        }
+      }
+
+      // Draw non-leaders first (dim and translucent)
+      for (let i = 0; i < population.length; i++) {
+        if (i !== leaderIdx && !population[i].done) {
+          drawLunarModule(worldCtx, population[i], false);
+        }
+      }
+
+      // Draw leading lander on top (vibrant amber with flames)
+      if (population[leaderIdx] && !population[leaderIdx].done) {
+        drawLunarModule(worldCtx, population[leaderIdx], true);
+      }
+
+      // 4. Lunar Terrain & Landing Pad
+      renderTerrain(worldCtx);
+
+      // 5. Explosions & Touchdown dust particles
+      renderParticles(worldCtx);
+    }
+
+    // --- 11. SLIDING 30-GENERATION GRAPH RENDERING ---
+    function renderGraph() {
+      if (!graphCtx || !graphCanvas) return;
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+
+      graphCtx.clearRect(0, 0, w, h);
+
+      const padLeft = 32;
+      const padRight = 12;
+      const padTop = 14;
+      const padBottom = 20;
+
+      const plotW = w - padLeft - padRight;
+      const plotH = h - padTop - padBottom;
+
+      // Sliding window animation
+      if (isSlidingGraph) {
+        graphSlideOffset += 0.12;
+        if (graphSlideOffset >= 1.0) {
+          graphSlideOffset = 1.0;
+          isSlidingGraph = false;
+        }
+      }
+
+      const maxWindow = 30;
+      let startIdx = 0;
+      let totalPts = history.length;
+
+      if (totalPts > maxWindow) {
+        startIdx = totalPts - maxWindow;
+      }
+
+      const windowData = history.slice(startIdx);
+
+      const maxY = 1600;
+      const minY = 0;
+
+      function getYPix(val) {
+        const norm = Math.max(0, Math.min(1, (val - minY) / (maxY - minY)));
+        return padTop + plotH * (1.0 - norm);
+      }
+
+      function getXPix(i, count) {
+        if (count <= 1) return padLeft + plotW / 2;
+        // Smooth slide interpolation when at max window
+        const base = (i / (count - 1));
+        return padLeft + base * plotW;
+      }
+
+      // Grid reference lines
+      graphCtx.strokeStyle = 'rgba(30, 36, 51, 0.7)';
+      graphCtx.lineWidth = 1;
+
+      // Soft landing threshold reference (1000)
+      const y1000 = getYPix(1000);
+      graphCtx.beginPath();
+      graphCtx.setLineDash([3, 3]);
+      graphCtx.moveTo(padLeft, y1000);
+      graphCtx.lineTo(w - padRight, y1000);
+      graphCtx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+      graphCtx.stroke();
+      graphCtx.setLineDash([]);
+
+      // Baseline grid lines
+      [0, 500, 1500].forEach(level => {
+        const yPix = getYPix(level);
+        graphCtx.beginPath();
+        graphCtx.moveTo(padLeft, yPix);
+        graphCtx.lineTo(w - padRight, yPix);
+        graphCtx.strokeStyle = 'rgba(30, 36, 51, 0.8)';
+        graphCtx.stroke();
+      });
+
+      // Axis labels
+      graphCtx.fillStyle = '#5c6475';
+      graphCtx.font = '9px var(--font-ui)';
+      graphCtx.textAlign = 'right';
+      graphCtx.fillText('1.5k', padLeft - 4, getYPix(1500) + 3);
+      graphCtx.fillText('1.0k', padLeft - 4, y1000 + 3);
+      graphCtx.fillText('500', padLeft - 4, getYPix(500) + 3);
+      graphCtx.fillText('0', padLeft - 4, getYPix(0) + 3);
+
+      if (windowData.length < 1) {
+        graphCtx.fillStyle = '#8b93a5';
+        graphCtx.textAlign = 'center';
+        graphCtx.fillText('Awaiting Generation 1 telemetry...', padLeft + plotW / 2, padTop + plotH / 2);
+        return;
+      }
+
+      // Draw Average Fitness line (Blue-grey)
+      graphCtx.beginPath();
+      for (let i = 0; i < windowData.length; i++) {
+        const x = getXPix(i, windowData.length);
+        const y = getYPix(windowData[i].avgFitness);
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = '#94a3b8';
+      graphCtx.lineWidth = 1.8;
+      graphCtx.stroke();
+
+      // Draw Best Fitness line (Amber)
+      graphCtx.beginPath();
+      for (let i = 0; i < windowData.length; i++) {
+        const x = getXPix(i, windowData.length);
+        const y = getYPix(windowData[i].bestFitness);
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = '#f59e0b';
+      graphCtx.lineWidth = 2.2;
+      graphCtx.shadowColor = 'rgba(245, 158, 11, 0.4)';
+      graphCtx.shadowBlur = 6;
+      graphCtx.stroke();
+      graphCtx.shadowBlur = 0;
+
+      // Data point dots on Best line
+      for (let i = 0; i < windowData.length; i++) {
+        const x = getXPix(i, windowData.length);
+        const y = getYPix(windowData[i].bestFitness);
+        graphCtx.beginPath();
+        graphCtx.arc(x, y, 2.5, 0, Math.PI * 2);
+        graphCtx.fillStyle = windowData[i].landedCount > 0 ? '#34d399' : '#f59e0b';
+        graphCtx.fill();
+      }
+
+      // Update generation window labels
+      const startGen = windowData[0].gen;
+      const endGen = windowData[windowData.length - 1].gen;
+      const rangeStartEl = document.getElementById('graphRangeStart');
+      const rangeEndEl = document.getElementById('graphRangeEnd');
+      if (rangeStartEl) rangeStartEl.textContent = `Gen ${startGen}`;
+      if (rangeEndEl) rangeEndEl.textContent = `Gen ${endGen}`;
+    }
+
+    // --- 12. "HOW IT WORKS" MODAL & NEURAL DIAGRAM ---
+    let animPulseProgress = 0;
+
+    function renderNetworkDiagram() {
+      if (!networkCtx || !networkCanvas) return;
+      const w = networkCanvas.width;
+      const h = networkCanvas.height;
+
+      networkCtx.clearRect(0, 0, w, h);
+
+      // Node layer positions
+      const layerX = [w * 0.14, w * 0.50, w * 0.86];
+      const inputY = [];
+      const hiddenY = [];
+      const outputY = [];
+
+      const numInputs = 7;
+      const numHidden = 10;
+      const numOutputs = 3;
+
+      for (let i = 0; i < numInputs; i++) {
+        inputY.push(h * 0.12 + (i / (numInputs - 1)) * (h * 0.76));
+      }
+      for (let j = 0; j < numHidden; j++) {
+        hiddenY.push(h * 0.08 + (j / (numHidden - 1)) * (h * 0.84));
+      }
+      for (let k = 0; k < numOutputs; k++) {
+        outputY.push(h * 0.25 + (k / (numOutputs - 1)) * (h * 0.50));
+      }
+
+      const weights = population.length > 0 ? population[0].weights : null;
+
+      // 1. Draw Synapses (Inputs -> Hidden)
+      animPulseProgress = (animPulseProgress + 0.02) % 1.0;
+
+      for (let i = 0; i < numInputs; i++) {
+        for (let j = 0; j < numHidden; j++) {
+          const wVal = weights ? weights[i * 10 + j] : 0.2;
+          const isPos = wVal >= 0;
+          const alpha = Math.min(0.7, Math.abs(wVal) * 0.5 + 0.08);
+
+          networkCtx.beginPath();
+          networkCtx.moveTo(layerX[0], inputY[i]);
+          networkCtx.lineTo(layerX[1], hiddenY[j]);
+          networkCtx.strokeStyle = isPos ? `rgba(16, 185, 129, ${alpha})` : `rgba(245, 158, 11, ${alpha})`;
+          networkCtx.lineWidth = Math.min(2.5, Math.abs(wVal) * 1.5 + 0.5);
+          networkCtx.stroke();
+
+          // Signal pulse wave traveling along synapse
+          if (i === 1 && j % 3 === 0) {
+            const px = layerX[0] + (layerX[1] - layerX[0]) * animPulseProgress;
+            const py = inputY[i] + (hiddenY[j] - inputY[i]) * animPulseProgress;
+            networkCtx.beginPath();
+            networkCtx.arc(px, py, 1.8, 0, Math.PI * 2);
+            networkCtx.fillStyle = '#ffffff';
+            networkCtx.fill();
+          }
+        }
+      }
+
+      // 2. Draw Synapses (Hidden -> Outputs)
+      for (let j = 0; j < numHidden; j++) {
+        for (let k = 0; k < numOutputs; k++) {
+          const wVal = weights ? weights[80 + j * 3 + k] : 0.2;
+          const isPos = wVal >= 0;
+          const alpha = Math.min(0.8, Math.abs(wVal) * 0.6 + 0.1);
+
+          networkCtx.beginPath();
+          networkCtx.moveTo(layerX[1], hiddenY[j]);
+          networkCtx.lineTo(layerX[2], outputY[k]);
+          networkCtx.strokeStyle = isPos ? `rgba(56, 189, 248, ${alpha})` : `rgba(239, 68, 68, ${alpha})`;
+          networkCtx.lineWidth = Math.min(2.5, Math.abs(wVal) * 1.5 + 0.5);
+          networkCtx.stroke();
+        }
+      }
+
+      const inputLabels = ['Offset dx', 'Altitude h', 'Speed vx', 'Speed vy', 'Angle \u03B8', 'AngVel \u03C9', 'Fuel rem'];
+      const outputLabels = ['Main Thruster', 'Left RCS', 'Right RCS'];
+
+      // 3. Draw Input Nodes
+      for (let i = 0; i < numInputs; i++) {
+        networkCtx.beginPath();
+        networkCtx.arc(layerX[0], inputY[i], 6, 0, Math.PI * 2);
+        networkCtx.fillStyle = '#1e2533';
+        networkCtx.fill();
+        networkCtx.strokeStyle = '#94a3b8';
+        networkCtx.lineWidth = 1.5;
+        networkCtx.stroke();
+
+        networkCtx.fillStyle = '#edebe6';
+        networkCtx.font = '10px var(--font-ui)';
+        networkCtx.textAlign = 'right';
+        networkCtx.fillText(inputLabels[i], layerX[0] - 10, inputY[i] + 3);
+      }
+
+      // 4. Draw Hidden Neurons (10 tanh)
+      for (let j = 0; j < numHidden; j++) {
+        networkCtx.beginPath();
+        networkCtx.arc(layerX[1], hiddenY[j], 5.5, 0, Math.PI * 2);
+        networkCtx.fillStyle = '#0f172a';
+        networkCtx.fill();
+        networkCtx.strokeStyle = '#38bdf8';
+        networkCtx.lineWidth = 1.2;
+        networkCtx.stroke();
+      }
+
+      // 5. Draw Output Nodes (3 actions)
+      for (let k = 0; k < numOutputs; k++) {
+        networkCtx.beginPath();
+        networkCtx.arc(layerX[2], outputY[k], 7, 0, Math.PI * 2);
+        networkCtx.fillStyle = '#1e2533';
+        networkCtx.fill();
+        networkCtx.strokeStyle = '#f59e0b';
+        networkCtx.lineWidth = 2.0;
+        networkCtx.stroke();
+
+        networkCtx.fillStyle = '#fbbf24';
+        networkCtx.font = '10px var(--font-ui)';
+        networkCtx.textAlign = 'left';
+        networkCtx.fillText(outputLabels[k], layerX[2] + 12, outputY[k] + 3);
+      }
+
+      // Layer headers
+      networkCtx.fillStyle = '#5c6475';
+      networkCtx.font = '10px var(--font-ui)';
+      networkCtx.textAlign = 'center';
+      networkCtx.fillText('7 INPUTS', layerX[0], 14);
+      networkCtx.fillText('10 HIDDEN (tanh)', layerX[1], 14);
+      networkCtx.fillText('3 OUTPUTS', layerX[2], 14);
+    }
+
+    function renderMiniLander() {
+      if (!miniCtx || !miniLanderCanvas) return;
+      const w = miniLanderCanvas.width;
+      const h = miniLanderCanvas.height;
+
+      miniCtx.clearRect(0, 0, w, h);
+
+      const lead = population.length > 0 ? population[0] : null;
+
+      // Draw mini ground
+      miniCtx.fillStyle = '#1c2433';
+      miniCtx.fillRect(0, h - 14, w, 14);
+      miniCtx.fillStyle = '#f59e0b';
+      miniCtx.fillRect(w / 2 - 25, h - 14, 50, 2);
+
+      if (lead) {
+        miniCtx.save();
+        const px = w / 2 + Math.max(-w * 0.4, Math.min(w * 0.4, (lead.x - WORLD.padX) * 0.35));
+        const py = Math.max(20, Math.min(h - 22, (lead.y / WORLD.height) * (h - 25)));
+
+        miniCtx.translate(px, py);
+        miniCtx.rotate(lead.theta);
+
+        // Lander body in mini view
+        miniCtx.fillStyle = '#f59e0b';
+        miniCtx.fillRect(-5, -4, 10, 8);
+
+        // Flames in mini view
+        if (lead.thrustMain > 0.05) {
+          miniCtx.fillStyle = '#fbbf24';
+          miniCtx.fillRect(-2, 4, 4, lead.thrustMain * 12);
+        }
+
+        miniCtx.restore();
+
+        // Update live meter numbers
+        const meterDx = document.getElementById('meter_dx');
+        const meterAlt = document.getElementById('meter_alt');
+        const meterVel = document.getElementById('meter_vel');
+        const meterAng = document.getElementById('meter_ang');
+        const barTm = document.getElementById('bar_tm');
+        const barTl = document.getElementById('bar_tl');
+        const barTr = document.getElementById('bar_tr');
+
+        if (meterDx) meterDx.textContent = `${lead.x - WORLD.padX > 0 ? '+' : ''}${(lead.x - WORLD.padX).toFixed(1)} px`;
+        if (meterAlt) meterAlt.textContent = `${Math.max(0, WORLD.padY - lead.y).toFixed(1)} px`;
+        if (meterVel) meterVel.textContent = `${lead.vx.toFixed(2)}, ${lead.vy.toFixed(2)}`;
+        if (meterAng) meterAng.textContent = `${(lead.theta * (180 / Math.PI)).toFixed(1)}\u00B0`;
+
+        if (barTm) barTm.style.width = `${Math.round(lead.thrustMain * 100)}%`;
+        if (barTl) barTl.style.width = `${Math.round(lead.thrustLeft * 100)}%`;
+        if (barTr) barTr.style.width = `${Math.round(lead.thrustRight * 100)}%`;
+      }
+    }
+
+    // --- 13. UI CONTROLS & EVENT HANDLERS ---
+    function updateTelemetryUI(bestFit, avgFit, landedCount, landingRate, isNewBest = false) {
+      const bestEl = document.getElementById('statBestFit');
+      const avgEl = document.getElementById('statAvgFit');
+      const landedEl = document.getElementById('statLandedCount');
+      const rateEl = document.getElementById('statLandingRate');
+      const effMutEl = document.getElementById('statEffMut');
+      const mutStatusEl = document.getElementById('statMutStatus');
+
+      if (bestEl) {
+        bestEl.textContent = bestFit.toFixed(1);
+        if (isNewBest) {
+          bestEl.classList.remove('pulse-flash');
+          void bestEl.offsetWidth; // trigger reflow
+          bestEl.classList.add('pulse-flash');
+        }
+      }
+      if (avgEl) avgEl.textContent = avgFit.toFixed(1);
+      if (landedEl) landedEl.textContent = `${landedCount} / ${config.population}`;
+      if (rateEl) rateEl.textContent = `${(landingRate * 100).toFixed(1)}% landing rate`;
+
+      const effSize = config.shrinkMutation
+        ? Math.max(0.03, config.mutationSize * (1.0 - landingRate))
+        : config.mutationSize;
+
+      if (effMutEl) effMutEl.textContent = `\u03C3 = ${effSize.toFixed(3)}`;
+      if (mutStatusEl) {
+        mutStatusEl.textContent = config.shrinkMutation && landingRate > 0.5
+          ? 'Narrowing variance'
+          : 'Standard scaling';
+      }
+    }
+
+    function triggerCelebration(type, message) {
+      const toast = document.getElementById('celebrationToast');
+      const sub = document.getElementById('toastSub');
+      const title = document.getElementById('toastTitle');
+
+      if (type === 'touchdown') {
+        const badge = document.getElementById('badgeTouchdown');
+        if (badge) {
+          badge.classList.add('achieved');
+          badge.textContent = `Touchdown: Gen ${milestones.touchdown}`;
+        }
+        if (title) title.textContent = 'TOUCHDOWN MOMENT';
+        if (sub) sub.textContent = message;
+      } else if (type === 'reliable') {
+        const badge = document.getElementById('badgeReliable');
+        if (badge) {
+          badge.classList.add('reliable-achieved');
+          badge.textContent = `Reliable (80%+): Gen ${milestones.reliable}`;
+        }
+        if (title) title.textContent = 'FLEET RELIABLE';
+        if (sub) sub.textContent = message;
+      }
+
+      if (toast) {
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 4000);
+      }
+    }
+
+    // Presets definition
+    const PRESETS = {
+      optimal: {
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 0.10,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        gravity: 0.020,
+        mainThrust: 0.060,
+        startingFuel: 500,
+        startHeight: 500,
+        padWidth: 90,
+        shrinkMutation: true
+      },
+      reckless: {
+        population: 50,
+        elites: 2,
+        parentPool: 12,
+        mutationChance: 0.35,
+        mutationSize: 0.55,
+        bigJumpChance: 0.20,
+        gravity: 0.020,
+        mainThrust: 0.060,
+        startingFuel: 500,
+        startHeight: 500,
+        padWidth: 90,
+        shrinkMutation: false
+      },
+      noelites: {
+        population: 50,
+        elites: 0,
+        parentPool: 10,
+        mutationChance: 0.10,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        gravity: 0.020,
+        mainThrust: 0.060,
+        startingFuel: 500,
+        startHeight: 500,
+        padWidth: 90,
+        shrinkMutation: true
+      },
+      tiny: {
+        population: 15,
+        elites: 1,
+        parentPool: 4,
+        mutationChance: 0.12,
+        mutationSize: 0.28,
+        bigJumpChance: 0.05,
+        gravity: 0.020,
+        mainThrust: 0.060,
+        startingFuel: 500,
+        startHeight: 500,
+        padWidth: 90,
+        shrinkMutation: true
+      },
+      hard: {
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 0.10,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        gravity: 0.032,
+        mainThrust: 0.055,
+        startingFuel: 320,
+        startHeight: 520,
+        padWidth: 50,
+        shrinkMutation: true
+      }
+    };
+
+    function applyPreset(name) {
+      activePreset = name;
+      const p = PRESETS[name];
+      if (!p) return;
+
+      Object.assign(config, p);
+      updateSliderUI();
+
+      // Update preset buttons visual state
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === name);
+      });
+
+      // Synchronize active population size if changed
+      if (config.population > population.length) {
+        while (population.length < config.population) {
+          population.push(createLander());
+        }
+      } else if (config.population < population.length) {
+        population.length = config.population;
+      }
+
+      // Update terrain for pad width changes
+      generateLunarTerrain();
+    }
+
+    function updateSliderUI() {
+      const mappings = [
+        { id: 'population', unit: '' },
+        { id: 'elites', unit: '' },
+        { id: 'parentPool', unit: '' },
+        { id: 'mutationChance', unit: '', prec: 2 },
+        { id: 'mutationSize', unit: '', prec: 2 },
+        { id: 'bigJumpChance', unit: '', prec: 2 },
+        { id: 'gravity', unit: ' px/f²', prec: 3 },
+        { id: 'mainThrust', unit: ' px/f²', prec: 3 },
+        { id: 'startingFuel', unit: ' units' },
+        { id: 'startHeight', unit: ' px' },
+        { id: 'padWidth', unit: ' px' }
+      ];
+
+      mappings.forEach(m => {
+        const input = document.getElementById(`sl_${m.id}`);
+        const valLabel = document.getElementById(`val_${m.id}`);
+        if (input && valLabel) {
+          input.value = config[m.id];
+          const displayVal = m.prec !== undefined ? config[m.id].toFixed(m.prec) : config[m.id];
+          valLabel.textContent = `${displayVal}${m.unit}`;
+        }
+      });
+
+      const chk = document.getElementById('chk_shrinkMutation');
+      if (chk) chk.checked = config.shrinkMutation;
+    }
+
+    function setupEventListeners() {
+      // 1. Preset buttons
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          applyPreset(btn.dataset.preset);
+        });
+      });
+
+      // 2. Sliders
+      const sliderDefs = [
+        { id: 'population', isFloat: false },
+        { id: 'elites', isFloat: false },
+        { id: 'parentPool', isFloat: false },
+        { id: 'mutationChance', isFloat: true, prec: 2 },
+        { id: 'mutationSize', isFloat: true, prec: 2 },
+        { id: 'bigJumpChance', isFloat: true, prec: 2 },
+        { id: 'gravity', isFloat: true, prec: 3, unit: ' px/f²' },
+        { id: 'mainThrust', isFloat: true, prec: 3, unit: ' px/f²' },
+        { id: 'startingFuel', isFloat: false, unit: ' units' },
+        { id: 'startHeight', isFloat: false, unit: ' px' },
+        { id: 'padWidth', isFloat: false, unit: ' px' }
+      ];
+
+      sliderDefs.forEach(def => {
+        const input = document.getElementById(`sl_${def.id}`);
+        const label = document.getElementById(`val_${def.id}`);
+        if (input && label) {
+          input.addEventListener('input', e => {
+            const val = def.isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+            config[def.id] = val;
+            const displayVal = def.prec !== undefined ? val.toFixed(def.prec) : val;
+            label.textContent = `${displayVal}${def.unit || ''}`;
+
+            if (def.id === 'padWidth') {
+              generateLunarTerrain();
+            } else if (def.id === 'population') {
+              if (config.population > population.length) {
+                while (population.length < config.population) {
+                  population.push(createLander());
+                }
+              } else if (config.population < population.length) {
+                population.length = config.population;
+              }
+            }
+
+            // Deselect presets if user customizes
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+          });
+        }
+      });
+
+      // 3. Checkbox
+      const chk = document.getElementById('chk_shrinkMutation');
+      if (chk) {
+        chk.addEventListener('change', e => {
+          config.shrinkMutation = e.target.checked;
+        });
+      }
+
+      // 4. Reset Defaults Button
+      const btnReset = document.getElementById('btnResetDefaults');
+      if (btnReset) {
+        btnReset.addEventListener('click', () => {
+          applyPreset('optimal');
+        });
+      }
+
+      // 5. Playback buttons (Pause, Skip, Restart)
+      const btnPause = document.getElementById('btnPause');
+      const labelPause = document.getElementById('labelPause');
+      const iconPlayPause = document.getElementById('iconPlayPause');
+
+      if (btnPause) {
+        btnPause.addEventListener('click', () => {
+          isPaused = !isPaused;
+          if (labelPause) labelPause.textContent = isPaused ? 'Resume' : 'Pause';
+          if (iconPlayPause) {
+            iconPlayPause.innerHTML = isPaused
+              ? '<polygon points="5,3 19,12 5,21"/>'
+              : '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+          }
+        });
+      }
+
+      const btnNextGen = document.getElementById('btnNextGen');
+      if (btnNextGen) {
+        btnNextGen.addEventListener('click', () => {
+          // Fast-forward current generation directly to conclusion
+          while (population.some(l => !l.done) && simFrame < config.maxFrames) {
+            simFrame++;
+            for (let i = 0; i < population.length; i++) {
+              updateLanderPhysics(population[i], i === 0);
+            }
+          }
+          evolvePopulation();
+        });
+      }
+
+      const btnRestart = document.getElementById('btnRestart');
+      if (btnRestart) {
+        btnRestart.addEventListener('click', () => {
+          generation = 1;
+          simFrame = 0;
+          history.length = 0;
+          particles.length = 0;
+          allTimeBestFitness = 0;
+          milestones.touchdown = null;
+          milestones.reliable = null;
+
+          const badgeT = document.getElementById('badgeTouchdown');
+          const badgeR = document.getElementById('badgeReliable');
+          if (badgeT) { badgeT.classList.remove('achieved'); badgeT.textContent = 'Touchdown: --'; }
+          if (badgeR) { badgeR.classList.remove('reliable-achieved'); badgeR.textContent = 'Reliable (80%+): --'; }
+
+          masterSeed = Math.floor(Math.random() * 100000);
+          rng = mulberry32(masterSeed);
+          initPopulation();
+          updateTelemetryUI(0, 0, 0, 0);
+        });
+      }
+
+      // 6. Speed buttons
+      document.querySelectorAll('.btn-speed').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          simSpeed = parseInt(btn.dataset.speed, 10);
+        });
+      });
+
+      // 7. Modal Open / Close
+      const modal = document.getElementById('howItWorksModal');
+      const btnOpenModal = document.getElementById('btnHowItWorks');
+      const btnCloseModal = document.getElementById('btnCloseModal');
+
+      if (btnOpenModal && modal) {
+        btnOpenModal.addEventListener('click', () => {
+          modal.classList.add('open');
+          resizeCanvases();
+        });
+      }
+
+      if (btnCloseModal && modal) {
+        btnCloseModal.addEventListener('click', () => {
+          modal.classList.remove('open');
+        });
+      }
+
+      if (modal) {
+        modal.addEventListener('click', e => {
+          if (e.target === modal) modal.classList.remove('open');
+        });
+      }
+
+      // Keyboard shortcuts: Space for pause, R for restart
+      window.addEventListener('keydown', e => {
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+          e.preventDefault();
+          if (btnPause) btnPause.click();
+        } else if (e.code === 'KeyR' && e.target.tagName !== 'INPUT') {
+          if (btnRestart) btnRestart.click();
+        }
+      });
+
+      window.addEventListener('resize', resizeCanvases);
+    }
+
+    // --- 14. FIXED-STEP SIMULATION TICK & MAIN LOOP ---
+    function tick() {
+      simFrame++;
+
+      // Update HUD frame & counter
+      let stillFlying = 0;
+      let landedSoFar = 0;
+      let crashedSoFar = 0;
+
+      for (let i = 0; i < population.length; i++) {
+        updateLanderPhysics(population[i], i === 0);
+        if (!population[i].done) stillFlying++;
+        else if (population[i].status === 'landed') landedSoFar++;
+        else if (population[i].status === 'crashed') crashedSoFar++;
+      }
+
+      updateParticles();
+
+      // Generation ends if all landers are finished or max frames reached
+      if (stillFlying === 0 || simFrame >= config.maxFrames) {
+        evolvePopulation();
+      }
+
+      return { stillFlying, landedSoFar, crashedSoFar };
+    }
+
+    function updateHudCounters(flying, landed, crashed) {
+      const hudGen = document.getElementById('hudGen');
+      const hudFrame = document.getElementById('hudFrame');
+      const hudFlying = document.getElementById('hudFlying');
+      const hudLanded = document.getElementById('hudLanded');
+      const hudCrashed = document.getElementById('hudCrashed');
+
+      if (hudGen) hudGen.textContent = generation;
+      if (hudFrame) hudFrame.textContent = `${simFrame} / ${config.maxFrames}`;
+      if (hudFlying) hudFlying.textContent = flying;
+      if (hudLanded) hudLanded.textContent = landed;
+      if (hudCrashed) hudCrashed.textContent = crashed;
+    }
+
+    function animationLoop() {
+      if (!isPaused) {
+        let stats = null;
+        for (let s = 0; s < simSpeed; s++) {
+          stats = tick();
+        }
+        if (stats) {
+          updateHudCounters(stats.stillFlying, stats.landedSoFar, stats.crashedSoFar);
+        }
+      }
+
+      renderWorld();
+      renderGraph();
+
+      const modal = document.getElementById('howItWorksModal');
+      if (modal && modal.classList.contains('open')) {
+        renderNetworkDiagram();
+        renderMiniLander();
+      }
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    // --- 15. INITIALIZATION ORDER ---
+    // All arrays, terrain, PRNG, and population are initialized before any render
+    function init() {
+      resizeCanvases();
+      generateLunarTerrain();
+      initPopulation();
+      updateSliderUI();
+      setupEventListeners();
+      renderGraph();
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Expose programmatic test API for automated verification harness
+    window.TOUCHDOWN = {
+      config: config,
+      WORLD: WORLD,
+      history: () => history,
+      population: () => population,
+      generation: () => generation,
+      simFrame: () => simFrame,
+      tickSimulation: tick,
+      renderWorld: renderWorld,
+      renderGraph: renderGraph,
+      applyPreset: applyPreset,
+      calculateFitness: calculateFitness,
+      evaluateNetwork: evaluateNetwork,
+      evolvePopulation: evolvePopulation,
+      resetSimulation: () => {
+        generation = 1;
+        simFrame = 0;
+        history.length = 0;
+        initPopulation();
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
