@@ -48,5 +48,13 @@ window.EXPERIMENTS = [
     tags: ["neuroevolution", "genetic algorithm"],
     meta: "learns in ~10 seconds",
     date: "2026-11"
+  },
+  {
+    slug: "rally",
+    title: "Rally",
+    blurb: "Two populations of tiny neural networks learn Pong by competing, generation after generation. No scripted teacher; just an arms race.",
+    tags: ["neuroevolution", "co-evolution"],
+    meta: "watch the arms race",
+    date: "2026-11"
   }
 ];

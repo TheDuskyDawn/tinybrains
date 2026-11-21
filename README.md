@@ -18,7 +18,8 @@ No server. No backend. No API key. No "please sign in to continue training." Jus
 | 04 | [**BALANCE**](experiments/balance/) | 50 neural nets learn to balance a pole on a cart | a few generations |
 | 05 | [**Slither**](experiments/slither/) | 12 snakes learn Snake with one shared Q-table | a few minutes |
 | 06 | [**Touchdown**](experiments/touchdown/) | A swarm of neural-net landers learns to land softly on a pad | a few generations |
-| 07 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
+| 07 | [**Rally**](experiments/rally/) | Two populations of tiny neural nets learn Pong by playing each other | generation by generation |
+| 08 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
 
 ## 🔒 Privacy Policy
 
@@ -53,7 +54,8 @@ Don't double-click `index.html`. Some browsers get weird about `file://`. They h
     ├── drive/              # experiment 03
     ├── balance/            # experiment 04
     ├── slither/            # experiment 05
-    └── touchdown/          # experiment 06
+    ├── touchdown/          # experiment 06
+    └── rally/              # experiment 07
 ```
 
 Each experiment lives in its own folder and is **fully self-contained**. If one breaks, the others carry on, like siblings at a wedding.

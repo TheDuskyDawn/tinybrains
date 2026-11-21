@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101215">
+<title>Rally — tinybrains</title>
+<meta name="description" content="Two populations of tiny neural networks learn Pong by competing, generation after generation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#101215;--panel:#171a1e;--panel2:#1d2126;--line:#30353b;--muted:#8d949b;--paper:#ece8dc;--amber:#f4bd4f;--blue:#8bc9e5;--green:#a4c88b;--font:"Bricolage Grotesque",system-ui,sans-serif;--serif:"Newsreader",Georgia,serif}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--paper);font-family:var(--font)}
+body{min-width:320px}
+button,input{font:inherit}
+button{color:inherit}
+.topbar{height:52px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #25292e}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand a{color:var(--paper);font-size:19px;font-weight:800;letter-spacing:-.06em;text-decoration:none}
+.brand span{color:var(--muted);font-size:11px;letter-spacing:.13em;text-transform:uppercase}
+.top-link{background:none;border:0;color:#aab0b5;font-size:12px;cursor:pointer;padding:7px 0}
+.top-link:hover{color:var(--amber)}
+.layout{height:calc(100dvh - 52px);min-height:610px;padding:15px 18px 16px;display:grid;grid-template-columns:minmax(232px,265px) minmax(410px,1fr) minmax(235px,270px);gap:14px;max-width:1800px;margin:0 auto}
+.panel{min-width:0;background:var(--panel);border:1px solid #282d32;border-radius:8px;animation:enter .55s both;animation-delay:var(--delay,0s)}
+.controls,.readout{padding:14px 14px 12px;overflow:auto;scrollbar-width:thin;scrollbar-color:#454b52 transparent}
+.controls h2,.readout h2{margin:0 0 3px;font-size:15px;letter-spacing:-.025em}
+.kicker{color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:0 0 11px}
+.preset{border:1px solid var(--line);border-radius:5px;background:#1a1e22;text-align:left;padding:7px 8px;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
+.preset:hover{background:#272c31;border-color:#646a70;transform:translateY(-1px)}
+.preset b{display:block;font-size:10px;font-weight:700}
+.preset small{display:block;margin-top:2px;color:var(--muted);font-family:var(--serif);font-size:10px}
+.sliders{display:grid;gap:4px}
+.slider-row{min-width:0}
+.slider-label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;line-height:1.15}
+.slider-label output{color:var(--amber);font-variant-numeric:tabular-nums}
+.slider-row input[type=range]{width:100%;height:13px;margin:2px 0 0;accent-color:var(--amber);display:block}
+.checks{border-top:1px solid #30353a;margin-top:7px;padding-top:7px;display:grid;gap:5px}
+.check{display:flex;align-items:center;gap:7px;font-size:10px;color:#c5c6c2;cursor:pointer}
+.check input{accent-color:var(--amber);margin:0}
+.reset{width:100%;margin-top:8px;border:1px solid #555b61;border-radius:5px;background:transparent;padding:7px 9px;font-size:10px;cursor:pointer;transition:background .18s,border .18s}
+.reset:hover{background:#272c31;border-color:var(--paper)}
+.stage{padding:13px;display:flex;flex-direction:column;min-height:0}
+.stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 1px 9px}
+.stage-title{font-size:15px;font-weight:700;letter-spacing:-.03em}
+.stage-title span{color:var(--muted);font-size:10px;font-weight:500;letter-spacing:0;margin-left:5px}
+.counters{display:flex;gap:12px;white-space:nowrap;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counters b{color:var(--paper);font-weight:600}
+.court-wrap{position:relative;width:100%;height:auto;aspect-ratio:760/420;flex:none;min-height:210px;max-height:calc(100% - 167px);background:#111519;border:1px solid #333a40;border-radius:6px;overflow:hidden}
+#court{display:block;width:100%;height:100%}
+.score-label{position:absolute;inset:13px 0 auto;display:flex;justify-content:center;gap:26px;pointer-events:none;font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;opacity:.85}
+#leftScore{color:var(--amber)} #rightScore{color:var(--blue)}
+.stage-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0 8px}
+.legend{display:flex;gap:12px;color:#b8bbb9;font-size:10px}
+.legend span{display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.amber{background:var(--amber)}.dot.blue{background:var(--blue)}
+.transport{display:flex;align-items:center;gap:5px}
+.transport button,.transport select{border:1px solid #41474e;border-radius:4px;background:#202429;color:var(--paper);font-size:10px;padding:5px 8px;cursor:pointer}
+.transport button:hover,.transport select:hover{background:#2c3238}
+.transport button.active{border-color:var(--amber);color:var(--amber)}
+.thumb-head{display:flex;justify-content:space-between;margin:0 1px 5px;color:var(--muted);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.thumbs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
+.thumb{position:relative;min-width:0;height:37px;padding:0;border:1px solid #363c42;border-radius:3px;background:#111519;overflow:hidden;cursor:pointer}
+.thumb:hover,.thumb.selected{border-color:var(--amber)}
+.thumb canvas{display:block;width:100%;height:100%}
+.thumb .idx{position:absolute;left:3px;top:2px;font-size:8px;color:#b2b4b1;text-shadow:0 1px 2px #000;pointer-events:none}
+.readout{display:flex;flex-direction:column}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:9px 0 12px}
+.metric{background:#1d2126;border:1px solid #2e3439;border-radius:5px;padding:8px 8px 7px;min-height:52px}
+.metric.wide{grid-column:1/-1}
+.metric-label{color:var(--muted);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.metric-value{font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.metric-value.amber{color:var(--amber)}.metric-value.blue{color:var(--blue)}
+.metric-note{color:#969da2;font-size:9px;font-family:var(--serif)}
+.chart-title{display:flex;justify-content:space-between;align-items:baseline;margin:3px 0 5px}
+.chart-title b{font-size:11px}.chart-title span{font-size:9px;color:var(--muted)}
+#graph{display:block;width:100%;height:130px;border:1px solid #30363c;border-radius:5px;background:#13171a}
+.graph-legend{display:flex;gap:12px;margin:5px 0 11px;color:#a8adaa;font-size:9px}
+.graph-legend i{width:8px;height:2px;display:inline-block;vertical-align:middle;margin-right:4px}
+.explain{margin-top:auto;border-top:1px solid #30353a;padding-top:9px}
+.explain h3{margin:0 0 4px;font-size:11px}
+.explain p{margin:0;color:#b5b6b1;font-family:var(--serif);font-size:12px;line-height:1.35}
+.toast{position:fixed;z-index:5;left:50%;top:63px;transform:translate(-50%,-12px);opacity:0;pointer-events:none;background:#242a2d;border:1px solid #52605a;border-radius:5px;padding:9px 15px;color:var(--paper);font-size:12px;transition:opacity .25s,transform .25s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast strong{color:var(--amber)}
+.pulse{animation:pulse .6s ease-out}
+.modal-backdrop{position:fixed;z-index:10;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,7,9,.78);padding:16px}
+.modal-backdrop.open{display:flex}
+.modal{width:min(850px,100%);max-height:min(90vh,760px);overflow:auto;background:#181c20;border:1px solid #464d52;border-radius:8px;padding:20px}
+.modal-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.modal h2{margin:0;font-size:22px;letter-spacing:-.04em}
+.modal-close{border:1px solid #454c52;background:transparent;border-radius:4px;padding:5px 9px;cursor:pointer}
+.modal-intro{font-family:var(--serif);font-size:15px;line-height:1.4;color:#c5c6c1;max-width:68ch}
+.diagram{width:100%;height:auto;max-height:190px;background:#121619;border:1px solid #2c3338;border-radius:5px}
+.flow{stroke-dasharray:6 7;animation:dash 1.2s linear infinite}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-grid section{border-top:1px solid #363c41;padding-top:9px}
+.modal-grid h3{font-size:12px;margin:0 0 4px}
+.modal-grid p{font-family:var(--serif);font-size:13px;line-height:1.4;color:#b9bcb7;margin:0}
+.network-svg{width:100%;height:178px;background:#121619;border:1px solid #2c3338;border-radius:5px}
+.network-link{stroke:#718087;stroke-width:.7;opacity:.45;stroke-dasharray:2 4;animation:dash 1.8s linear infinite}
+.net-node{fill:#151a1c;stroke:#9aa8a6;stroke-width:1}
+.net-node.input{stroke:var(--amber)}.net-node.output{stroke:var(--blue)}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dash{to{stroke-dashoffset:-26}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(244,189,79,.5)}100%{box-shadow:0 0 0 12px rgba(244,189,79,0)}}
+@keyframes scorePop{50%{transform:scale(1.22)}}
+.court-wrap{min-height:0}
+@media(max-width:1050px){.layout{grid-template-columns:minmax(210px,240px) minmax(360px,1fr);height:auto;min-height:calc(100dvh - 52px)}.readout{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;column-gap:18px}.readout>.section-head,.metrics{grid-column:1}.chart-title,#graph,.graph-legend{grid-column:2}.chart-title{grid-row:1}.explain{grid-column:1/-1}.court-wrap{max-height:none}}
+@media(max-width:700px){.topbar{height:46px;padding:0 12px}.layout{height:auto;min-height:0;padding:10px;display:flex;flex-direction:column;gap:9px}.controls{order:2;max-height:none}.stage{order:1;min-height:0}.readout{order:3;display:flex}.court-wrap{height:auto;aspect-ratio:760/420;min-height:190px}.thumbs{grid-template-columns:repeat(4,minmax(0,1fr))}.thumb{height:42px}.controls{overflow:visible}.explain{margin-top:9px}.readout{padding:13px}.modal-grid{grid-template-columns:1fr}.stage-tools{align-items:flex-start;flex-direction:column}.transport{flex-wrap:wrap}}
+@media(max-height:760px) and (min-width:1051px){.layout{padding-top:10px;padding-bottom:10px;gap:10px}.controls,.readout{padding-top:10px;padding-bottom:9px}.preset-grid{margin-bottom:7px;gap:4px}.preset{padding:5px 7px}.sliders{gap:2px}.slider-row input[type=range]{height:11px;margin-top:1px}.checks{margin-top:5px;padding-top:5px;gap:4px}.reset{margin-top:6px;padding:5px}.court-wrap{max-height:calc(100% - 153px)}#graph{height:112px}.metrics{margin:7px 0 9px}.metric{min-height:47px;padding:6px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><a href="../../">tinybrains</a><span>experiment 02 / co-evolution</span></div>
+  <button class="top-link" id="howButton" type="button">How it works ↗</button>
+</header>
+<main class="layout">
+  <aside class="panel controls" style="--delay:.05s" aria-label="Simulation settings">
+    <div class="section-head"><div><h2>Set the rules</h2><div class="kicker">Change the pressure</div></div></div>
+    <div class="preset-grid" aria-label="Experiment presets">
+      <button class="preset" data-preset="reckless" type="button"><b>Reckless mutation</b><small>turn up the noise</small></button>
+      <button class="preset" data-preset="noElites" type="button"><b>No elites</b><small>keep nobody safe</small></button>
+      <button class="preset" data-preset="tiny" type="button"><b>Tiny populations</b><small>make every rival count</small></button>
+      <button class="preset" data-preset="underdog" type="button"><b>Underdog</b><small>half-height left paddle</small></button>
+    </div>
+    <div class="sliders" id="sliders"></div>
+    <div class="checks">
+      <label class="check"><input type="checkbox" id="shrinkCheck" checked> Shrink mutation as rallies grow</label>
+      <label class="check"><input type="checkbox" id="hallCheck" checked> Test against past champions</label>
+    </div>
+    <button class="reset" id="resetButton" type="button">Reset to optimal values</button>
+  </aside>
+
+  <section class="panel stage" style="--delay:.14s" aria-label="Live match">
+    <div class="stage-head">
+      <div class="stage-title">Live court <span id="roundLabel">ROUND 1 / 3</span></div>
+      <div class="counters"><span>GEN <b id="generation">1</b></span><span>MATCHES <b id="playing">16</b> playing</span></div>
+    </div>
+    <div class="court-wrap" id="courtWrap">
+      <canvas id="court" width="760" height="420" aria-label="Pong match visualization"></canvas>
+      <div class="score-label"><span id="leftScore">0</span><span id="rightScore">0</span></div>
+    </div>
+    <div class="stage-tools">
+      <div class="legend"><span><i class="dot amber"></i> Left population</span><span><i class="dot blue"></i> Right population</span></div>
+      <div class="transport">
+        <label for="speedSelect" class="kicker">speed</label>
+        <select id="speedSelect" aria-label="Simulation speed">
+          <option value="1">1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option><option value="40">40×</option><option value="80">80×</option>
+        </select>
+        <button id="pauseButton" type="button">Pause</button>
+        <button id="restartButton" type="button">Restart</button>
+      </div>
+    </div>
+    <div class="thumb-head"><span>Other concurrent matches</span><span>click to feature</span></div>
+    <div class="thumbs" id="thumbs"></div>
+  </section>
+
+  <aside class="panel readout" style="--delay:.23s" aria-label="Progress and results">
+    <div class="section-head"><div><h2>Arms race</h2><div class="kicker">What the last generation learned</div></div></div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Best rally</div><div class="metric-value amber" id="bestRally">—</div><div class="metric-note">returns in one rally</div></div>
+      <div class="metric"><div class="metric-label">Average rally</div><div class="metric-value" id="averageRally">—</div><div class="metric-note">returns per rally</div></div>
+      <div class="metric"><div class="metric-label">Left wins</div><div class="metric-value amber" id="leftWins">—</div><div class="metric-note">of current generation's matches</div></div>
+      <div class="metric"><div class="metric-label">Hall of fame</div><div class="metric-value" id="hallCount">0 / 10</div><div class="metric-note">champions remembered per side</div></div>
+      <div class="metric wide"><div class="metric-label">Scripted benchmark</div><div class="metric-value blue" id="benchmark">—</div><div class="metric-note">evolved-side returns vs the 60%-speed tracking bot</div></div>
+    </div>
+    <div class="chart-title"><b>Rally length by generation</b><span>last 30</span></div>
+    <canvas id="graph" width="520" height="210" aria-label="Graph of best and average rally length over recent generations"></canvas>
+    <div class="graph-legend"><span><i style="background:var(--amber)"></i>Best rally</span><span><i style="background:#8294a0"></i>Average rally</span></div>
+    <div class="explain"><h3>Reading the graph</h3><p>Amber is the longest rally; slate is the generation average. The win count is relative: if both sides improve together, it can stay near even. The scripted-bot benchmark is a separate yardstick. A sharp line is progress, not proof either side has mastered Pong.</p></div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal-backdrop" id="howModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-top"><h2 id="modalTitle">Two populations. No referee.</h2><button class="modal-close" id="closeModal" type="button" aria-label="Close">Close ×</button></div>
+    <p class="modal-intro">Each side is a population of 16 small neural networks. They play one another, earn fitness from points and returns, and breed separately. Every generation adds a checkpoint against past champions so the contest does not only reward beating today's opponent.</p>
+    <svg class="diagram" viewBox="0 0 780 165" role="img" aria-label="Populations play matches, earn fitness, and produce new generations">
+      <defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7" fill="none" stroke="#859198"/></marker></defs>
+      <g fill="#1e2528" stroke="#455058">
+        <rect x="20" y="46" width="120" height="56" rx="5"/><rect x="640" y="46" width="120" height="56" rx="5"/>
+        <rect x="185" y="46" width="110" height="56" rx="5"/><rect x="335" y="46" width="110" height="56" rx="5"/><rect x="485" y="46" width="110" height="56" rx="5"/>
+      </g>
+      <g font-family="Bricolage Grotesque, sans-serif" text-anchor="middle" fill="#ece8dc">
+        <text x="80" y="70" font-size="12" fill="#f4bd4f">LEFT POPULATION</text><text x="80" y="88" font-size="10">16 networks</text>
+        <text x="240" y="70" font-size="12">MATCHES</text><text x="240" y="88" font-size="10">3 rounds + hall</text>
+        <text x="390" y="70" font-size="12">FITNESS</text><text x="390" y="88" font-size="10">10 × points + returns</text>
+        <text x="540" y="70" font-size="12">SELECTION</text><text x="540" y="88" font-size="10">elites + crossover</text>
+        <text x="700" y="70" font-size="12" fill="#8bc9e5">RIGHT POPULATION</text><text x="700" y="88" font-size="10">16 networks</text>
+      </g>
+      <g fill="none" stroke="#859198" stroke-width="1.5" marker-end="url(#arrow)">
+        <path class="flow" d="M141 61H180"/><path class="flow" d="M141 88H180"/><path class="flow" d="M296 74H330"/><path class="flow" d="M446 74H480"/><path class="flow" d="M596 74H635"/>
+        <path class="flow" d="M700 108C700 143 80 143 80 108"/>
+      </g>
+      <text x="390" y="151" fill="#939da0" font-family="Newsreader, Georgia, serif" font-size="11" text-anchor="middle">new generation, stronger opposition, repeat</text>
+    </svg>
+    <div class="modal-grid">
+      <section><h3>The network</h3>
+        <svg class="network-svg" viewBox="0 0 500 176" role="img" aria-label="Fully connected neural network with six inputs, eight hidden units, and one output">
+          <g id="networkLinks"></g><g id="networkNodes"></g>
+          <text x="19" y="166" fill="#aeb6b4" font-size="10">6 inputs</text><text x="217" y="166" fill="#aeb6b4" font-size="10">8 tanh hidden</text><text x="431" y="166" fill="#aeb6b4" font-size="10">1 output</text>
+        </svg>
+        <p>Inputs describe the ball and both paddles from a mirrored left-side view. The tanh output sets paddle velocity between −1× and +1× speed.</p>
+      </section>
+      <section><h3>Selection and mutation</h3><p>Each population keeps its top two unchanged. Children come from the top six by single-point crossover; each weight mutates independently with 10% probability. Five percent of children get a 0.6 big jump. Normal mutation shrinks as rallies get longer, with a 0.03 floor.</p></section>
+      <section><h3>Fitness</h3><p>Per agent, fitness is summed over matches: 10 points for each point scored, plus 1 for each successful paddle return. A match ends at 5 points or 1,500 frames. Hall-of-fame challenge returns count toward fitness too.</p></section>
+      <section><h3>Benchmark and caveat</h3><p>The best network from each side is also tested against a fixed bot that tracks the ball at 60% paddle speed. Co-evolution can still stall or cycle; the hall of fame and benchmark help reveal that, but cannot eliminate it.</p></section>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+(() => {
+  // Configuration and all state are initialized before rendering or callbacks can run.
+  const DEFAULTS = Object.freeze({
+    population:16, elites:2, parentPool:6, mutationChance:.10, mutationSize:.25,
+    bigJumpChance:.05, ballSpeed:4, speedUp:.03, paddleSpeed:5, paddleHeight:70,
+    rounds:3, shrinkMutation:true, hallEnabled:true
+  });
+  const SETTINGS = [
+    {key:"population",label:"Population per side",min:8,max:32,step:2,format:v=>`${v} each`},
+    {key:"elites",label:"Elites",min:0,max:6,step:1,format:v=>v},
+    {key:"parentPool",label:"Parent pool",min:2,max:10,step:1,format:v=>v},
+    {key:"mutationChance",label:"Mutation chance",min:0,max:.4,step:.01,format:v=>`${Math.round(v*100)}%`},
+    {key:"mutationSize",label:"Mutation size",min:.05,max:.6,step:.01,format:v=>Number(v).toFixed(2)},
+    {key:"bigJumpChance",label:"Big-jump chance",min:0,max:.2,step:.01,format:v=>`${Math.round(v*100)}%`},
+    {key:"ballSpeed",label:"Ball speed",min:2,max:8,step:.5,format:v=>`${Number(v).toFixed(1)} px/f`},
+    {key:"speedUp",label:"Speed-up per hit",min:0,max:.08,step:.005,format:v=>`${Math.round(v*100)}%`},
+    {key:"paddleSpeed",label:"Paddle speed",min:2,max:8,step:.5,format:v=>`${Number(v).toFixed(1)} px/f`},
+    {key:"paddleHeight",label:"Paddle height",min:30,max:120,step:2,format:v=>`${v} px`},
+    {key:"rounds",label:"Rounds per generation",min:1,max:5,step:1,format:v=>v}
+  ];
+  const COURT = Object.freeze({width:760,height:420,paddleX:30,paddleWidth:9,ballRadius:5,frameLimit:1500,pointsToWin:5,maxBallSpeed:12});
+  const PRESETS = {
+    reckless:{mutationChance:.25,mutationSize:.45,bigJumpChance:.15,shrinkMutation:false},
+    noElites:{elites:0},
+    tiny:{population:8,parentPool:4,elites:1},
+    underdog:{underdog:true}
+  };
+  let settings={...DEFAULTS}, seed=0x5eed1234, generation=1, roundIndex=0, phase="round";
+  let leftPopulation=[],rightPopulation=[],hallLeft=[],hallRight=[],matches=[],history=[];
+  let leftFitness=[],rightFitness=[],leftReturns=[],rightReturns=[];
+  let genRallies=[],genReturns=0,genWins=0,genDraws=0,completedMatches=0;
+  let featuredIndex=0,paused=false,simSpeed=1,accumulator=0,lastTime=0,frameHandle=0;
+  let underdog=false,firstLongRally=false,masters=false,bestEverRally=0;
+  let benchmarkValue=0,lastGenerationStats={best:0,average:0,leftWins:0,benchmark:0};
+  let chartOffset=0,toastTimer=0,lastScoreMatch=null,lastLeftScore=-1,lastRightScore=-1;
+  let courtContext=null,graphContext=null,thumbsRoot=null,thumbContexts=[];
+  const $=id=>document.getElementById(id);
+  const rng={
+    next(){seed=(seed+0x6D2B79F5)|0;let t=seed;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;},
+    int(max){return Math.floor(this.next()*max);},
+    range(min,max){return min+this.next()*(max-min);},
+    gaussian(){const u=Math.max(Number.EPSILON,this.next()),v=this.next();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);},
+    shuffle(array){for(let i=array.length-1;i>0;i--){const j=this.int(i+1);[array[i],array[j]]=[array[j],array[i]];}return array;}
+  };
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const makeNetwork=()=>Array.from({length:65},()=>rng.range(-.35,.35));
+  const cloneNetwork=brain=>brain.slice();
+
+  // Court and physics: a side is evaluated in the same left-facing coordinate system.
+  function reflectedInputs(match,side){
+    const own=side==="left"?match.leftY:match.rightY;
+    const opponent=side==="left"?match.rightY:match.leftY;
+    const x=side==="left"?match.ball.x:COURT.width-match.ball.x;
+    const vx=side==="left"?match.ball.vx:-match.ball.vx;
+    return [(x-COURT.paddleX)/COURT.width,(match.ball.y-own)/(COURT.height/2),
+      vx/COURT.maxBallSpeed,match.ball.vy/COURT.maxBallSpeed,
+      (own-COURT.height/2)/(COURT.height/2),(opponent-COURT.height/2)/(COURT.height/2)];
+  }
+  function networkOutput(brain,inputs){
+    let output=brain[64];
+    for(let h=0;h<8;h++){
+      let sum=brain[48+h];
+      for(let i=0;i<6;i++)sum+=brain[h*6+i]*inputs[i];
+      output+=Math.tanh(sum)*brain[56+h];
+    }
+    return Math.tanh(output);
+  }
+  function paddleHeight(side){return settings.paddleHeight*(underdog&&side==="left"?.5:1);}
+  function trackController(y,target,speed){return clamp(target-y,-speed,speed);}
+  function createMatch(leftBrain,rightBrain,leftIndex,rightIndex,kind="population"){
+    const direction=rng.next()<.5?-1:1;
+    const angle=rng.range(-.16,.16);
+    const speed=settings.ballSpeed;
+    return {
+      leftBrain,rightBrain,leftIndex,rightIndex,kind,
+      leftScripted:kind==="benchmark"&&leftIndex<0,rightScripted:kind==="benchmark"&&rightIndex<0,
+      leftY:COURT.height/2,rightY:COURT.height/2,
+      ball:{x:COURT.width/2,y:COURT.height/2,vx:Math.cos(angle)*speed*direction,vy:Math.sin(angle)*speed,trail:[]},
+      scoreLeft:0,scoreRight:0,leftReturns:0,rightReturns:0,rallyReturns:0,
+      rallyCount:0,totalReturns:0,maxRally:0,frames:0,done:false,
+      leftFlash:0,rightFlash:0,pointFlash:0
+    };
+  }
+  function finishRally(match){
+    match.rallyCount++;
+    match.totalReturns+=match.rallyReturns;
+    match.maxRally=Math.max(match.maxRally,match.rallyReturns);
+    if(match.kind!=="benchmark"){
+      genRallies.push(match.rallyReturns);
+      genReturns+=match.rallyReturns;
+      if(match.rallyReturns>=10&&!firstLongRally){firstLongRally=true;notify("First long rally",`${match.rallyReturns} returns — the volley is alive.`);}
+    }
+    match.rallyReturns=0;
+  }
+  function point(match,sideScored){
+    finishRally(match);
+    if(sideScored==="left")match.scoreLeft++;else match.scoreRight++;
+    match.pointFlash=12;
+    match.ball.x=COURT.width/2;match.ball.y=COURT.height/2;
+    const angle=rng.range(-.16,.16),direction=rng.next()<.5?-1:1;
+    match.ball.vx=Math.cos(angle)*settings.ballSpeed*direction;
+    match.ball.vy=Math.sin(angle)*settings.ballSpeed;
+    match.ball.trail.length=0;
+    if(match.scoreLeft>=COURT.pointsToWin||match.scoreRight>=COURT.pointsToWin||match.frames>=COURT.frameLimit)endMatch(match);
+  }
+  function movePaddle(match,side){
+    const ownY=side==="left"?match.leftY:match.rightY;
+    const brain=side==="left"?match.leftBrain:match.rightBrain;
+    const scripted=side==="left"?match.leftScripted:match.rightScripted;
+    const delta=scripted?trackController(ownY,match.ball.y,settings.paddleSpeed*.6):networkOutput(brain,reflectedInputs(match,side))*settings.paddleSpeed;
+    const half=paddleHeight(side)/2;
+    const next=clamp(ownY+delta,half,COURT.height-half);
+    if(side==="left")match.leftY=next;else match.rightY=next;
+  }
+  function stepMatch(match){
+    if(match.done)return;
+    match.frames++;
+    movePaddle(match,"left");movePaddle(match,"right");
+    const b=match.ball,r=COURT.ballRadius;
+    b.trail.push({x:b.x,y:b.y});if(b.trail.length>12)b.trail.shift();
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.y<r){b.y=r;b.vy=Math.abs(b.vy);}
+    if(b.y>COURT.height-r){b.y=COURT.height-r;b.vy=-Math.abs(b.vy);}
+    const leftFace=COURT.paddleX+COURT.paddleWidth+r;
+    const rightFace=COURT.width-COURT.paddleX-COURT.paddleWidth-r;
+    if(b.vx<0&&b.x<=leftFace){
+      if(Math.abs(b.y-match.leftY)<=paddleHeight("left")/2+r){
+        const relative=clamp((b.y-match.leftY)/(paddleHeight("left")/2),-1,1);
+        const speed=Math.min(COURT.maxBallSpeed,Math.hypot(b.vx,b.vy)*(1+settings.speedUp));
+        const angle=relative*1.18;b.vx=Math.cos(angle)*speed;b.vy=Math.sin(angle)*speed;
+        b.x=leftFace+1;match.leftReturns++;match.rallyReturns++;match.leftFlash=7;
+      }else{point(match,"right");return;}
+    }else if(b.vx>0&&b.x>=rightFace){
+      if(Math.abs(b.y-match.rightY)<=paddleHeight("right")/2+r){
+        const relative=clamp((b.y-match.rightY)/(paddleHeight("right")/2),-1,1);
+        const speed=Math.min(COURT.maxBallSpeed,Math.hypot(b.vx,b.vy)*(1+settings.speedUp));
+        const angle=relative*1.18;b.vx=-Math.cos(angle)*speed;b.vy=Math.sin(angle)*speed;
+        b.x=rightFace-1;match.rightReturns++;match.rallyReturns++;match.rightFlash=7;
+      }else{point(match,"left");return;}
+    }
+    match.leftFlash=Math.max(0,match.leftFlash-1);match.rightFlash=Math.max(0,match.rightFlash-1);match.pointFlash=Math.max(0,match.pointFlash-1);
+    if(match.frames>=COURT.frameLimit){
+      finishRally(match);
+      endMatch(match);
+    }
+  }
+
+  // Match schedule and tournament scoring.
+  function bestIndex(fitness){let best=0;for(let i=1;i<fitness.length;i++)if(fitness[i]>fitness[best])best=i;return best;}
+  function scheduleRound(kind="round",bank="population"){
+    const count=settings.population,permutation=rng.shuffle(Array.from({length:count},(_,i)=>i));
+    matches=Array.from({length:count},(_,i)=>{
+      if(bank==="leftHall"){
+        const rival=hallRight[rng.int(hallRight.length)];
+        return createMatch(leftPopulation[i],rival, i,-1,"hall");
+      }
+      if(bank==="rightHall"){
+        const rival=hallLeft[rng.int(hallLeft.length)];
+        return createMatch(rival,rightPopulation[permutation[i]],-1,permutation[i],"hall");
+      }
+      return createMatch(leftPopulation[i],rightPopulation[permutation[i]],i,permutation[i],kind);
+    });
+    featuredIndex=matches.length?bank==="rightHall"
+      ?matches.findIndex(m=>m.rightIndex===bestIndex(rightFitness))
+      :matches.findIndex(m=>m.leftIndex===bestIndex(leftFitness)):-1;
+    if(featuredIndex<0)featuredIndex=0;
+    buildThumbs();
+  }
+  function beginGeneration(){
+    roundIndex=0;phase="round";genRallies=[];genReturns=0;genWins=0;genDraws=0;completedMatches=0;
+    leftFitness=Array(settings.population).fill(0);rightFitness=Array(settings.population).fill(0);
+    leftReturns=Array(settings.population).fill(0);rightReturns=Array(settings.population).fill(0);
+    scheduleRound();
+  }
+  function endMatch(match){
+    if(match.done)return;
+    if(match.rallyReturns>0)finishRally(match);
+    match.done=true;completedMatches++;
+    const lf=10*match.scoreLeft+match.leftReturns,rf=10*match.scoreRight+match.rightReturns;
+    if(match.kind!=="benchmark"){
+      if(match.leftIndex>=0){leftFitness[match.leftIndex]+=lf;leftReturns[match.leftIndex]+=match.leftReturns;}
+      if(match.rightIndex>=0){rightFitness[match.rightIndex]+=rf;rightReturns[match.rightIndex]+=match.rightReturns;}
+      if(match.kind==="round"){
+        if(match.scoreLeft>match.scoreRight)genWins++;else if(match.scoreLeft===match.scoreRight)genDraws++;
+      }
+    }
+  }
+  function advanceTournament(){
+    if(matches.some(m=>!m.done))return;
+    if(phase==="round"){
+      roundIndex++;
+      if(roundIndex<settings.rounds){scheduleRound();return;}
+      if(settings.hallEnabled&&hallLeft.length&&hallRight.length){phase="leftHall";scheduleRound("hall","leftHall");return;}
+      finishGeneration();return;
+    }
+    if(phase==="leftHall"){phase="rightHall";scheduleRound("hall","rightHall");return;}
+    finishGeneration();
+  }
+  function childOf(parents,mutationStep){
+    const a=parents[rng.int(parents.length)],b=parents[rng.int(parents.length)];
+    const split=1+rng.int(64),child=Array.from({length:65},(_,i)=>i<split?a[i]:b[i]);
+    const big=rng.next()<settings.bigJumpChance;
+    for(let i=0;i<child.length;i++)if(rng.next()<settings.mutationChance)child[i]+=rng.gaussian()*(big?.6:mutationStep);
+    return child;
+  }
+  function evolve(population,fitness,avgRally){
+    const ranked=population.map((brain,index)=>({brain,fitness:fitness[index]})).sort((a,b)=>b.fitness-a.fitness);
+    const eliteCount=Math.min(settings.elites,settings.population),parents=ranked.slice(0,Math.min(settings.parentPool,ranked.length)).map(item=>item.brain);
+    const scaled=settings.shrinkMutation?settings.mutationSize*(1-Math.min(1,avgRally/15)):settings.mutationSize;
+    const mutationStep=settings.shrinkMutation?Math.max(.03,scaled):scaled;
+    const next=ranked.slice(0,eliteCount).map(item=>cloneNetwork(item.brain));
+    while(next.length<settings.population)next.push(childOf(parents,mutationStep));
+    return next;
+  }
+  function addHall(hall,population,fitness){
+    const best=population[bestIndex(fitness)];
+    hall.push(cloneNetwork(best));if(hall.length>10)hall.shift();
+  }
+  function runBenchmark(brain,side){
+    const match=side==="left"?createMatch(brain,null,0,-1,"benchmark"):createMatch(null,brain,-1,0,"benchmark");
+    let limit=900;
+    while(!match.done&&limit-->0)stepMatch(match);
+    if(!match.done){if(match.rallyReturns>0)finishRally(match);endMatch(match);}
+    return side==="left"?match.leftReturns:match.rightReturns;
+  }
+  function finishGeneration(){
+    const rallies=genRallies.length?genRallies:[0];
+    const best=Math.max(...rallies),average=rallies.reduce((sum,n)=>sum+n,0)/rallies.length;
+    const leftBest=leftPopulation[bestIndex(leftFitness)],rightBest=rightPopulation[bestIndex(rightFitness)];
+    addHall(hallLeft,leftPopulation,leftFitness);addHall(hallRight,rightPopulation,rightFitness);
+    benchmarkValue=(runBenchmark(leftBest,"left")+runBenchmark(rightBest,"right"))/2;
+    lastGenerationStats={best,average,leftWins:genWins,benchmark:benchmarkValue};
+    history.push({generation,best,average,benchmark:benchmarkValue,leftWins:genWins});
+    if(history.length>30)history.shift();
+    if(best>bestEverRally){bestEverRally=best;const metric=$("bestRally");if(metric){metric.classList.remove("pulse");void metric.offsetWidth;metric.classList.add("pulse");}}
+    if(!masters&&average>=15){masters=true;notify("Masters",`Generation ${generation} averaged ${average.toFixed(1)} returns per rally.`);}
+    leftPopulation=evolve(leftPopulation,leftFitness,average);
+    rightPopulation=evolve(rightPopulation,rightFitness,average);
+    generation++;beginGeneration();renderMetrics();
+  }
+  function resetSimulation(newSeed){
+    if(newSeed!==undefined)seed=newSeed>>>0;
+    generation=1;roundIndex=0;phase="round";history=[];hallLeft=[];hallRight=[];
+    firstLongRally=false;masters=false;bestEverRally=0;benchmarkValue=0;
+    leftPopulation=Array.from({length:settings.population},makeNetwork);
+    rightPopulation=Array.from({length:settings.population},makeNetwork);
+    leftFitness=Array(settings.population).fill(0);rightFitness=Array(settings.population).fill(0);
+    leftReturns=Array(settings.population).fill(0);rightReturns=Array(settings.population).fill(0);
+    genRallies=[];genReturns=0;genWins=0;genDraws=0;completedMatches=0;lastGenerationStats={best:0,average:0,leftWins:0,benchmark:0};
+    beginGeneration();renderMetrics();drawAll();
+  }
+
+  // Rendering: one main court, clickable match thumbnails, and a sliding 30-generation graph.
+  function getContext(canvas){try{return canvas&&canvas.getContext("2d");}catch{return null;}}
+  function drawCourt(ctx,match,mini=false){
+    if(!ctx||!match)return;
+    const w=COURT.width,h=COURT.height;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle="#111519";ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle="#30383e";ctx.lineWidth=1;ctx.setLineDash([6,8]);ctx.beginPath();ctx.moveTo(w/2,0);ctx.lineTo(w/2,h);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle="#22292e";ctx.strokeRect(7,7,w-14,h-14);
+    const trail=match.ball.trail;
+    for(let i=0;i<trail.length;i++){
+      ctx.globalAlpha=(i+1)/trail.length*.25;ctx.fillStyle="#f1eee4";ctx.beginPath();ctx.arc(trail[i].x,trail[i].y,COURT.ballRadius*(i+1)/trail.length,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    const heightL=paddleHeight("left"),heightR=paddleHeight("right");
+    ctx.fillStyle=match.leftFlash?"#fff0c5":"#f4bd4f";ctx.shadowColor="#f4bd4f";ctx.shadowBlur=match.leftFlash?14:0;ctx.fillRect(COURT.paddleX,match.leftY-heightL/2,COURT.paddleWidth,heightL);
+    ctx.fillStyle=match.rightFlash?"#e0f6ff":"#8bc9e5";ctx.shadowColor="#8bc9e5";ctx.shadowBlur=match.rightFlash?14:0;ctx.fillRect(w-COURT.paddleX-COURT.paddleWidth,match.rightY-heightR/2,COURT.paddleWidth,heightR);ctx.shadowBlur=0;
+    ctx.fillStyle="#f1eee4";ctx.beginPath();ctx.arc(match.ball.x,match.ball.y,mini?6:COURT.ballRadius,0,Math.PI*2);ctx.fill();
+  }
+  function drawGraph(){
+    const ctx=graphContext,canvas=$("graph");if(!ctx||!canvas)return;
+    const w=canvas.width,h=canvas.height,p={l:31,r:9,t:12,b:25},plotW=w-p.l-p.r,plotH=h-p.t-p.b;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle="#13171a";ctx.fillRect(0,0,w,h);
+    const data=history.slice(-30),maxValue=Math.max(15,...data.map(d=>d.best))*1.12;
+    ctx.font="10px Bricolage Grotesque, sans-serif";ctx.textAlign="right";ctx.fillStyle="#78828a";
+    [0,.5,1].forEach(t=>{const y=p.t+plotH*(1-t);ctx.strokeStyle="#2a3035";ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillText(Math.round(maxValue*t),p.l-6,y+3);});
+    if(data.length){
+      const step=plotW/Math.max(29,data.length-1),targetShift=(30-data.length)*step;
+      chartOffset+=(targetShift-chartOffset)*.14;
+      const line=(key,color,width)=>{
+        ctx.beginPath();data.forEach((d,i)=>{const x=p.l+chartOffset+i*step,y=p.t+plotH*(1-clamp(d[key]/maxValue,0,1));if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
+      };
+      line("average","#8294a0",1.7);line("best","#f4bd4f",2.3);
+      ctx.textAlign="left";ctx.fillStyle="#78828a";ctx.fillText(String(data[0].generation),p.l,h-7);ctx.textAlign="right";ctx.fillText(String(data[data.length-1].generation),w-p.r,h-7);
+    }
+  }
+  function drawAll(){
+    if(courtContext&&matches[featuredIndex])drawCourt(courtContext,matches[featuredIndex]);
+    for(let i=0;i<thumbContexts.length;i++)if(matches[i])drawCourt(thumbContexts[i],matches[i],true);
+    drawGraph();
+  }
+  function renderMetrics(){
+    $("generation").textContent=String(generation);
+    $("roundLabel").textContent=phase==="round"?`ROUND ${roundIndex+1} / ${settings.rounds}`:phase==="leftHall"?"HALL CHECK · LEFT":"HALL CHECK · RIGHT";
+    $("playing").textContent=String(matches.filter(m=>!m.done).length);
+    const featured=matches[featuredIndex];
+    const leftScore=$("leftScore"),rightScore=$("rightScore");
+    leftScore.textContent=featured?String(featured.scoreLeft):"0";rightScore.textContent=featured?String(featured.scoreRight):"0";
+    if(featured){
+      const changedMatch=featured!==lastScoreMatch;
+      if(changedMatch&&lastScoreMatch){pulseScore(leftScore);pulseScore(rightScore);}
+      else if(!changedMatch&&featured.scoreLeft!==lastLeftScore)pulseScore(leftScore);
+      else if(!changedMatch&&featured.scoreRight!==lastRightScore)pulseScore(rightScore);
+      lastScoreMatch=featured;lastLeftScore=featured.scoreLeft;lastRightScore=featured.scoreRight;
+    }
+    $("bestRally").textContent=lastGenerationStats.best?String(lastGenerationStats.best):"—";
+    $("averageRally").textContent=lastGenerationStats.best?lastGenerationStats.average.toFixed(1):"—";
+    $("leftWins").textContent=lastGenerationStats.best?String(lastGenerationStats.leftWins):"—";
+    $("hallCount").textContent=`${hallLeft.length} / 10`;
+    $("benchmark").textContent=lastGenerationStats.best?lastGenerationStats.benchmark.toFixed(1):"—";
+  }
+  function pulseScore(element){element.classList.remove("score-pop");void element.offsetWidth;element.classList.add("score-pop");}
+  function buildThumbs(){
+    thumbsRoot=$("thumbs");thumbsRoot.replaceChildren();thumbContexts=[];
+    matches.forEach((match,index)=>{
+      const button=document.createElement("button");button.className=`thumb${index===featuredIndex?" selected":""}`;button.type="button";button.setAttribute("aria-label",`Feature match ${index+1}`);
+      const canvas=document.createElement("canvas");canvas.width=380;canvas.height=210;button.append(canvas);
+      const label=document.createElement("span");label.className="idx";label.textContent=String(index+1);button.append(label);
+      button.addEventListener("click",()=>{featuredIndex=index;[...thumbsRoot.children].forEach((el,i)=>el.classList.toggle("selected",i===index));renderMetrics();drawAll();});
+      thumbsRoot.append(button);thumbContexts.push(getContext(canvas));
+    });
+    renderMetrics();
+  }
+  function notify(title,detail){
+    const toast=$("toast");toast.innerHTML=`<strong>${title}</strong> · ${detail}`;toast.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove("show"),3800);
+    $("courtWrap").classList.remove("pulse");void $("courtWrap").offsetWidth;$("courtWrap").classList.add("pulse");
+  }
+
+  // UI and fixed-step animation loop.
+  function buildSliders(){
+    const root=$("sliders");root.replaceChildren();
+    SETTINGS.forEach(def=>{
+      const row=document.createElement("div");row.className="slider-row";
+      const label=document.createElement("label");label.className="slider-label";label.htmlFor=`setting-${def.key}`;label.textContent=def.label;
+      const output=document.createElement("output");output.id=`value-${def.key}`;output.htmlFor=`setting-${def.key}`;label.append(output);
+      const input=document.createElement("input");input.type="range";input.id=`setting-${def.key}`;input.min=String(def.min);input.max=String(def.max);input.step=String(def.step);input.value=String(settings[def.key]);input.setAttribute("aria-label",def.label);
+      input.addEventListener("input",()=>updateSetting(def.key,Number(input.value)));
+      row.append(label,input);root.append(row);updateSlider(def.key);
+    });
+  }
+  function updateSlider(key){
+    const def=SETTINGS.find(item=>item.key===key);if(!def)return;
+    $(`setting-${key}`).value=String(settings[key]);$(`value-${key}`).textContent=def.format(settings[key]);
+  }
+  function updateSetting(key,value){
+    settings[key]=value;
+    if(key==="population"){
+      settings.elites=Math.min(settings.elites,value);settings.parentPool=clamp(settings.parentPool,2,value);
+      updateSlider("elites");updateSlider("parentPool");
+      resetSimulation((seed+0x9e3779b9)>>>0);
+    }else if(key==="elites"){settings.elites=Math.min(value,settings.population);updateSlider(key);}
+    else if(key==="parentPool"){settings.parentPool=clamp(value,2,settings.population);updateSlider(key);}
+    else updateSlider(key);
+    renderMetrics();drawAll();
+  }
+  function applyPreset(name){
+    const preset=PRESETS[name];if(!preset)return;
+    underdog=Boolean(preset.underdog);
+    Object.entries(preset).forEach(([key,value])=>{if(key!=="underdog"&&key in settings)settings[key]=value;});
+    settings.population=clamp(settings.population,8,32);
+    settings.parentPool=clamp(settings.parentPool,2,settings.population);
+    settings.elites=Math.min(settings.elites,settings.population);
+    $("shrinkCheck").checked=settings.shrinkMutation;$("hallCheck").checked=settings.hallEnabled;
+    SETTINGS.forEach(def=>updateSlider(def.key));
+    resetSimulation((seed+0x9e3779b9)>>>0);
+  }
+  function resetDefaults(){
+    settings={...DEFAULTS};underdog=false;
+    $("shrinkCheck").checked=settings.shrinkMutation;$("hallCheck").checked=settings.hallEnabled;
+    SETTINGS.forEach(def=>updateSlider(def.key));
+    resetSimulation(0x5eed1234);
+  }
+  function buildNetworkDiagram(){
+    const links=$("networkLinks"),nodes=$("networkNodes"),xs=[45,250,455],ys=[19,39,59,79,99,119,139,159];
+    const inputY=[39,59,79,99,119,139],outY=79;
+    let lines="";
+    inputY.forEach(y1=>ys.forEach(y2=>{lines+=`<line class="network-link" x1="45" y1="${y1}" x2="250" y2="${y2}"/>`; }));
+    ys.forEach(y=>lines+=`<line class="network-link" x1="250" y1="${y}" x2="455" y2="${outY}"/>`);
+    links.innerHTML=lines;
+    let circles="";
+    inputY.forEach(y=>circles+=`<circle class="net-node input" cx="45" cy="${y}" r="5"/>`);
+    ys.forEach(y=>circles+=`<circle class="net-node" cx="250" cy="${y}" r="6"/>`);
+    circles+=`<circle class="net-node output" cx="455" cy="${outY}" r="7"/>`;nodes.innerHTML=circles;
+  }
+  function showModal(open){
+    $("howModal").classList.toggle("open",open);
+    if(open)$("closeModal").focus();else $("howButton").focus();
+  }
+  function init(){
+    buildSliders();courtContext=getContext($("court"));graphContext=getContext($("graph"));buildNetworkDiagram();
+    $("shrinkCheck").addEventListener("change",event=>{settings.shrinkMutation=event.target.checked;});
+    $("hallCheck").addEventListener("change",event=>{settings.hallEnabled=event.target.checked;});
+    $("speedSelect").addEventListener("change",event=>{simSpeed=Number(event.target.value);});
+    $("pauseButton").addEventListener("click",()=>{paused=!paused;$("pauseButton").textContent=paused?"Resume":"Pause";$("pauseButton").classList.toggle("active",paused);});
+    $("restartButton").addEventListener("click",()=>resetSimulation((seed+0x9e3779b9)>>>0));
+    $("resetButton").addEventListener("click",resetDefaults);
+    document.querySelectorAll("[data-preset]").forEach(button=>button.addEventListener("click",()=>applyPreset(button.dataset.preset)));
+    $("howButton").addEventListener("click",()=>showModal(true));$("closeModal").addEventListener("click",()=>showModal(false));
+    $("howModal").addEventListener("click",event=>{if(event.target===$("howModal"))showModal(false);});
+    document.addEventListener("keydown",event=>{if(event.key==="Escape"&&$("howModal").classList.contains("open"))showModal(false);});
+    resetSimulation(seed);lastTime=performance.now();frameHandle=requestAnimationFrame(loop);
+  }
+  function loop(now){
+    const elapsed=Math.min(.25,Math.max(0,(now-lastTime)/1000));lastTime=now;
+    if(!paused){
+      accumulator+=elapsed*simSpeed;const dt=1/60;let steps=0;
+      while(accumulator>=dt&&steps<5000){
+        for(const match of matches)stepMatch(match);
+        advanceTournament();accumulator-=dt;steps++;
+      }
+    }
+    renderMetrics();drawAll();frameHandle=requestAnimationFrame(loop);
+  }
+
+  window.RallyDebug={
+    getState:()=>({generation,roundIndex,phase,population:settings.population,leftPopulation,rightPopulation,hallLeft,hallRight,matches,history,lastGenerationStats,benchmarkValue,settings,underdog,firstLongRally,masters,seed}),
+    reflectedInputs,networkOutput,createMatch,stepMatch,runBenchmark,finishGeneration,resetSimulation,
+    step(count=1){for(let i=0;i<count;i++){for(const m of matches)stepMatch(m);advanceTournament();}},
+    setSettings(values){Object.assign(settings,values);settings.parentPool=clamp(settings.parentPool,2,settings.population);settings.elites=Math.min(settings.elites,settings.population);},
+    forceGeneration(){for(let guard=0;guard<10000;guard++){for(const m of matches)if(!m.done)while(!m.done)stepMatch(m);advanceTournament();if(generation>1&&phase==="round"&&roundIndex===0)return;}},
+    seededNetwork:makeNetwork,physics:COURT
+  };
+  init();
+})();
+</script>
+</body>
+</html>
