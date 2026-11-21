@@ -1,0 +1,2413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swing — Neuroevolution of Pendulum Swing-Up & Balance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       CSS STYLES & DESIGN SYSTEM
+       Near-black background, warm off-white, amber accent, blue-grey secondary.
+       No purple gradients, no glassmorphism, no emoji.
+       ========================================================================== */
+    :root {
+      --bg-base: #0b0c0e;
+      --bg-surface: #12151a;
+      --bg-card: #181c24;
+      --bg-card-hover: #1f2530;
+      --border-subtle: #242b38;
+      --border-strong: #333d4f;
+      --text-main: #eceae5;
+      --text-muted: #8e9bb0;
+      --text-dim: #5c6779;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.18);
+      --amber-glow: rgba(245, 158, 11, 0.4);
+      --bluegrey: #64748b;
+      --bluegrey-light: #94a3b8;
+      --bluegrey-dim: rgba(100, 116, 139, 0.2);
+      --danger: #ef4444;
+      --font-ui: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.4;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top App Header */
+    header.app-header {
+      height: 44px;
+      padding: 0 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--amber-dim);
+      color: var(--amber-bright);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .brand-desc {
+      font-family: var(--font-serif);
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Main 3-Column Layout */
+    .app-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 290px 1fr 310px;
+      height: calc(100vh - 44px);
+      overflow: hidden;
+    }
+
+    /* Column Shared Styling */
+    .col-left, .col-right {
+      background: var(--bg-surface);
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .col-left {
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .col-right {
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    .col-center {
+      background: var(--bg-base);
+      display: flex;
+      flex-direction: column;
+      padding: 10px 18px 12px 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Scrollbar */
+    .col-left::-webkit-scrollbar, .col-right::-webkit-scrollbar {
+      width: 5px;
+    }
+    .col-left::-webkit-scrollbar-thumb, .col-right::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 3px;
+    }
+
+    /* Section Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Experiment Presets */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    button.btn-preset {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    button.btn-preset:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-strong);
+      color: var(--amber-bright);
+    }
+
+    button.btn-preset.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* Live Sliders */
+    .sliders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .slider-val {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      color: var(--text-main);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider-control {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-main);
+      border: 2px solid var(--bg-card);
+      cursor: pointer;
+      transition: transform 0.1s, background 0.1s;
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb {
+      background: var(--amber-bright);
+      transform: scale(1.2);
+    }
+
+    /* Checkbox & Reset */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-top: 4px;
+      padding: 4px 0;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-size: 11px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    button.btn-reset-optimal {
+      margin-top: 8px;
+      width: 100%;
+      background: transparent;
+      border: 1px dashed var(--border-strong);
+      color: var(--text-muted);
+      padding: 7px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button.btn-reset-optimal:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* Center Column Elements */
+    .center-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 6px 14px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .center-metrics {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .metric-tag {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-main);
+    }
+
+    .metric-value.highlight {
+      color: var(--amber-bright);
+    }
+
+    .center-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .speed-btn-group {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    button.btn-speed {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px 7px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    button.btn-speed:hover {
+      color: var(--text-main);
+    }
+
+    button.btn-speed.active {
+      background: var(--amber);
+      color: #000;
+      font-weight: 700;
+    }
+
+    button.btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button.btn-action:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-strong);
+    }
+
+    button.btn-how-it-works {
+      background: var(--amber-dim);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: var(--amber-bright);
+    }
+
+    button.btn-how-it-works:hover {
+      background: rgba(245, 158, 11, 0.3);
+      border-color: var(--amber);
+    }
+
+    /* Simulation Canvas Wrapper */
+    .canvas-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at center, #131720 0%, #0b0c0e 75%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    canvas#simCanvas {
+      display: block;
+      width: 500px;
+      height: 500px;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 1;
+    }
+
+    /* Success Moments Toast Banner */
+    .milestone-toast {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      background: rgba(18, 21, 26, 0.94);
+      border: 1px solid var(--amber);
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25);
+      border-radius: 6px;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      z-index: 10;
+    }
+
+    .milestone-toast.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .milestone-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-weight: 800;
+      font-size: 11px;
+    }
+
+    .milestone-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .milestone-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--amber-bright);
+    }
+
+    .milestone-desc {
+      font-family: var(--font-serif);
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    /* Right Column Styling */
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .stat-val-group {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-main);
+    }
+
+    .stat-value.amber {
+      color: var(--amber-bright);
+    }
+
+    .stat-value.bluegrey {
+      color: var(--bluegrey-light);
+    }
+
+    /* History Graph */
+    .graph-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .graph-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-color-box {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .legend-color-box.amber {
+      background: var(--amber);
+    }
+
+    .legend-color-box.bluegrey {
+      background: var(--bluegrey-light);
+    }
+
+    canvas#graphCanvas {
+      width: 100%;
+      height: 140px;
+      background: #11141a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      display: block;
+    }
+
+    /* Explanatory text card */
+    .explainer-card {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .explainer-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--amber-bright);
+      margin-bottom: 6px;
+    }
+
+    .explainer-body {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .explainer-body strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Modal Popup: How it works */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 9, 12, 0.82);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      width: 740px;
+      max-width: 95vw;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.96);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.open .modal-box {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+
+    button.btn-close-modal:hover {
+      color: var(--text-main);
+    }
+
+    .modal-content {
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 16px;
+    }
+
+    .network-diagram-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .diagram-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    canvas#networkCanvas {
+      width: 100%;
+      height: 250px;
+      background: #0f1217;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      display: block;
+    }
+
+    .mini-scene-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    canvas#miniSceneCanvas {
+      width: 100%;
+      height: 250px;
+      background: #0f1217;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      display: block;
+    }
+
+    .modal-footer-text {
+      padding: 12px 18px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-subtle);
+      font-family: var(--font-serif);
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Staggered Load-in */
+    .stagger-in {
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-title">
+        SWING
+        <span class="brand-badge">Neuroevolution</span>
+      </div>
+      <div class="brand-desc">Small neural networks learn underactuated pendulum swing-up & upright balance</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-action btn-how-it-works" id="btnOpenModal" aria-label="Open architecture explanation">
+        Architecture & How it Works
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Layout -->
+  <main class="app-layout">
+
+    <!-- LEFT COLUMN: Presets, Sliders, Settings -->
+    <aside class="col-left stagger-in" style="animation-delay: 0.05s;">
+      
+      <!-- Presets -->
+      <section class="card">
+        <div class="card-title">
+          <span>Experiment Presets</span>
+        </div>
+        <div class="preset-grid">
+          <button class="btn-preset" id="presetReckless" title="Mutation chance 50%, size 1.0, big-jump 20%, shrink off">Reckless mutation</button>
+          <button class="btn-preset" id="presetNoElites" title="Keep 0 elites">No elites</button>
+          <button class="btn-preset" id="presetTinyPop" title="Population 10, elites 1, parent pool 3">Tiny population</button>
+          <button class="btn-preset" id="presetHardWorld" title="Motor 2.5 N·m, friction 0.25, push 0.4">Hard world</button>
+        </div>
+      </section>
+
+      <!-- Live Sliders -->
+      <section class="card">
+        <div class="card-title">
+          <span>Live Parameters</span>
+          <span style="font-size: 9px; font-weight: normal; color: var(--text-dim);">Immediate & Gen-Sync</span>
+        </div>
+        <div class="sliders-list">
+          
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Population</span>
+              <span class="slider-val" id="valPop">50</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderPop" min="10" max="100" step="5" value="50">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Elites</span>
+              <span class="slider-val" id="valElites">4</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderElites" min="0" max="10" step="1" value="4">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Parent Pool</span>
+              <span class="slider-val" id="valPool">10</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderPool" min="2" max="25" step="1" value="10">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Mutation Chance</span>
+              <span class="slider-val" id="valMutChance">10%</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderMutChance" min="1" max="80" step="1" value="10">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Mutation Size (σ)</span>
+              <span class="slider-val" id="valMutSize">0.25</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderMutSize" min="0.02" max="1.50" step="0.01" value="0.25">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Big-Jump Chance</span>
+              <span class="slider-val" id="valBigJump">5%</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderBigJump" min="0" max="30" step="1" value="5">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Motor Strength</span>
+              <span class="slider-val" id="valMotor">4.0 N·m</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderMotor" min="1.0" max="8.0" step="0.1" value="4.0">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Gravity (g)</span>
+              <span class="slider-val" id="valGravity">9.8 m/s²</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderGravity" min="2.0" max="20.0" step="0.1" value="9.8">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Friction</span>
+              <span class="slider-val" id="valFriction">0.05</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderFriction" min="0.00" max="0.50" step="0.01" value="0.05">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Push Size</span>
+              <span class="slider-val" id="valPush">0.50 rad/s</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderPush" min="0.0" max="1.0" step="0.05" value="0.5">
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-head">
+              <span class="slider-label">Episode Length</span>
+              <span class="slider-val" id="valEpisode">12 s</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="sliderEpisode" min="6" max="20" step="1" value="12">
+            </div>
+          </div>
+
+          <label class="checkbox-row" for="chkShrink">
+            <input type="checkbox" id="chkShrink" checked>
+            <span class="checkbox-label">Shrink mutation near perfect</span>
+          </label>
+
+          <button class="btn-reset-optimal" id="btnResetOptimal">Reset to optimal values</button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- MIDDLE COLUMN: Top Bar, Canvas, Milestones -->
+    <section class="col-center stagger-in" style="animation-delay: 0.1s;">
+      
+      <!-- Top Status Bar -->
+      <div class="center-top-bar">
+        <div class="center-metrics">
+          <div class="metric-item">
+            <span class="metric-tag">Generation</span>
+            <span class="metric-value highlight" id="badgeGen">1</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-tag">Balanced Now</span>
+            <span class="metric-value" id="badgeBalancedNow">0 / 50</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-tag">Episode Time</span>
+            <span class="metric-value" id="badgeTime">0.0 / 12.0 s</span>
+          </div>
+        </div>
+
+        <div class="center-controls">
+          <div class="speed-btn-group" role="group" aria-label="Simulation Speed">
+            <button class="btn-speed active" data-speed="1">1x</button>
+            <button class="btn-speed" data-speed="2">2x</button>
+            <button class="btn-speed" data-speed="5">5x</button>
+            <button class="btn-speed" data-speed="10">10x</button>
+            <button class="btn-speed" data-speed="20">20x</button>
+            <button class="btn-speed" data-speed="40">40x</button>
+            <button class="btn-speed" data-speed="80">80x</button>
+          </div>
+          <button class="btn-action" id="btnPause" aria-label="Pause or Resume simulation">Pause</button>
+          <button class="btn-action" id="btnRestart" aria-label="Restart simulation">Restart</button>
+        </div>
+      </div>
+
+      <!-- Simulation Canvas Container -->
+      <div class="canvas-container">
+        <canvas id="simCanvas" width="500" height="500"></canvas>
+
+        <!-- Milestone Toast Banner -->
+        <div class="milestone-toast" id="milestoneToast">
+          <div class="milestone-icon">★</div>
+          <div class="milestone-text">
+            <span class="milestone-title" id="toastTitle">Swing-up!</span>
+            <span class="milestone-desc" id="toastDesc">First pendulum reached the upright balance zone.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Stats, Graph, Explainer -->
+    <aside class="col-right stagger-in" style="animation-delay: 0.15s;">
+      
+      <!-- Fitness & Balance Stats -->
+      <section class="card stat-box">
+        <div class="card-title">
+          <span>Performance Metrics</span>
+          <span style="font-size: 9px; color: var(--text-dim);">Current & Record</span>
+        </div>
+        
+        <div class="stat-row">
+          <span class="stat-label">Last-Best Fitness</span>
+          <div class="stat-val-group">
+            <span class="stat-value amber" id="statLastBestFit">0.0</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Average Fitness</span>
+          <div class="stat-val-group">
+            <span class="stat-value bluegrey" id="statAvgFit">0.0</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Best Balance Duration</span>
+          <div class="stat-val-group">
+            <span class="stat-value highlight" id="statBalancedDuration">Balanced 0.0 s of 12.0 s</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Swing-up Time</span>
+          <div class="stat-val-group">
+            <span class="stat-value" id="statSwingUpTime">not yet</span>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">All-Time Record</span>
+          <div class="stat-val-group">
+            <span class="stat-value amber" id="statRecordFit">0.0 (Gen 1)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- History Graph -->
+      <section class="card graph-card">
+        <div class="card-title">
+          <span>Fitness History (30 Gen Window)</span>
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-color-box amber"></span>
+              <span>Best</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color-box bluegrey"></span>
+              <span>Average</span>
+            </div>
+          </div>
+        </div>
+        <canvas id="graphCanvas" width="280" height="140"></canvas>
+      </section>
+
+      <!-- Reading the Graph Explanation -->
+      <section class="explainer-card">
+        <div class="explainer-title">Reading the graph</div>
+        <div class="explainer-body">
+          The <strong>amber line</strong> jumps when a pendulum first discovers the swing-up trick. The <strong>blue-grey line</strong> follows as the trick spreads through crossover. A flat average far below the best usually indicates that mutation is too large or progress scaling is off.
+        </div>
+      </section>
+
+      <!-- Underactuation Note -->
+      <section class="explainer-card" style="margin-top: auto;">
+        <div class="explainer-title">The Underactuation Trick</div>
+        <div class="explainer-body">
+          Holding maximum motor torque (4.0 N·m) cannot lift a 1 kg point mass past 90° against 9.8 m/s² gravity (needs 9.8 N·m). To reach upright, networks must pump resonant kinetic energy back and forth, then brake sharply near the top into a stabilizing PD regime.
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- POPUP MODAL: Architecture & How It Works -->
+  <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">
+          <span>Neural Controller Architecture</span>
+          <span class="brand-badge">61 Weights</span>
+        </div>
+        <button class="btn-close-modal" id="btnCloseModal" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="modal-content">
+        <div class="network-diagram-wrap">
+          <div class="diagram-caption">
+            <span>Inputs (4) &rarr; Hidden (10 tanh) &rarr; Motor (1 tanh)</span>
+            <span style="color: var(--amber-bright);">Live Activations</span>
+          </div>
+          <canvas id="networkCanvas" width="420" height="250"></canvas>
+        </div>
+
+        <div class="mini-scene-wrap">
+          <div class="diagram-caption">
+            <span>Leader Pendulum</span>
+            <span>Real-time</span>
+          </div>
+          <canvas id="miniSceneCanvas" width="240" height="250"></canvas>
+        </div>
+      </div>
+
+      <div class="modal-footer-text">
+        Every individual is a feed-forward network with 4 inputs: sin(θ), cos(θ), normalized angular velocity ω/8, and previous output u<sub>t-1</sub>. The 61 parameters (40 input weights, 10 hidden biases, 10 output weights, 1 output bias) evolve without gradients. Single-point crossover recombines functional sub-circuits while adaptive Gaussian mutation refines the balance controller.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. SETTINGS & INITIALIZATION
+       All variables, arrays, buffers, and flags are strictly initialized
+       before any function or loop can run.
+       ========================================================================== */
+    const DT = 0.02; // 50 Hz physics step
+    const ROD_LENGTH_PX = 170; // 1 m drawn as 170 px
+
+    // Active live settings
+    const settings = {
+      population: 50,
+      elites: 4,
+      parentPool: 10,
+      mutationChance: 0.10,
+      mutationSize: 0.25,
+      bigJumpChance: 0.05,
+      motorStrength: 4.0,
+      gravity: 9.8,
+      friction: 0.05,
+      pushSize: 0.50,
+      episodeLength: 12.0,
+      shrinkMutation: true
+    };
+
+    // Staged settings for next generation
+    const stagedSettings = {
+      population: 50,
+      elites: 4,
+      parentPool: 10,
+      episodeLength: 12.0
+    };
+
+    // Simulation runtime state
+    let simSpeed = 1;
+    let isPaused = false;
+    let generation = 1;
+    let currentStep = 0;
+    let totalSteps = Math.round(settings.episodeLength / DT);
+
+    // World disturbance & test definition for current generation
+    let currentWorld = {
+      theta0: Math.PI,
+      omega0: 0.0,
+      kick1Step: 380,
+      kick1Val: 0.0,
+      kick2Step: 510,
+      kick2Val: 0.0
+    };
+
+    // Population arrays (each genome is Float32Array(61))
+    let population = [];
+    let thetas = new Float32Array(settings.population);
+    let omegas = new Float32Array(settings.population);
+    let lastOutputs = new Float32Array(settings.population);
+    let currentFitness = new Float64Array(settings.population);
+    let balancedSteps = new Int32Array(settings.population);
+    let firstBalancedTime = new Float32Array(settings.population);
+
+    // Leader index in current generation
+    let currentLeaderIdx = 0;
+
+    // Leader bob trail buffer (array of {x, y})
+    const MAX_TRAIL = 16;
+    let leaderTrail = [];
+
+    // Visual effect states
+    let kickFlash = 0.0;
+    let bestPulse = 0.0;
+    let milestonePulse = 0.0;
+
+    // Milestone tracking (each fires once per run)
+    const milestones = {
+      swingUp: false,
+      holdsOn: false,
+      reliable: false
+    };
+
+    // Graph history buffer: array of { gen, bestFit, avgFit, bestSec }
+    const historyData = [];
+    let graphYMinEased = 0.0;
+    let graphYMaxEased = 100.0;
+
+    // All-time record
+    let recordFitness = 0.0;
+    let recordGen = 1;
+
+    // Modal state
+    let isModalOpen = false;
+
+    /* ==========================================================================
+       2. RANDOM NUMBER GENERATORS
+       Mulberry32 seeded PRNG for generation fairness.
+       Standard Math.random() + Box-Muller for evolution mutation/crossover.
+       ========================================================================== */
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussianRandom(mean = 0, std = 1) {
+      let u1 = Math.random();
+      let u2 = Math.random();
+      while (u1 <= 1e-7) u1 = Math.random();
+      return mean + Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2) * std;
+    }
+
+    /* ==========================================================================
+       3. NEURAL NETWORK FORWARD PASS (61 Weights)
+       4 inputs: sin(θ), cos(θ), clamp(ω/8, -1, 1), lastOutput
+       10 hidden tanh
+       1 output tanh (motor command)
+       Weights layout:
+         [0..39]: 4 * 10 input-to-hidden weights
+         [40..49]: 10 hidden biases
+         [50..59]: 10 hidden-to-output weights
+         [60]: 1 output bias
+       ========================================================================== */
+    function createRandomGenome() {
+      const g = new Float32Array(61);
+      for (let i = 0; i < 61; i++) {
+        g[i] = gaussianRandom(0, 0.5);
+      }
+      return g;
+    }
+
+    // Temporary buffers for forward pass to avoid allocation
+    const forwardInputs = new Float32Array(4);
+    const forwardHidden = new Float32Array(10);
+
+    function evaluateNetwork(genome, sinTh, cosTh, clampedOm, lastOut, hiddenOutBuffer = null) {
+      forwardInputs[0] = sinTh;
+      forwardInputs[1] = cosTh;
+      forwardInputs[2] = clampedOm;
+      forwardInputs[3] = lastOut;
+
+      for (let j = 0; j < 10; j++) {
+        let sum = genome[40 + j];
+        sum += forwardInputs[0] * genome[j * 4 + 0];
+        sum += forwardInputs[1] * genome[j * 4 + 1];
+        sum += forwardInputs[2] * genome[j * 4 + 2];
+        sum += forwardInputs[3] * genome[j * 4 + 3];
+        forwardHidden[j] = Math.tanh(sum);
+        if (hiddenOutBuffer) {
+          hiddenOutBuffer[j] = forwardHidden[j];
+        }
+      }
+
+      let outSum = genome[60];
+      for (let j = 0; j < 10; j++) {
+        outSum += forwardHidden[j] * genome[50 + j];
+      }
+      return Math.tanh(outSum);
+    }
+
+    /* ==========================================================================
+       4. WORLD & DISTURBANCE GENERATION
+       Reproducible start and kicks via mulberry32 seed (generation * 7919 + 12345).
+       ========================================================================== */
+    function setupGenerationWorld(gen) {
+      const rng = mulberry32(gen * 7919 + 12345);
+      totalSteps = Math.round(settings.episodeLength / DT);
+
+      // Start: theta = PI + random in [-0.3, 0.3], omega = random in [-0.5, 0.5]
+      const theta0 = Math.PI + (rng() * 0.6 - 0.3);
+      const omega0 = rng() * 1.0 - 0.5;
+
+      // Disturbances: 2 kicks
+      const kick1Step = Math.floor((0.60 + rng() * 0.12) * totalSteps);
+      const sign1 = rng() < 0.5 ? -1 : 1;
+      const kick1Val = sign1 * settings.pushSize * (0.7 + rng() * 0.3);
+
+      const kick2Step = Math.floor((0.78 + rng() * 0.14) * totalSteps);
+      const sign2 = rng() < 0.5 ? -1 : 1;
+      const kick2Val = sign2 * settings.pushSize * (0.7 + rng() * 0.3);
+
+      currentWorld = {
+        theta0,
+        omega0,
+        kick1Step,
+        kick1Val,
+        kick2Step,
+        kick2Val
+      };
+
+      // Reset all pendulums to world start
+      const N = population.length;
+      thetas = new Float32Array(N).fill(theta0);
+      omegas = new Float32Array(N).fill(omega0);
+      lastOutputs = new Float32Array(N).fill(0.0);
+      currentFitness = new Float64Array(N).fill(0.0);
+      balancedSteps = new Int32Array(N).fill(0);
+      firstBalancedTime = new Float32Array(N).fill(-1.0);
+
+      currentStep = 0;
+      currentLeaderIdx = 0;
+      leaderTrail = [];
+    }
+
+    /* ==========================================================================
+       5. EVOLUTIONARY ALGORITHM
+       Elites, parent pool, single-point crossover, adaptive mutation.
+       ========================================================================== */
+    function evolve() {
+      const N = population.length;
+
+      // Rank individuals by fitness descending
+      const indices = Array.from({ length: N }, (_, i) => i);
+      indices.sort((a, b) => currentFitness[b] - currentFitness[a]);
+
+      const bestIdx = indices[0];
+      const bestFit = currentFitness[bestIdx];
+      const bestSec = balancedSteps[bestIdx] * DT;
+      const avgFit = currentFitness.reduce((sum, f) => sum + f, 0) / N;
+
+      // Update record
+      if (bestFit > recordFitness) {
+        recordFitness = bestFit;
+        recordGen = generation;
+        bestPulse = 1.0;
+      }
+
+      // Check success moments
+      // 1. Swing-up: first time any pendulum reaches a balanced step
+      if (!milestones.swingUp) {
+        for (let i = 0; i < N; i++) {
+          if (balancedSteps[i] > 0) {
+            triggerMilestone("Swing-up!", "First pendulum reached the upright balance zone.");
+            milestones.swingUp = true;
+            break;
+          }
+        }
+      }
+
+      // 2. Holds on: best pendulum balances for 5.0 s or more
+      if (!milestones.holdsOn && bestSec >= 5.0) {
+        triggerMilestone("Holds on!", "Leader sustained balance for 5.0+ seconds.");
+        milestones.holdsOn = true;
+      }
+
+      // 3. Reliable: >= 80% of population balance for 3.0 s or more
+      if (!milestones.reliable) {
+        let count3s = 0;
+        for (let i = 0; i < N; i++) {
+          if (balancedSteps[i] * DT >= 3.0) count3s++;
+        }
+        if (count3s / N >= 0.80) {
+          triggerMilestone("Reliable!", "At least 80% of the population balanced for 3.0+ seconds.");
+          milestones.reliable = true;
+        }
+      }
+
+      // Record to graph history
+      historyData.push({
+        gen: generation,
+        bestFit,
+        avgFit,
+        bestSec
+      });
+
+      // Update UI readouts for generation result
+      updateStatsUI(bestFit, avgFit, bestSec, firstBalancedTime[bestIdx]);
+
+      // Apply staged settings for next generation
+      settings.population = stagedSettings.population;
+      settings.elites = Math.min(stagedSettings.elites, settings.population);
+      settings.parentPool = Math.min(stagedSettings.parentPool, settings.population);
+      settings.episodeLength = stagedSettings.episodeLength;
+
+      // Breeding next generation
+      const nextPop = [];
+      const targetPop = settings.population;
+
+      // 1. Elites
+      for (let i = 0; i < settings.elites && i < indices.length; i++) {
+        nextPop.push(new Float32Array(population[indices[i]]));
+      }
+
+      // Parent pool
+      const poolSize = Math.min(settings.parentPool, indices.length);
+      const parentPoolGenomes = [];
+      for (let i = 0; i < poolSize; i++) {
+        parentPoolGenomes.push(population[indices[i]]);
+      }
+
+      // Progress ratio (0 to 1)
+      const progress = Math.max(0, Math.min(1, bestSec / settings.episodeLength));
+      const baseSigma = settings.shrinkMutation
+        ? Math.max(0.03, settings.mutationSize * (1 - progress))
+        : settings.mutationSize;
+
+      // 2. Crossover & Mutation for remaining individuals
+      while (nextPop.length < targetPop) {
+        const p1 = parentPoolGenomes[Math.floor(Math.random() * poolSize)];
+        const p2 = parentPoolGenomes[Math.floor(Math.random() * poolSize)];
+
+        // Single-point crossover on 61 weights
+        const child = new Float32Array(61);
+        const cp = 1 + Math.floor(Math.random() * 60); // 1..60
+        for (let k = 0; k < cp; k++) child[k] = p1[k];
+        for (let k = cp; k < 61; k++) child[k] = p2[k];
+
+        // Mutation with big-jump chance
+        const isBigJump = Math.random() < settings.bigJumpChance;
+        const sigma = isBigJump ? 0.6 : baseSigma;
+
+        for (let k = 0; k < 61; k++) {
+          if (Math.random() < settings.mutationChance) {
+            child[k] += gaussianRandom(0, sigma);
+          }
+        }
+        nextPop.push(child);
+      }
+
+      population = nextPop;
+      generation++;
+      setupGenerationWorld(generation);
+    }
+
+    function triggerMilestone(title, desc) {
+      milestonePulse = 1.0;
+      const toast = document.getElementById("milestoneToast");
+      document.getElementById("toastTitle").textContent = title;
+      document.getElementById("toastDesc").textContent = desc;
+      toast.classList.add("visible");
+      setTimeout(() => {
+        toast.classList.remove("visible");
+      }, 4000);
+    }
+
+    /* ==========================================================================
+       6. SIMULATION STEP (Fixed-step dt = 0.02s)
+       ========================================================================== */
+    function stepSimulation() {
+      const N = population.length;
+      const isKick1 = (currentStep === currentWorld.kick1Step);
+      const isKick2 = (currentStep === currentWorld.kick2Step);
+
+      if (isKick1 || isKick2) {
+        kickFlash = 1.0;
+      }
+
+      const g = settings.gravity;
+      const friction = settings.friction;
+      const motorStr = settings.motorStrength;
+      const timeNow = currentStep * DT;
+
+      let maxFit = -Infinity;
+      let leaderCandidate = 0;
+
+      for (let i = 0; i < N; i++) {
+        let th = thetas[i];
+        let om = omegas[i];
+
+        // Apply kick disturbances
+        if (isKick1) {
+          om += currentWorld.kick1Val;
+          om = Math.max(-8, Math.min(8, om));
+        }
+        if (isKick2) {
+          om += currentWorld.kick2Val;
+          om = Math.max(-8, Math.min(8, om));
+        }
+
+        // Inputs
+        const sinTh = Math.sin(th);
+        const cosTh = Math.cos(th);
+        const clampedOm = Math.max(-1, Math.min(1, om / 8));
+        const lastOut = lastOutputs[i];
+
+        // Network evaluation
+        const out = evaluateNetwork(population[i], sinTh, cosTh, clampedOm, lastOut);
+        lastOutputs[i] = out;
+
+        // Torque and physics equation:
+        // alpha = g * sin(theta) + torque - friction * omega
+        const torque = out * motorStr;
+        const alpha = g * sinTh + torque - friction * om;
+
+        om += alpha * DT;
+        om = Math.max(-8, Math.min(8, om));
+        th += om * DT;
+
+        // Wrap theta into (-PI, PI]
+        while (th > Math.PI) th -= 2 * Math.PI;
+        while (th <= -Math.PI) th += 2 * Math.PI;
+
+        thetas[i] = th;
+        omegas[i] = om;
+
+        // Balanced check: |theta| < 0.2 and |omega| < 1.5
+        const isBalanced = (Math.abs(th) < 0.2 && Math.abs(om) < 1.5);
+        if (isBalanced) {
+          balancedSteps[i]++;
+          if (firstBalancedTime[i] < 0) {
+            firstBalancedTime[i] = timeNow;
+          }
+        }
+
+        // Fitness accumulation:
+        // (1 + cos(theta))/2 + 2 * balanced - 0.02 * (output)^2 - 0.02 * (omega/8)^2
+        const stepFit = (1 + cosTh) * 0.5 +
+          (isBalanced ? 2.0 : 0.0) -
+          0.02 * (out * out) -
+          0.02 * (clampedOm * clampedOm);
+
+        currentFitness[i] += stepFit;
+
+        if (currentFitness[i] > maxFit) {
+          maxFit = currentFitness[i];
+          leaderCandidate = i;
+        }
+      }
+
+      currentLeaderIdx = leaderCandidate;
+
+      // Update leader bob trail
+      const lth = thetas[currentLeaderIdx];
+      const cx = 250;
+      const cy = 250;
+      const bx = cx + ROD_LENGTH_PX * Math.sin(lth);
+      const by = cy - ROD_LENGTH_PX * Math.cos(lth);
+      leaderTrail.push({ x: bx, y: by });
+      if (leaderTrail.length > MAX_TRAIL) {
+        leaderTrail.shift();
+      }
+
+      currentStep++;
+      if (currentStep >= totalSteps) {
+        evolve();
+      }
+    }
+
+    /* ==========================================================================
+       7. CANVAS DRAWING
+       Main simulation canvas (pivot, rods, bobs, torque arrow, energy meter, etc.)
+       ========================================================================== */
+    const simCanvas = document.getElementById("simCanvas");
+    const simCtx = simCanvas.getContext("2d");
+
+    function renderSimulation() {
+      const ctx = simCtx;
+      const width = simCanvas.width;
+      const height = simCanvas.height;
+      const cx = width / 2;
+      const cy = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Kick Flash & Visual Pulses
+      if (kickFlash > 0.01) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${kickFlash * 0.15})`;
+        ctx.fillRect(0, 0, width, height);
+        kickFlash *= 0.88;
+      }
+
+      // Best beat record pulse
+      if (bestPulse > 0.01) {
+        ctx.save();
+        ctx.beginPath();
+        const r = (1 - bestPulse) * 180 + 20;
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(251, 191, 36, ${bestPulse * 0.7})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+        bestPulse *= 0.94;
+      }
+
+      // Milestone celebratory shockwave
+      if (milestonePulse > 0.01) {
+        ctx.save();
+        ctx.beginPath();
+        const r2 = (1 - milestonePulse) * 220 + 10;
+        ctx.arc(cx, cy - ROD_LENGTH_PX, r2, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(245, 158, 11, ${milestonePulse * 0.9})`;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
+        milestonePulse *= 0.94;
+      }
+
+      // 2. Upright Target Ring at (cx, cy - ROD_LENGTH_PX)
+      const targetY = cy - ROD_LENGTH_PX;
+      const leaderTh = thetas[currentLeaderIdx] || 0;
+      const leaderOm = omegas[currentLeaderIdx] || 0;
+      const leaderBalanced = (Math.abs(leaderTh) < 0.2 && Math.abs(leaderOm) < 1.5);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, targetY, 18, 0, Math.PI * 2);
+      if (leaderBalanced) {
+        // Glowing warm amber aura
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.restore();
+
+      // 3. Draw Non-Leader Pendulums (dim, translucent blue-grey)
+      const N = population.length;
+      ctx.save();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.22)';
+      for (let i = 0; i < N; i++) {
+        if (i === currentLeaderIdx) continue;
+        const th = thetas[i];
+        const bx = cx + ROD_LENGTH_PX * Math.sin(th);
+        const by = cy - ROD_LENGTH_PX * Math.cos(th);
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 4. Draw Leader Pendulum Bob Trail
+      if (leaderTrail.length > 1) {
+        ctx.save();
+        for (let i = 0; i < leaderTrail.length - 1; i++) {
+          const alpha = (i / leaderTrail.length) * 0.45;
+          ctx.beginPath();
+          ctx.arc(leaderTrail[i].x, leaderTrail[i].y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(245, 158, 11, ${alpha})`;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 5. Draw Leader Pendulum (prominent amber rod and bob)
+      const lbx = cx + ROD_LENGTH_PX * Math.sin(leaderTh);
+      const lby = cy - ROD_LENGTH_PX * Math.cos(leaderTh);
+
+      ctx.save();
+      // Glow
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = leaderBalanced ? 14 : 6;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(lbx, lby);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Leader bob (point mass 1 kg)
+      ctx.beginPath();
+      ctx.arc(lbx, lby, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fill();
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      // 6. Leader Motor Torque Curved Arrow at Pivot
+      const leaderOut = lastOutputs[currentLeaderIdx] || 0;
+      const torque = leaderOut * settings.motorStrength;
+      const torqueMag = Math.abs(leaderOut);
+
+      if (torqueMag > 0.05) {
+        ctx.save();
+        const arrowR = 32;
+        const sweepAngle = (torque / settings.motorStrength) * (Math.PI * 0.45);
+        const startA = -Math.PI / 2;
+        const endA = startA + sweepAngle;
+        const counterClockwise = (torque < 0);
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, arrowR, startA, endA, counterClockwise);
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Arrow head
+        const headAngle = endA;
+        const hx = cx + arrowR * Math.cos(headAngle);
+        const hy = cy + arrowR * Math.sin(headAngle);
+        const tangent = counterClockwise ? headAngle - Math.PI / 2 : headAngle + Math.PI / 2;
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(
+          hx - 7 * Math.cos(tangent - 0.5),
+          hy - 7 * Math.sin(tangent - 0.5)
+        );
+        ctx.lineTo(
+          hx - 7 * Math.cos(tangent + 0.5),
+          hy - 7 * Math.sin(tangent + 0.5)
+        );
+        ctx.closePath();
+        ctx.fill();
+
+        // Torque readout label
+        ctx.font = '10px var(--font-ui)';
+        ctx.fillStyle = '#fde68a';
+        ctx.textAlign = 'center';
+        ctx.fillText(`τ = ${torque > 0 ? '+' : ''}${torque.toFixed(2)} N·m`, cx, cy + 46);
+        ctx.restore();
+      }
+
+      // 7. Mechanical Shared Pivot
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e2430';
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.restore();
+
+      // 8. Energy Meter: E = ω²/2 + g * cos(θ)
+      // Hanging: -g, Top: +g. Range [-g, +g] -> 0 to 1
+      const g = settings.gravity;
+      const energy = 0.5 * leaderOm * leaderOm + g * Math.cos(leaderTh);
+      const normE = (energy + g) / (2 * g); // 0 at bottom, 1.0 at upright
+
+      const meterX = 40;
+      const meterY = height - 38;
+      const meterW = width - 80;
+      const meterH = 14;
+
+      ctx.save();
+      // Meter container
+      ctx.fillStyle = 'rgba(18, 21, 26, 0.85)';
+      ctx.strokeStyle = 'var(--border-subtle)';
+      ctx.lineWidth = 1;
+      ctx.fillRect(meterX, meterY, meterW, meterH);
+      ctx.strokeRect(meterX, meterY, meterW, meterH);
+
+      // Meter fill
+      const fillW = Math.max(0, Math.min(meterW, normE * meterW));
+      const fillGrad = ctx.createLinearGradient(meterX, 0, meterX + meterW, 0);
+      fillGrad.addColorStop(0, '#334155');
+      fillGrad.addColorStop(0.5, '#d97706');
+      fillGrad.addColorStop(1, '#fbbf24');
+
+      ctx.fillStyle = fillGrad;
+      ctx.fillRect(meterX + 1, meterY + 1, fillW, meterH - 2);
+
+      // Escape threshold mark at normE = 1.0 (right edge)
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(meterX + meterW, meterY - 3);
+      ctx.lineTo(meterX + meterW, meterY + meterH + 3);
+      ctx.stroke();
+
+      // Labels
+      ctx.font = '10px var(--font-ui)';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'left';
+      ctx.fillText(`ENERGY E: ${energy > 0 ? '+' : ''}${energy.toFixed(1)} J`, meterX, meterY - 6);
+
+      ctx.textAlign = 'right';
+      const escapeNotice = energy >= g ? '⚡ SWING-UP THRESHOLD MET' : `Threshold: +${g.toFixed(1)} J`;
+      ctx.fillStyle = energy >= g ? '#fbbf24' : '#64748b';
+      ctx.fillText(escapeNotice, meterX + meterW, meterY - 6);
+      ctx.restore();
+
+      // 9. Kick Warning Label
+      if (kickFlash > 0.1) {
+        ctx.save();
+        ctx.font = 'bold 11px var(--font-ui)';
+        ctx.fillStyle = '#fbbf24';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ DISTURBANCE KICK', cx, 40);
+        ctx.restore();
+      }
+    }
+
+    /* ==========================================================================
+       8. HISTORY GRAPH RENDERING
+       Smooth sliding window of last 30 generations.
+       Auto-scales Y-axis with 10% headroom and exponential easing.
+       ========================================================================== */
+    const graphCanvas = document.getElementById("graphCanvas");
+    const graphCtx = graphCanvas.getContext("2d");
+
+    function renderGraph() {
+      const ctx = graphCtx;
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (historyData.length === 0) {
+        ctx.font = '11px var(--font-serif)';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        ctx.fillText('Waiting for generation 1 to complete...', w / 2, h / 2);
+        return;
+      }
+
+      // Sliding window of last 30 generations
+      const WINDOW_SIZE = 30;
+      const startIdx = Math.max(0, historyData.length - WINDOW_SIZE);
+      const visibleData = historyData.slice(startIdx);
+
+      // Find min and max
+      let localMin = Infinity;
+      let localMax = -Infinity;
+      for (const d of visibleData) {
+        if (d.bestFit > localMax) localMax = d.bestFit;
+        if (d.avgFit > localMax) localMax = d.avgFit;
+        if (d.bestFit < localMin) localMin = d.bestFit;
+        if (d.avgFit < localMin) localMin = d.avgFit;
+      }
+      if (localMin === Infinity) { localMin = 0; localMax = 100; }
+
+      const range = Math.max(20, localMax - localMin);
+      const targetMin = Math.max(0, localMin - range * 0.1);
+      const targetMax = localMax + range * 0.1;
+
+      // Eased Y bounds
+      graphYMinEased += (targetMin - graphYMinEased) * 0.15;
+      graphYMaxEased += (targetMax - graphYMaxEased) * 0.15;
+      const curMin = graphYMinEased;
+      const curMax = Math.max(curMin + 10, graphYMaxEased);
+
+      const paddingLeft = 32;
+      const paddingRight = 10;
+      const paddingTop = 12;
+      const paddingBottom = 18;
+      const plotW = w - paddingLeft - paddingRight;
+      const plotH = h - paddingTop - paddingBottom;
+
+      // Grid lines
+      ctx.strokeStyle = '#1e2430';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const gridLevels = 3;
+      for (let i = 0; i <= gridLevels; i++) {
+        const y = paddingTop + (i / gridLevels) * plotH;
+        ctx.moveTo(paddingLeft, y);
+        ctx.lineTo(w - paddingRight, y);
+
+        const val = curMax - (i / gridLevels) * (curMax - curMin);
+        ctx.font = '9px var(--font-ui)';
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(val).toString(), paddingLeft - 4, y + 3);
+      }
+      ctx.stroke();
+
+      const nPoints = visibleData.length;
+      if (nPoints < 1) return;
+
+      const getX = (i) => {
+        if (nPoints === 1) return paddingLeft + plotW / 2;
+        return paddingLeft + (i / (WINDOW_SIZE - 1)) * plotW;
+      };
+      const getY = (val) => {
+        const norm = (val - curMin) / (curMax - curMin);
+        return paddingTop + (1 - Math.max(0, Math.min(1, norm))) * plotH;
+      };
+
+      // Draw Average line (blue-grey)
+      ctx.save();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      for (let i = 0; i < nPoints; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].avgFit);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // Draw Best line (amber)
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.4;
+      ctx.shadowColor = 'rgba(245, 158, 11, 0.4)';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      for (let i = 0; i < nPoints; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].bestFit);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Points for best line
+      ctx.fillStyle = '#fbbf24';
+      for (let i = 0; i < nPoints; i++) {
+        const x = getX(i);
+        const y = getY(visibleData[i].bestFit);
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // X-axis label
+      const firstGen = visibleData[0].gen;
+      const lastGen = visibleData[nPoints - 1].gen;
+      ctx.font = '9px var(--font-ui)';
+      ctx.fillStyle = '#475569';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Gen ${firstGen}`, paddingLeft, h - 4);
+      ctx.textAlign = 'right';
+      ctx.fillText(`Gen ${lastGen}`, w - paddingRight, h - 4);
+    }
+
+    /* ==========================================================================
+       9. ARCHITECTURE POPUP: LIVE ANIMATED NETWORK & MINI SCENE
+       ========================================================================== */
+    const networkCanvas = document.getElementById("networkCanvas");
+    const networkCtx = networkCanvas ? networkCanvas.getContext("2d") : null;
+    const miniSceneCanvas = document.getElementById("miniSceneCanvas");
+    const miniSceneCtx = miniSceneCanvas ? miniSceneCanvas.getContext("2d") : null;
+    let animPhase = 0;
+
+    function renderModalDiagrams() {
+      if (!isModalOpen || !networkCtx || !miniSceneCtx) return;
+      animPhase += 0.05;
+
+      const leaderGenome = population[currentLeaderIdx];
+      if (!leaderGenome) return;
+
+      const th = thetas[currentLeaderIdx];
+      const om = omegas[currentLeaderIdx];
+      const sinTh = Math.sin(th);
+      const cosTh = Math.cos(th);
+      const clampedOm = Math.max(-1, Math.min(1, om / 8));
+      const lastOut = lastOutputs[currentLeaderIdx];
+
+      const hiddenActs = new Float32Array(10);
+      const out = evaluateNetwork(leaderGenome, sinTh, cosTh, clampedOm, lastOut, hiddenActs);
+
+      // --- Draw Neural Network Canvas ---
+      const nctx = networkCtx;
+      const nw = networkCanvas.width;
+      const nh = networkCanvas.height;
+      nctx.clearRect(0, 0, nw, nh);
+
+      const inX = 50;
+      const hidX = nw / 2;
+      const outX = nw - 50;
+
+      const inputYs = [50, 100, 150, 200];
+      const hiddenYs = [];
+      for (let j = 0; j < 10; j++) {
+        hiddenYs.push(26 + j * 22);
+      }
+      const outY = nh / 2;
+
+      // 1. Draw Weights from Input to Hidden
+      for (let j = 0; j < 10; j++) {
+        for (let i = 0; i < 4; i++) {
+          const w = leaderGenome[j * 4 + i];
+          const alpha = Math.min(0.8, Math.abs(w) * 0.4);
+          nctx.beginPath();
+          nctx.moveTo(inX, inputYs[i]);
+          nctx.lineTo(hidX, hiddenYs[j]);
+          nctx.strokeStyle = w > 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+          nctx.lineWidth = Math.min(2.5, Math.abs(w) * 1.5);
+          nctx.stroke();
+
+          // Animated signal pulse along active synapses
+          if (Math.abs(w) > 0.4) {
+            const p = (animPhase + i * 0.2 + j * 0.1) % 1.0;
+            const px = inX + (hidX - inX) * p;
+            const py = inputYs[i] + (hiddenYs[j] - inputYs[i]) * p;
+            nctx.beginPath();
+            nctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            nctx.fillStyle = w > 0 ? 'rgba(251, 191, 36, 0.8)' : 'rgba(148, 163, 184, 0.8)';
+            nctx.fill();
+          }
+        }
+      }
+
+      // 2. Draw Weights from Hidden to Output
+      for (let j = 0; j < 10; j++) {
+        const w = leaderGenome[50 + j];
+        const alpha = Math.min(0.8, Math.abs(w) * 0.4);
+        nctx.beginPath();
+        nctx.moveTo(hidX, hiddenYs[j]);
+        nctx.lineTo(outX, outY);
+        nctx.strokeStyle = w > 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+        nctx.lineWidth = Math.min(2.5, Math.abs(w) * 1.5);
+        nctx.stroke();
+
+        if (Math.abs(w) > 0.4) {
+          const p = (animPhase + j * 0.15) % 1.0;
+          const px = hidX + (outX - hidX) * p;
+          const py = hiddenYs[j] + (outY - hiddenYs[j]) * p;
+          nctx.beginPath();
+          nctx.arc(px, py, 1.5, 0, Math.PI * 2);
+          nctx.fillStyle = w > 0 ? 'rgba(251, 191, 36, 0.8)' : 'rgba(148, 163, 184, 0.8)';
+          nctx.fill();
+        }
+      }
+
+      // 3. Draw Nodes
+      const drawNode = (x, y, r, val, label) => {
+        nctx.beginPath();
+        nctx.arc(x, y, r, 0, Math.PI * 2);
+        const col = val > 0 ? `rgba(245, 158, 11, ${0.3 + 0.7 * Math.abs(val)})` : `rgba(100, 116, 139, ${0.3 + 0.7 * Math.abs(val)})`;
+        nctx.fillStyle = col;
+        nctx.fill();
+        nctx.strokeStyle = '#eceae5';
+        nctx.lineWidth = 1.5;
+        nctx.stroke();
+
+        if (label) {
+          nctx.font = '10px var(--font-ui)';
+          nctx.fillStyle = '#eceae5';
+          nctx.textAlign = x < nw / 2 ? 'right' : 'left';
+          const lx = x < nw / 2 ? x - r - 6 : x + r + 6;
+          nctx.fillText(label, lx, y + 3);
+        }
+      };
+
+      const inLabels = ['sin θ', 'cos θ', 'ω / 8', 'u (t-1)'];
+      const inVals = [sinTh, cosTh, clampedOm, lastOut];
+      for (let i = 0; i < 4; i++) {
+        drawNode(inX, inputYs[i], 7, inVals[i], inLabels[i]);
+      }
+      for (let j = 0; j < 10; j++) {
+        drawNode(hidX, hiddenYs[j], 5, hiddenActs[j], null);
+      }
+      drawNode(outX, outY, 8, out, 'motor u');
+
+      // --- Draw Mini Leader Pendulum Scene ---
+      const mctx = miniSceneCtx;
+      const mw = miniSceneCanvas.width;
+      const mh = miniSceneCanvas.height;
+      const mcx = mw / 2;
+      const mcy = mh / 2 + 10;
+      const mRodLen = 85;
+
+      mctx.clearRect(0, 0, mw, mh);
+
+      // Target ring
+      mctx.beginPath();
+      mctx.arc(mcx, mcy - mRodLen, 12, 0, Math.PI * 2);
+      mctx.strokeStyle = Math.abs(th) < 0.2 && Math.abs(om) < 1.5 ? '#fbbf24' : 'rgba(245, 158, 11, 0.3)';
+      mctx.stroke();
+
+      // Rod
+      const mbx = mcx + mRodLen * Math.sin(th);
+      const mby = mcy - mRodLen * Math.cos(th);
+      mctx.beginPath();
+      mctx.moveTo(mcx, mcy);
+      mctx.lineTo(mbx, mby);
+      mctx.strokeStyle = '#f59e0b';
+      mctx.lineWidth = 2.5;
+      mctx.stroke();
+
+      // Bob
+      mctx.beginPath();
+      mctx.arc(mbx, mby, 6, 0, Math.PI * 2);
+      mctx.fillStyle = '#fbbf24';
+      mctx.fill();
+
+      // Mini pivot
+      mctx.beginPath();
+      mctx.arc(mcx, mcy, 4, 0, Math.PI * 2);
+      mctx.fillStyle = '#fff';
+      mctx.fill();
+
+      // Mini Energy Bar at bottom
+      const g = settings.gravity;
+      const E = 0.5 * om * om + g * Math.cos(th);
+      const normE = Math.max(0, Math.min(1, (E + g) / (2 * g)));
+      mctx.fillStyle = '#1e2430';
+      mctx.fillRect(20, mh - 24, mw - 40, 10);
+      mctx.fillStyle = normE >= 1 ? '#fbbf24' : '#f59e0b';
+      mctx.fillRect(20, mh - 24, (mw - 40) * normE, 10);
+
+      mctx.font = '9px var(--font-ui)';
+      mctx.fillStyle = '#94a3b8';
+      mctx.textAlign = 'center';
+      mctx.fillText(`Energy: ${E.toFixed(1)} J`, mw / 2, mh - 30);
+    }
+
+    /* ==========================================================================
+       10. UI UPDATES & READOUTS
+       ========================================================================== */
+    function updateStatsUI(bestFit, avgFit, bestSec, swingUpTime) {
+      document.getElementById("statLastBestFit").textContent = bestFit.toFixed(1);
+      document.getElementById("statAvgFit").textContent = avgFit.toFixed(1);
+      document.getElementById("statBalancedDuration").textContent =
+        `Balanced ${bestSec.toFixed(1)} s of ${settings.episodeLength.toFixed(1)} s`;
+
+      if (swingUpTime >= 0) {
+        document.getElementById("statSwingUpTime").textContent = `${swingUpTime.toFixed(2)} s`;
+      } else {
+        document.getElementById("statSwingUpTime").textContent = "not yet";
+      }
+
+      document.getElementById("statRecordFit").textContent = `${recordFitness.toFixed(1)} (Gen ${recordGen})`;
+    }
+
+    function updateLiveHeaderUI() {
+      document.getElementById("badgeGen").textContent = generation;
+      
+      // Count currently balanced
+      let balCount = 0;
+      const N = population.length;
+      for (let i = 0; i < N; i++) {
+        if (Math.abs(thetas[i]) < 0.2 && Math.abs(omegas[i]) < 1.5) {
+          balCount++;
+        }
+      }
+      document.getElementById("badgeBalancedNow").textContent = `${balCount} / ${N}`;
+      const elapsed = (currentStep * DT).toFixed(1);
+      document.getElementById("badgeTime").textContent = `${elapsed} / ${settings.episodeLength.toFixed(1)} s`;
+    }
+
+    /* ==========================================================================
+       11. CONTROLS, PRESETS & EVENT LISTENERS
+       ========================================================================== */
+    function setupControls() {
+      // Speed Buttons
+      const speedBtns = document.querySelectorAll(".btn-speed");
+      speedBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          speedBtns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          simSpeed = parseInt(btn.dataset.speed, 10);
+        });
+      });
+
+      // Pause Button
+      const btnPause = document.getElementById("btnPause");
+      btnPause.addEventListener("click", () => {
+        isPaused = !isPaused;
+        btnPause.textContent = isPaused ? "Resume" : "Pause";
+      });
+
+      // Restart Button
+      const btnRestart = document.getElementById("btnRestart");
+      btnRestart.addEventListener("click", () => {
+        restartSimulation();
+      });
+
+      // Sliders linking
+      const bindSlider = (id, valId, key, isStaged, formatFn) => {
+        const slider = document.getElementById(id);
+        const valSpan = document.getElementById(valId);
+        slider.addEventListener("input", (e) => {
+          const num = parseFloat(e.target.value);
+          if (isStaged) {
+            stagedSettings[key] = num;
+          } else {
+            settings[key] = num;
+          }
+          valSpan.textContent = formatFn(num);
+          clearPresetActiveState();
+        });
+      };
+
+      bindSlider("sliderPop", "valPop", "population", true, v => v);
+      bindSlider("sliderElites", "valElites", "elites", true, v => v);
+      bindSlider("sliderPool", "valPool", "parentPool", true, v => v);
+      bindSlider("sliderMutChance", "valMutChance", "mutationChance", false, v => `${v}%`);
+      // When slider changes mutationChance, convert to 0..1
+      document.getElementById("sliderMutChance").addEventListener("input", e => {
+        settings.mutationChance = parseFloat(e.target.value) / 100.0;
+      });
+
+      bindSlider("sliderMutSize", "valMutSize", "mutationSize", false, v => v.toFixed(2));
+      bindSlider("sliderBigJump", "valBigJump", "bigJumpChance", false, v => `${v}%`);
+      document.getElementById("sliderBigJump").addEventListener("input", e => {
+        settings.bigJumpChance = parseFloat(e.target.value) / 100.0;
+      });
+
+      bindSlider("sliderMotor", "valMotor", "motorStrength", false, v => `${v.toFixed(1)} N·m`);
+      bindSlider("sliderGravity", "valGravity", "gravity", false, v => `${v.toFixed(1)} m/s²`);
+      bindSlider("sliderFriction", "valFriction", "friction", false, v => v.toFixed(2));
+      bindSlider("sliderPush", "valPush", "pushSize", false, v => `${v.toFixed(2)} rad/s`);
+      bindSlider("sliderEpisode", "valEpisode", "episodeLength", true, v => `${v} s`);
+
+      // Checkbox Shrink
+      const chkShrink = document.getElementById("chkShrink");
+      chkShrink.addEventListener("change", (e) => {
+        settings.shrinkMutation = e.target.checked;
+        clearPresetActiveState();
+      });
+
+      // Reset to Optimal Values
+      document.getElementById("btnResetOptimal").addEventListener("click", () => {
+        applySettings({
+          population: 50,
+          elites: 4,
+          parentPool: 10,
+          mutationChance: 0.10,
+          mutationSize: 0.25,
+          bigJumpChance: 0.05,
+          motorStrength: 4.0,
+          gravity: 9.8,
+          friction: 0.05,
+          pushSize: 0.50,
+          episodeLength: 12.0,
+          shrinkMutation: true
+        });
+        clearPresetActiveState();
+      });
+
+      // Presets
+      document.getElementById("presetReckless").addEventListener("click", function() {
+        applySettings({
+          mutationChance: 0.50,
+          mutationSize: 1.0,
+          bigJumpChance: 0.20,
+          shrinkMutation: false
+        });
+        setPresetActive(this);
+      });
+
+      document.getElementById("presetNoElites").addEventListener("click", function() {
+        applySettings({
+          elites: 0
+        });
+        setPresetActive(this);
+      });
+
+      document.getElementById("presetTinyPop").addEventListener("click", function() {
+        applySettings({
+          population: 10,
+          elites: 1,
+          parentPool: 3
+        });
+        setPresetActive(this);
+      });
+
+      document.getElementById("presetHardWorld").addEventListener("click", function() {
+        applySettings({
+          motorStrength: 2.5,
+          friction: 0.25,
+          pushSize: 0.4
+        });
+        setPresetActive(this);
+      });
+
+      // Modal open/close
+      const modalOverlay = document.getElementById("modalOverlay");
+      document.getElementById("btnOpenModal").addEventListener("click", () => {
+        modalOverlay.classList.add("open");
+        isModalOpen = true;
+      });
+      document.getElementById("btnCloseModal").addEventListener("click", () => {
+        modalOverlay.classList.remove("open");
+        isModalOpen = false;
+      });
+      modalOverlay.addEventListener("click", (e) => {
+        if (e.target === modalOverlay) {
+          modalOverlay.classList.remove("open");
+          isModalOpen = false;
+        }
+      });
+    }
+
+    function setPresetActive(btn) {
+      document.querySelectorAll(".btn-preset").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    }
+
+    function clearPresetActiveState() {
+      document.querySelectorAll(".btn-preset").forEach(b => b.classList.remove("active"));
+    }
+
+    function applySettings(newVals) {
+      if (newVals.population !== undefined) {
+        stagedSettings.population = newVals.population;
+        document.getElementById("sliderPop").value = newVals.population;
+        document.getElementById("valPop").textContent = newVals.population;
+      }
+      if (newVals.elites !== undefined) {
+        stagedSettings.elites = newVals.elites;
+        document.getElementById("sliderElites").value = newVals.elites;
+        document.getElementById("valElites").textContent = newVals.elites;
+      }
+      if (newVals.parentPool !== undefined) {
+        stagedSettings.parentPool = newVals.parentPool;
+        document.getElementById("sliderPool").value = newVals.parentPool;
+        document.getElementById("valPool").textContent = newVals.parentPool;
+      }
+      if (newVals.mutationChance !== undefined) {
+        settings.mutationChance = newVals.mutationChance;
+        document.getElementById("sliderMutChance").value = Math.round(newVals.mutationChance * 100);
+        document.getElementById("valMutChance").textContent = `${Math.round(newVals.mutationChance * 100)}%`;
+      }
+      if (newVals.mutationSize !== undefined) {
+        settings.mutationSize = newVals.mutationSize;
+        document.getElementById("sliderMutSize").value = newVals.mutationSize;
+        document.getElementById("valMutSize").textContent = newVals.mutationSize.toFixed(2);
+      }
+      if (newVals.bigJumpChance !== undefined) {
+        settings.bigJumpChance = newVals.bigJumpChance;
+        document.getElementById("sliderBigJump").value = Math.round(newVals.bigJumpChance * 100);
+        document.getElementById("valBigJump").textContent = `${Math.round(newVals.bigJumpChance * 100)}%`;
+      }
+      if (newVals.motorStrength !== undefined) {
+        settings.motorStrength = newVals.motorStrength;
+        document.getElementById("sliderMotor").value = newVals.motorStrength;
+        document.getElementById("valMotor").textContent = `${newVals.motorStrength.toFixed(1)} N·m`;
+      }
+      if (newVals.gravity !== undefined) {
+        settings.gravity = newVals.gravity;
+        document.getElementById("sliderGravity").value = newVals.gravity;
+        document.getElementById("valGravity").textContent = `${newVals.gravity.toFixed(1)} m/s²`;
+      }
+      if (newVals.friction !== undefined) {
+        settings.friction = newVals.friction;
+        document.getElementById("sliderFriction").value = newVals.friction;
+        document.getElementById("valFriction").textContent = newVals.friction.toFixed(2);
+      }
+      if (newVals.pushSize !== undefined) {
+        settings.pushSize = newVals.pushSize;
+        document.getElementById("sliderPush").value = newVals.pushSize;
+        document.getElementById("valPush").textContent = `${newVals.pushSize.toFixed(2)} rad/s`;
+      }
+      if (newVals.episodeLength !== undefined) {
+        stagedSettings.episodeLength = newVals.episodeLength;
+        document.getElementById("sliderEpisode").value = newVals.episodeLength;
+        document.getElementById("valEpisode").textContent = `${newVals.episodeLength} s`;
+      }
+      if (newVals.shrinkMutation !== undefined) {
+        settings.shrinkMutation = newVals.shrinkMutation;
+        document.getElementById("chkShrink").checked = newVals.shrinkMutation;
+      }
+    }
+
+    function restartSimulation() {
+      generation = 1;
+      currentStep = 0;
+      historyData.length = 0;
+      recordFitness = 0.0;
+      recordGen = 1;
+      milestones.swingUp = false;
+      milestones.holdsOn = false;
+      milestones.reliable = false;
+
+      // Apply staged settings immediately on restart
+      settings.population = stagedSettings.population;
+      settings.elites = Math.min(stagedSettings.elites, settings.population);
+      settings.parentPool = Math.min(stagedSettings.parentPool, settings.population);
+      settings.episodeLength = stagedSettings.episodeLength;
+
+      population = Array.from({ length: settings.population }, () => createRandomGenome());
+      setupGenerationWorld(generation);
+      updateStatsUI(0, 0, 0, -1);
+    }
+
+    /* ==========================================================================
+       12. ANIMATION LOOP
+       ========================================================================== */
+    function animationLoop() {
+      if (!isPaused) {
+        const stepsToRun = simSpeed;
+        for (let s = 0; s < stepsToRun; s++) {
+          stepSimulation();
+        }
+      }
+
+      renderSimulation();
+      renderGraph();
+      renderModalDiagrams();
+      updateLiveHeaderUI();
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Initialize application
+    function init() {
+      population = Array.from({ length: settings.population }, () => createRandomGenome());
+      setupGenerationWorld(1);
+      setupControls();
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Safe startup
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
