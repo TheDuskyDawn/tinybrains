@@ -1,0 +1,2568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climb — Neuroevolution in a Mountain Valley</title>
+  <!-- Google Fonts: Bricolage Grotesque & Newsreader -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #07090e;
+      --bg-panel: #0d1118;
+      --bg-card: #131924;
+      --bg-card-hover: #192130;
+      --border-subtle: #1c2536;
+      --border-medium: #27344c;
+      --border-focus: #f59e0b;
+      --text-bright: #f8fafc;
+      --text-main: #e2e8f0;
+      --text-muted: #8292a8;
+      --text-faint: #4c5a70;
+      --accent-amber: #f59e0b;
+      --accent-amber-light: #fbbf24;
+      --accent-amber-dim: rgba(245, 158, 11, 0.16);
+      --accent-slate: #64748b;
+      --accent-slate-light: #94a3b8;
+      --accent-slate-dim: rgba(100, 116, 139, 0.2);
+      --font-ui: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Staggered Load-in Animation */
+    @keyframes panelIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Celebratory Pulse Animation */
+    @keyframes bannerPulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        border-color: var(--accent-amber-light);
+      }
+      50% {
+        box-shadow: 0 0 16px 2px rgba(245, 158, 11, 0.35);
+        border-color: var(--accent-amber);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+        border-color: var(--border-medium);
+      }
+    }
+
+    /* App Container (Strict 1-screen at 1280x720) */
+    .app-root {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header.app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--text-bright);
+    }
+
+    .brand-subtitle {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-pill .label {
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .status-pill .value {
+      color: var(--accent-amber-light);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speed-group {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .btn-speed {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .btn-speed:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-bright);
+    }
+
+    .btn-speed.active {
+      background: var(--accent-amber-dim);
+      color: var(--accent-amber-light);
+    }
+
+    .btn-control {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .btn-control:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-medium);
+      color: var(--text-bright);
+    }
+
+    .btn-control.primary {
+      border-color: rgba(245, 158, 11, 0.4);
+      color: var(--accent-amber-light);
+    }
+
+    .btn-control.primary:hover {
+      background: var(--accent-amber-dim);
+      border-color: var(--accent-amber);
+    }
+
+    /* Main Workspace Layout (3 Columns) */
+    main.workspace {
+      display: grid;
+      grid-template-columns: 275px 1fr 315px;
+      gap: 10px;
+      padding: 10px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: Controls & Presets */
+    aside.sidebar-left {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      min-height: 0;
+      animation: panelIn 0.35s ease 0.05s both;
+    }
+
+    /* Custom Scrollbar for Left Sidebar */
+    aside.sidebar-left::-webkit-scrollbar {
+      width: 5px;
+    }
+    aside.sidebar-left::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    aside.sidebar-left::-webkit-scrollbar-thumb {
+      background: var(--border-medium);
+      border-radius: 3px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Presets Grid */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .btn-preset {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-preset:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-medium);
+      color: var(--text-bright);
+    }
+
+    .btn-preset.active {
+      background: var(--accent-amber-dim);
+      border-color: var(--accent-amber);
+      color: var(--accent-amber-light);
+    }
+
+    /* Slider List */
+    .sliders-container {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .slider-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: var(--accent-amber-light);
+      font-size: 11px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-medium);
+      outline: none;
+      cursor: pointer;
+      margin: 2px 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-amber);
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.1s ease;
+      border: 1px solid #fff;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: var(--accent-amber-light);
+    }
+
+    /* Checkbox & Reset Button Row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0 10px 0;
+      cursor: pointer;
+    }
+
+    .toggle-row input[type="checkbox"] {
+      accent-color: var(--accent-amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .toggle-row label {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn-reset {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 7px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-top: auto;
+    }
+
+    .btn-reset:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-medium);
+      color: var(--text-bright);
+    }
+
+    /* Middle Column: Canvas Viewport */
+    section.viewport-center {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+      min-width: 0;
+      animation: panelIn 0.35s ease 0.15s both;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    canvas#valley-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Success Moments Banner */
+    #success-banner {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      opacity: 0;
+      pointer-events: none;
+      background: var(--bg-card);
+      border: 1px solid var(--accent-amber);
+      border-radius: 4px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 10;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+
+    #success-banner.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      animation: bannerPulse 1.8s ease-in-out infinite;
+    }
+
+    .banner-tag {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-amber-light);
+      background: var(--accent-amber-dim);
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .banner-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    /* Right Column: Metrics & Graph */
+    aside.sidebar-right {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      min-height: 0;
+      animation: panelIn 0.35s ease 0.25s both;
+    }
+
+    /* Custom Scrollbar for Right Sidebar */
+    aside.sidebar-right::-webkit-scrollbar {
+      width: 5px;
+    }
+    aside.sidebar-right::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    aside.sidebar-right::-webkit-scrollbar-thumb {
+      background: var(--border-medium);
+      border-radius: 3px;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .metric-val {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-bright);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-val.amber {
+      color: var(--accent-amber-light);
+    }
+
+    .metric-val.slate {
+      color: var(--accent-slate-light);
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text-faint);
+      margin-top: 2px;
+    }
+
+    /* Live Leader Strip */
+    .leader-strip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 7px 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .leader-tag {
+      color: var(--accent-amber-light);
+      font-weight: 700;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .leader-stats {
+      font-variant-numeric: tabular-nums;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* Fitness Evolution Graph Container */
+    .graph-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .graph-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .graph-legend {
+      display: flex;
+      gap: 10px;
+      font-size: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.amber {
+      background: var(--accent-amber);
+    }
+
+    .legend-dot.slate {
+      background: var(--accent-slate-light);
+    }
+
+    .graph-canvas-wrap {
+      width: 100%;
+      height: 145px;
+      position: relative;
+    }
+
+    canvas#fitness-graph {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Reading the Graph Card */
+    .explanation-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 10px;
+      font-family: var(--font-serif);
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    .explanation-card strong {
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-bright);
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .explanation-card p {
+      margin-bottom: 4px;
+    }
+
+    .explanation-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Modal Dialog ("How It Works") */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(4, 6, 10, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      width: 820px;
+      max-width: 92vw;
+      max-height: 88vh;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-medium);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+      transform: translateY(10px) scale(0.98);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-backdrop.open .modal-box {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .btn-close-modal:hover {
+      color: var(--text-bright);
+      background: var(--border-subtle);
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .modal-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-col-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-amber-light);
+    }
+
+    .modal-canvas-wrap {
+      width: 100%;
+      height: 220px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .modal-canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .modal-desc {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .modal-desc strong {
+      font-family: var(--font-ui);
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    /* Prefers-reduced-motion: replace animations with static highlights */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+      #success-banner.visible {
+        animation: none !important;
+        border-color: var(--accent-amber-light) !important;
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.5) !important;
+      }
+    }
+
+    /* Graceful Degradation for Narrow Screens */
+    @media (max-width: 1080px) {
+      body {
+        overflow-y: auto;
+      }
+      .app-root {
+        height: auto;
+        min-height: 100vh;
+      }
+      main.workspace {
+        grid-template-columns: 260px 1fr;
+        grid-template-rows: auto auto;
+        height: auto;
+        overflow: visible;
+      }
+      aside.sidebar-right {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-root">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-wrap">
+        <h1 class="brand-title">CLIMB</h1>
+        <span class="brand-subtitle">Neuroevolution in a mountain valley</span>
+      </div>
+
+      <div class="header-center">
+        <div class="status-pill">
+          <span class="label">Gen</span>
+          <span class="value" id="hdr-gen">1</span>
+        </div>
+        <div class="status-pill">
+          <span class="label">Running</span>
+          <span class="value" id="hdr-running">50 / 50</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="speed-group" title="Simulation speed">
+          <button class="btn-speed active" data-speed="1">1×</button>
+          <button class="btn-speed" data-speed="2">2×</button>
+          <button class="btn-speed" data-speed="5">5×</button>
+          <button class="btn-speed" data-speed="10">10×</button>
+          <button class="btn-speed" data-speed="20">20×</button>
+          <button class="btn-speed" data-speed="80">80×</button>
+        </div>
+
+        <button class="btn-control" id="btn-pause">
+          <span id="pause-icon">⏸</span> <span id="pause-text">Pause</span>
+        </button>
+        <button class="btn-control" id="btn-restart">
+          <span>↺</span> Restart
+        </button>
+        <button class="btn-control primary" id="btn-how">
+          <span>?</span> How It Works
+        </button>
+      </div>
+    </header>
+
+    <!-- Workspace -->
+    <main class="workspace">
+      <!-- Left Panel: Presets & Live Sliders -->
+      <aside class="sidebar-left">
+        <div class="section-title">
+          <span>Experiment Presets</span>
+        </div>
+        <div class="presets-grid">
+          <button class="btn-preset" data-preset="reckless">Reckless</button>
+          <button class="btn-preset" data-preset="noelites">No Elites</button>
+          <button class="btn-preset" data-preset="tinypop">Tiny Pop</button>
+          <button class="btn-preset" data-preset="hardworld">Hard World</button>
+        </div>
+
+        <div class="section-title">
+          <span>Live Parameters</span>
+        </div>
+        <div class="sliders-container">
+          <!-- Population (8 to 100, 50) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Population</span>
+              <span class="slider-value" id="val-population">50</span>
+            </div>
+            <input type="range" id="slider-population" min="8" max="100" step="1" value="50">
+          </div>
+
+          <!-- Elites (0 to 10, 4) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Elites</span>
+              <span class="slider-value" id="val-elites">4</span>
+            </div>
+            <input type="range" id="slider-elites" min="0" max="10" step="1" value="4">
+          </div>
+
+          <!-- Parent Pool (3 to 40, 10) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Parent Pool</span>
+              <span class="slider-value" id="val-parentPool">10</span>
+            </div>
+            <input type="range" id="slider-parentPool" min="3" max="40" step="1" value="10">
+          </div>
+
+          <!-- Mutation Chance (1% to 50%, 10%) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Chance</span>
+              <span class="slider-value" id="val-mutationChance">10%</span>
+            </div>
+            <input type="range" id="slider-mutationChance" min="0.01" max="0.50" step="0.01" value="0.10">
+          </div>
+
+          <!-- Mutation Size (0.05 to 0.6, 0.25) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Size</span>
+              <span class="slider-value" id="val-mutationSize">0.25</span>
+            </div>
+            <input type="range" id="slider-mutationSize" min="0.05" max="0.60" step="0.01" value="0.25">
+          </div>
+
+          <!-- Big-jump Chance (0% to 20%, 5%) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Big-jump Chance</span>
+              <span class="slider-value" id="val-bigJumpChance">5%</span>
+            </div>
+            <input type="range" id="slider-bigJumpChance" min="0.00" max="0.20" step="0.01" value="0.05">
+          </div>
+
+          <!-- Engine Power (0.0008 to 0.0018, 0.0015) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Engine Power</span>
+              <span class="slider-value" id="val-power">0.00150</span>
+            </div>
+            <input type="range" id="slider-power" min="0.0008" max="0.0018" step="0.00005" value="0.0015">
+          </div>
+
+          <!-- Gravity Strength (0.0022 to 0.0035, 0.0025) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Gravity Strength</span>
+              <span class="slider-value" id="val-gravity">0.00250</span>
+            </div>
+            <input type="range" id="slider-gravity" min="0.0022" max="0.0035" step="0.00005" value="0.0025">
+          </div>
+
+          <!-- Max Steps (250 to 600, 300) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Max Steps</span>
+              <span class="slider-value" id="val-maxSteps">300</span>
+            </div>
+            <input type="range" id="slider-maxSteps" min="250" max="600" step="10" value="300">
+          </div>
+
+          <!-- Effort Cost (0 to 0.2, 0.05) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Effort Cost</span>
+              <span class="slider-value" id="val-effortCost">0.05</span>
+            </div>
+            <input type="range" id="slider-effortCost" min="0.00" max="0.20" step="0.01" value="0.05">
+          </div>
+
+          <!-- Start Spread (0 to 0.4, 0.2) -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Start Spread</span>
+              <span class="slider-value" id="val-startSpread">0.20</span>
+            </div>
+            <input type="range" id="slider-startSpread" min="0.00" max="0.40" step="0.01" value="0.20">
+          </div>
+        </div>
+
+        <!-- Checkbox -->
+        <div class="toggle-row">
+          <input type="checkbox" id="chk-shrink" checked>
+          <label for="chk-shrink">Shrink mutation near perfect</label>
+        </div>
+
+        <!-- Reset Button -->
+        <button class="btn-reset" id="btn-reset">Reset to optimal values</button>
+      </aside>
+
+      <!-- Middle Panel: Simulation Canvas -->
+      <section class="viewport-center">
+        <!-- Success Banner -->
+        <div id="success-banner">
+          <span class="banner-tag" id="banner-tag">MOMENT</span>
+          <span class="banner-text" id="banner-text">First car reached the flag</span>
+        </div>
+
+        <div class="canvas-wrapper" id="canvas-container">
+          <canvas id="valley-canvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Right Panel: Metrics & Graph -->
+      <aside class="sidebar-right">
+        <div class="section-title">
+          <span>Performance</span>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-label">Best Fitness</span>
+            <span class="metric-val amber" id="metric-best-fit">—</span>
+            <span class="metric-sub" id="metric-best-raw">Raw score</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Avg Fitness</span>
+            <span class="metric-val slate" id="metric-avg-fit">—</span>
+            <span class="metric-sub">Population mean</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Steps to Flag</span>
+            <span class="metric-val" id="metric-best-steps">Not yet</span>
+            <span class="metric-sub" id="metric-steps-sub">Speed record</span>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-label">Summit Share</span>
+            <span class="metric-val" id="metric-reached-count">0 of 50</span>
+            <span class="metric-sub" id="metric-reached-pct">0% reached</span>
+          </div>
+        </div>
+
+        <!-- Live Leader Strip -->
+        <div class="leader-strip">
+          <span class="leader-tag">Leader Live</span>
+          <span class="leader-stats" id="leader-stats">x: -0.50 | v: 0.000 | fit: 0</span>
+        </div>
+
+        <!-- Fitness Evolution Graph -->
+        <div class="graph-card">
+          <div class="graph-header">
+            <span class="section-title" style="margin-bottom:0;">Fitness History</span>
+            <div class="graph-legend">
+              <div class="legend-item"><span class="legend-dot amber"></span> Best</div>
+              <div class="legend-item"><span class="legend-dot slate"></span> Avg</div>
+            </div>
+          </div>
+          <div class="graph-canvas-wrap">
+            <canvas id="fitness-graph"></canvas>
+          </div>
+        </div>
+
+        <!-- Reading the Graph Card -->
+        <div class="explanation-card">
+          <strong>Reading the graph</strong>
+          <p>Below the dashed line (1000) the cars are still learning to swing to build momentum.</p>
+          <p>Above it, they reach the flag; the climb above 1000 means they are finding faster lines with less wasted engine effort.</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- "How It Works" Popup Modal -->
+  <div class="modal-backdrop" id="how-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">How Climb Works</h2>
+        <button class="btn-close-modal" id="btn-close-modal" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Column 1: Animated Neural Net Diagram -->
+        <div class="modal-col">
+          <span class="modal-col-title">Neural Controller (49 Weights)</span>
+          <div class="modal-canvas-wrap">
+            <canvas id="net-diagram-canvas"></canvas>
+          </div>
+          <div class="modal-desc">
+            <p><strong>Architecture:</strong> 4 inputs (normalized position, velocity, hill slope, and previous throttle) pass into 8 tanh hidden units, outputting a continuous throttle force between -1 (full left) and +1 (full right).</p>
+            <p style="margin-top:6px;">Lines show current champion weights: <strong>amber</strong> for excitatory, <strong>blue-grey</strong> for inhibitory. Animated pulses trace live signal flow.</p>
+          </div>
+        </div>
+
+        <!-- Column 2: Live Mini Scene -->
+        <div class="modal-col">
+          <span class="modal-col-title">Champion Live Replay</span>
+          <div class="modal-canvas-wrap">
+            <canvas id="mini-scene-canvas"></canvas>
+          </div>
+          <div class="modal-desc">
+            <p><strong>Neuroevolution:</strong> The population discovers resonant rocking without backpropagation. The engine is too weak to scale the hill head-on; cars must swing up the left slope to accumulate gravitational potential energy.</p>
+            <p style="margin-top:6px;">Elite networks pass their weights forward, while crossover and adaptive Gaussian mutation explore progressively tighter variations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       1. SETTINGS & CONSTANTS
+       ========================================================================= */
+    const DEFAULT_SETTINGS = {
+      population: 50,
+      elites: 4,
+      parentPool: 10,
+      mutationChance: 0.10,
+      mutationSize: 0.25,
+      bigJumpChance: 0.05,
+      power: 0.0015,
+      gravity: 0.0025,
+      maxSteps: 300,
+      effortCost: 0.05,
+      startSpread: 0.20,
+      shrinkMutation: true
+    };
+
+    // Live settings copy (updated immediately by sliders & presets)
+    const settings = { ...DEFAULT_SETTINGS };
+
+    /* =========================================================================
+       2. SEEDED RANDOM GENERATORS (Mulberry32 & Box-Muller Gaussian)
+       ========================================================================= */
+    function createMulberry32(seed) {
+      let a = seed >>> 0;
+      return function() {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(a ^ (a >>> 15), a | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // Two distinct seeded PRNGs for reproducibility
+    let startRng = createMulberry32(12345);
+    let evoRng = createMulberry32(20240607);
+
+    function randomGaussian(rng, mean = 0, std = 1) {
+      let u1 = rng();
+      let u2 = rng();
+      while (u1 <= 1e-15) u1 = rng();
+      const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      return mean + z0 * std;
+    }
+
+    /* =========================================================================
+       3. STATE INITIALIZATION
+       ========================================================================= */
+    let generation = 1;
+    let speed = 1;
+    let isPaused = false;
+    let generationHistory = []; // Stores generation stats for graph
+    let dustParticles = [];     // Capped at 300 particles
+    let flagFlashTimer = 0;     // Flag arrival pulse timer
+    let graphGlideOffset = 0;   // Smooth glide offset for graph window
+
+    // Success moments tracking (each shown once)
+    const successMoments = {
+      firstSummit: false,
+      reliable: false,
+      quickClimb: false
+    };
+
+    // Champion car memory for the "How It Works" popup
+    let globalChampion = {
+      weights: null,
+      steps: null,
+      fitness: 0
+    };
+
+    /* =========================================================================
+       4. PHYSICS & ENVIRONMENT DEFINITION
+       ========================================================================= */
+    // Hill height function: h(x) = 0.45 * sin(3x) + 0.55
+    function hillHeight(x) {
+      return 0.45 * Math.sin(3 * x) + 0.55;
+    }
+
+    // Hill slope: dh/dx = 1.35 * cos(3x)
+    function hillSlope(x) {
+      return 1.35 * Math.cos(3 * x);
+    }
+
+    /* =========================================================================
+       5. NEURAL NETWORK ARCHITECTURE
+       4 inputs -> 8 hidden tanh -> 1 output tanh (force [-1, 1])
+       Weights layout: 4*8 (weights1) + 8 (bias1) + 8*1 (weights2) + 1 (bias2) = 49
+       ========================================================================= */
+    class NeuralNetwork {
+      constructor(weights = null, rng = evoRng) {
+        if (weights) {
+          this.weights = new Float32Array(weights);
+        } else {
+          this.weights = new Float32Array(49);
+          // Standard Glorot/Xavier uniform initialization
+          const scale = Math.sqrt(2.0 / 4.0);
+          for (let i = 0; i < 49; i++) {
+            this.weights[i] = (rng() * 2.0 - 1.0) * scale;
+          }
+        }
+      }
+
+      forward(x, v, slope, lastForce) {
+        // Network inputs (all normalized ~ -1 to 1)
+        const in0 = (x + 0.375) / 0.825;
+        const in1 = v / 0.07;
+        const in2 = slope; // cos(3x) is in [-1, 1]
+        const in3 = lastForce; // in [-1, 1]
+
+        const hidden = new Float32Array(8);
+        for (let j = 0; j < 8; j++) {
+          let sum = this.weights[32 + j]; // bias 1
+          sum += in0 * this.weights[0 * 8 + j];
+          sum += in1 * this.weights[1 * 8 + j];
+          sum += in2 * this.weights[2 * 8 + j];
+          sum += in3 * this.weights[3 * 8 + j];
+          hidden[j] = Math.tanh(sum);
+        }
+
+        let outSum = this.weights[48]; // bias 2
+        for (let j = 0; j < 8; j++) {
+          outSum += hidden[j] * this.weights[40 + j];
+        }
+
+        return Math.tanh(outSum);
+      }
+    }
+
+    /* =========================================================================
+       6. CAR INSTANCE & EVALUATION
+       ========================================================================= */
+    class Car {
+      constructor(network, startX) {
+        this.network = network;
+        this.reset(startX);
+      }
+
+      reset(startX) {
+        this.x = startX;
+        this.v = 0.0;
+        this.lastForce = 0.0;
+        this.stepCount = 0;
+        this.minX = startX;
+        this.maxX = startX;
+        this.effortSum = 0.0;
+        this.reached = false;
+        this.ended = false;
+        this.stepsUsed = 0;
+        this.fitness = 0;
+        this.trail = []; // Fading trail coordinates (for leader)
+        this.phaseHistory = []; // (x, v) coordinates for phase portrait
+      }
+
+      step(power, gravity, maxSteps) {
+        if (this.ended) return;
+
+        this.stepCount++;
+
+        // Network evaluation
+        const cos3x = Math.cos(3 * this.x);
+        const force = this.network.forward(this.x, this.v, cos3x, this.lastForce);
+        this.lastForce = force;
+        this.effortSum += force * force;
+
+        // Physics step: v = v + force * power - gravity * cos(3x)
+        this.v = this.v + force * power - gravity * cos3x;
+        // Clamp velocity to [-0.07, 0.07]
+        if (this.v < -0.07) this.v = -0.07;
+        else if (this.v > 0.07) this.v = 0.07;
+
+        // Position update
+        this.x = this.x + this.v;
+
+        // Left inelastic wall at x = -1.2
+        if (this.x < -1.2) {
+          this.x = -1.2;
+          if (this.v < 0) this.v = 0.0;
+        }
+
+        // Track trajectory extremes
+        if (this.x < this.minX) this.minX = this.x;
+        if (this.x > this.maxX) this.maxX = this.x;
+
+        // Record phase portrait point
+        if (this.phaseHistory.length < 350) {
+          this.phaseHistory.push({ x: this.x, v: this.v });
+        }
+
+        // Flag reached at x >= 0.45
+        if (this.x >= 0.45) {
+          this.reached = true;
+          this.ended = true;
+          this.stepsUsed = this.stepCount;
+          return;
+        }
+
+        // Timeout check
+        if (this.stepCount >= maxSteps) {
+          this.ended = true;
+          this.stepsUsed = maxSteps;
+        }
+      }
+
+      computeFitness(maxSteps, effortCost) {
+        const reach = Math.max(0, Math.min(1, (this.maxX + 1.2) / 1.65));
+        const swing = Math.max(0, Math.min(1, (this.maxX - this.minX) / 1.65));
+        const effort = effortCost * this.effortSum;
+
+        if (this.reached) {
+          this.fitness = 1000 + 2 * (maxSteps - this.stepsUsed) - effort;
+        } else {
+          this.fitness = Math.max(0, 300 * reach + 200 * swing - effort);
+        }
+        return this.fitness;
+      }
+
+      getLiveFitness(maxSteps, effortCost) {
+        const reach = Math.max(0, Math.min(1, (this.maxX + 1.2) / 1.65));
+        const swing = Math.max(0, Math.min(1, (this.maxX - this.minX) / 1.65));
+        const effort = effortCost * this.effortSum;
+        if (this.reached) {
+          return 1000 + 2 * (maxSteps - this.stepsUsed) - effort;
+        }
+        return Math.max(0, 300 * reach + 200 * swing - effort);
+      }
+    }
+
+    /* =========================================================================
+       7. EVOLUTION ENGINE (Elitism, Crossover, Adaptive Mutation, Big Jumps)
+       ========================================================================= */
+    let currentStartX = -0.5;
+    let population = [];
+
+    function initializePopulation() {
+      population = [];
+      currentStartX = -0.5 + (startRng() - 0.5) * settings.startSpread;
+      for (let i = 0; i < settings.population; i++) {
+        const net = new NeuralNetwork(null, evoRng);
+        population.push(new Car(net, currentStartX));
+      }
+    }
+
+    function evolvePopulation() {
+      // 1. Compute fitness for every car and sort descending
+      for (const car of population) {
+        car.computeFitness(settings.maxSteps, settings.effortCost);
+      }
+      population.sort((a, b) => b.fitness - a.fitness);
+
+      const bestCar = population[0];
+      const reachedCount = population.filter(c => c.reached).length;
+      const avgFitness = population.reduce((sum, c) => sum + c.fitness, 0) / population.length;
+      const bestSteps = bestCar.reached ? bestCar.stepsUsed : null;
+
+      // Update global champion
+      if (!globalChampion.weights || bestCar.fitness >= globalChampion.fitness) {
+        globalChampion.weights = new Float32Array(bestCar.network.weights);
+        globalChampion.steps = bestSteps;
+        globalChampion.fitness = bestCar.fitness;
+      }
+
+      // Record generation history for graph
+      generationHistory.push({
+        gen: generation,
+        bestFitness: bestCar.fitness,
+        avgFitness: avgFitness,
+        bestSteps: bestSteps,
+        reachedCount: reachedCount,
+        popSize: population.length
+      });
+      graphGlideOffset = 1.0; // Trigger smooth sliding animation
+
+      // Update UI Metrics
+      updatePerformanceUI(bestCar, avgFitness, reachedCount, bestSteps);
+
+      // Check Success Moments
+      checkSuccessMoments(reachedCount, bestSteps);
+
+      // 2. Spawn Next Generation
+      const targetPopSize = settings.population;
+      const effectiveElites = Math.max(0, Math.min(settings.elites, targetPopSize - 1));
+      const effectivePool = Math.max(1, Math.min(settings.parentPool, population.length));
+
+      const newNetworks = [];
+
+      // Copy elites unchanged
+      for (let i = 0; i < effectiveElites && i < population.length; i++) {
+        newNetworks.push(new NeuralNetwork(population[i].network.weights));
+      }
+
+      // Compute mutation std deviation
+      const bestFit = bestCar.fitness;
+      const progress = Math.min(1, bestFit / 1400);
+
+      while (newNetworks.length < targetPopSize) {
+        // Tournament / Pool selection
+        const p1Idx = Math.floor(evoRng() * effectivePool);
+        const p2Idx = Math.floor(evoRng() * effectivePool);
+        const parent1 = population[p1Idx].network.weights;
+        const parent2 = population[p2Idx].network.weights;
+
+        // Single-point crossover on flat weight array (point 1 to 48)
+        const crossPoint = 1 + Math.floor(evoRng() * 48);
+        const childWeights = new Float32Array(49);
+        for (let w = 0; w < crossPoint; w++) childWeights[w] = parent1[w];
+        for (let w = crossPoint; w < 49; w++) childWeights[w] = parent2[w];
+
+        // Mutation parameters
+        const isBigJump = evoRng() < settings.bigJumpChance;
+        let mutationStd = settings.mutationSize;
+        if (isBigJump) {
+          mutationStd = 0.60;
+        } else if (settings.shrinkMutation) {
+          mutationStd = Math.max(0.03, settings.mutationSize * (1.0 - progress));
+        }
+
+        // Mutate weights
+        for (let w = 0; w < 49; w++) {
+          if (evoRng() < settings.mutationChance) {
+            childWeights[w] += randomGaussian(evoRng, 0, mutationStd);
+          }
+        }
+
+        newNetworks.push(new NeuralNetwork(childWeights));
+      }
+
+      // 3. New Start Position & Reinitialize Cars
+      generation++;
+      currentStartX = -0.5 + (startRng() - 0.5) * settings.startSpread;
+      population = newNetworks.map(net => new Car(net, currentStartX));
+
+      document.getElementById('hdr-gen').textContent = generation;
+    }
+
+    /* =========================================================================
+       8. SUCCESS MOMENTS NOTIFICATIONS
+       ========================================================================= */
+    function triggerSuccessBanner(tag, message) {
+      const banner = document.getElementById('success-banner');
+      document.getElementById('banner-tag').textContent = tag;
+      document.getElementById('banner-text').textContent = message;
+      banner.classList.add('visible');
+
+      setTimeout(() => {
+        banner.classList.remove('visible');
+      }, 3400);
+    }
+
+    function checkSuccessMoments(reachedCount, bestSteps) {
+      if (reachedCount > 0 && !successMoments.firstSummit) {
+        successMoments.firstSummit = true;
+        triggerSuccessBanner('First Summit', `Generation ${generation}: A car reached the flag!`);
+      }
+      if (reachedCount >= 0.8 * population.length && !successMoments.reliable) {
+        successMoments.reliable = true;
+        triggerSuccessBanner('Reliable', `Generation ${generation}: Over 80% reached the flag!`);
+      }
+      if (bestSteps !== null && bestSteps <= 120 && !successMoments.quickClimb) {
+        successMoments.quickClimb = true;
+        triggerSuccessBanner('Quick Climb', `Generation ${generation}: Flag scaled in ${bestSteps} steps!`);
+      }
+    }
+
+    /* =========================================================================
+       9. SIMULATION STEPPING & CONTROL LOOP
+       ========================================================================= */
+    function stepSimulation() {
+      let anyRunning = false;
+      const maxSteps = settings.maxSteps;
+      const power = settings.power;
+      const gravity = settings.gravity;
+
+      for (const car of population) {
+        if (!car.ended) {
+          car.step(power, gravity, maxSteps);
+          if (car.reached && flagFlashTimer === 0) {
+            flagFlashTimer = 25; // Flag pulses on car arrival
+            spawnDustParticles(0.45, hillHeight(0.45));
+          }
+          if (!car.ended) {
+            anyRunning = true;
+          }
+        }
+      }
+
+      // Check if generation ended
+      if (!anyRunning) {
+        evolvePopulation();
+      }
+    }
+
+    function spawnDustParticles(worldX, worldY) {
+      if (dustParticles.length >= 300) return;
+      const count = 16;
+      for (let i = 0; i < count; i++) {
+        if (dustParticles.length >= 300) break;
+        const angle = Math.PI * (0.8 + Math.random() * 0.9); // upward/backward
+        const spd = 0.8 + Math.random() * 2.2;
+        dustParticles.push({
+          x: worldX,
+          y: worldY,
+          vx: Math.cos(angle) * spd * 0.003,
+          vy: Math.sin(angle) * spd * 0.003,
+          life: 1.0,
+          decay: 0.025 + Math.random() * 0.02,
+          size: 1.2 + Math.random() * 1.8,
+          color: Math.random() > 0.4 ? '#f59e0b' : '#94a3b8'
+        });
+      }
+    }
+
+    /* =========================================================================
+       10. VALLEY CANVAS RENDERING
+       ========================================================================= */
+    const valleyCanvas = document.getElementById('valley-canvas');
+    const valleyCtx = valleyCanvas ? valleyCanvas.getContext('2d') : null;
+
+    // Coordinate mapping between world units and canvas pixels
+    // x in [-1.25, 0.55], h(x) in [0.05, 1.05]
+    function toScreenX(x, width) {
+      const minX = -1.25;
+      const maxX = 0.55;
+      const padLeft = 30;
+      const padRight = 30;
+      return padLeft + ((x - minX) / (maxX - minX)) * (width - padLeft - padRight);
+    }
+
+    function toScreenY(h, height) {
+      const minH = 0.05;
+      const maxH = 1.05;
+      const padTop = 35;
+      const padBottom = 35;
+      return height - padBottom - ((h - minH) / (maxH - minH)) * (height - padTop - padBottom);
+    }
+
+    function drawValley(ctx, width, height, time) {
+      // 1. Clear background
+      ctx.fillStyle = '#0a0d14';
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Render Valley Ground Curve
+      ctx.beginPath();
+      const startSX = toScreenX(-1.20, width);
+      ctx.moveTo(startSX, height);
+
+      const steps = 140;
+      for (let i = 0; i <= steps; i++) {
+        const x = -1.20 + (i / steps) * (0.55 - (-1.20));
+        const h = hillHeight(x);
+        ctx.lineTo(toScreenX(x, width), toScreenY(h, height));
+      }
+
+      ctx.lineTo(toScreenX(0.55, width), height);
+      ctx.closePath();
+
+      // Deep dark terrain fill
+      const terrainGrad = ctx.createLinearGradient(0, height * 0.25, 0, height);
+      terrainGrad.addColorStop(0, '#121722');
+      terrainGrad.addColorStop(1, '#080a0f');
+      ctx.fillStyle = terrainGrad;
+      ctx.fill();
+
+      // Thin warm line along the surface
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const x = -1.20 + (i / steps) * (0.55 - (-1.20));
+        const h = hillHeight(x);
+        const sx = toScreenX(x, width);
+        const sy = toScreenY(h, height);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Surface warm accent glow
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+
+      // 3. Left Wall at x = -1.2
+      const wallSX = toScreenX(-1.20, width);
+      const wallSY = toScreenY(hillHeight(-1.20), height);
+      ctx.beginPath();
+      ctx.moveTo(wallSX, wallSY);
+      ctx.lineTo(wallSX, wallSY - 42);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 4.0;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(wallSX, wallSY);
+      ctx.lineTo(wallSX, wallSY - 42);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 4. Start Position Marker
+      const startSX_pos = toScreenX(currentStartX, width);
+      const startSY_pos = toScreenY(hillHeight(currentStartX), height);
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(startSX_pos, startSY_pos - 15);
+      ctx.lineTo(startSX_pos, startSY_pos + 15);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Small start point indicator
+      ctx.beginPath();
+      ctx.arc(startSX_pos, startSY_pos, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+      ctx.fill();
+
+      // 5. Flag on Right Hill at x = 0.45
+      const flagSX = toScreenX(0.45, width);
+      const flagSY = toScreenY(hillHeight(0.45), height);
+      drawFlag(ctx, flagSX, flagSY, time);
+
+      // 6. Dust Particles
+      updateAndDrawParticles(ctx, width, height);
+
+      // 7. Find Live Leader
+      let leaderCar = population[0];
+      let maxLiveFit = -Infinity;
+      for (const car of population) {
+        const lf = car.getLiveFitness(settings.maxSteps, settings.effortCost);
+        if (lf > maxLiveFit) {
+          maxLiveFit = lf;
+          leaderCar = car;
+        }
+      }
+
+      // Update Live Leader UI Strip
+      const leaderStatsEl = document.getElementById('leader-stats');
+      if (leaderStatsEl && leaderCar) {
+        leaderStatsEl.textContent = `x: ${leaderCar.x.toFixed(2)} | v: ${leaderCar.v.toFixed(3)} | fit: ${Math.round(maxLiveFit)}`;
+      }
+
+      // Record Leader Trail
+      if (leaderCar) {
+        const lsx = toScreenX(leaderCar.x, width);
+        const lsy = toScreenY(hillHeight(leaderCar.x), height);
+        leaderCar.trail.push({ x: lsx, y: lsy });
+        if (leaderCar.trail.length > 40) leaderCar.trail.shift();
+
+        // Draw leader trail
+        if (leaderCar.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(leaderCar.trail[0].x, leaderCar.trail[0].y);
+          for (let i = 1; i < leaderCar.trail.length; i++) {
+            ctx.lineTo(leaderCar.trail[i].x, leaderCar.trail[i].y);
+          }
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.3)';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+      }
+
+      // 8. Draw All Non-Leader Cars
+      for (const car of population) {
+        if (car !== leaderCar) {
+          drawCar(ctx, car, width, height, false, time);
+        }
+      }
+
+      // 9. Draw Leader Car on Top
+      if (leaderCar) {
+        drawCar(ctx, leaderCar, width, height, true, time);
+      }
+
+      // 10. Phase Portrait in Top-Right Corner
+      if (leaderCar) {
+        drawPhasePortrait(ctx, leaderCar, width);
+      }
+    }
+
+    function drawFlag(ctx, sx, sy, time) {
+      // Flagpole
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx, sy - 34);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Gold finial on pole top
+      ctx.beginPath();
+      ctx.arc(sx, sy - 34, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+
+      // Waving Flag Banner
+      const wave = Math.sin(time * 0.006) * 3;
+      const isFlashing = flagFlashTimer > 0;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 34);
+      ctx.quadraticCurveTo(sx + 10, sy - 34 + wave, sx + 22, sy - 30 + wave * 0.8);
+      ctx.lineTo(sx + 22, sy - 18 + wave * 0.8);
+      ctx.quadraticCurveTo(sx + 10, sy - 22 + wave, sx, sy - 22);
+      ctx.closePath();
+
+      if (isFlashing) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 14;
+      } else {
+        ctx.fillStyle = '#f59e0b';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (flagFlashTimer > 0) flagFlashTimer--;
+    }
+
+    function drawCar(ctx, car, width, height, isLeader, time) {
+      const cx = toScreenX(car.x, width);
+      const cy = toScreenY(hillHeight(car.x), height);
+
+      // Calculate tangent slope angle in screen coordinates
+      const delta = 0.006;
+      const x1 = toScreenX(car.x - delta, width);
+      const y1 = toScreenY(hillHeight(car.x - delta), height);
+      const x2 = toScreenX(car.x + delta, width);
+      const y2 = toScreenY(hillHeight(car.x + delta), height);
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+
+      const force = car.lastForce;
+
+      // Exhaust Thruster Flame
+      // When force > 0 (pushing right), flame shoots rearwards (left / -x).
+      // When force < 0 (pushing left), flame shoots forwards (right / +x).
+      if (Math.abs(force) > 0.04) {
+        const flameLen = Math.abs(force) * 13 + (Math.sin(time * 0.04) * 2);
+        const dir = force > 0 ? -1 : 1;
+        const nozzleX = dir === -1 ? -8.5 : 8.5;
+
+        ctx.beginPath();
+        ctx.moveTo(nozzleX, -3.5);
+        ctx.lineTo(nozzleX + dir * flameLen, -3.5);
+        ctx.lineTo(nozzleX, -1.5);
+        ctx.closePath();
+
+        const flameGrad = ctx.createLinearGradient(nozzleX, -3, nozzleX + dir * flameLen, -3);
+        if (isLeader) {
+          flameGrad.addColorStop(0, '#ffffff');
+          flameGrad.addColorStop(0.3, '#fde047');
+          flameGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        } else {
+          flameGrad.addColorStop(0, '#e2e8f0');
+          flameGrad.addColorStop(1, 'rgba(148, 163, 184, 0)');
+        }
+        ctx.fillStyle = flameGrad;
+        ctx.fill();
+      }
+
+      // Car Body Silhouette
+      ctx.beginPath();
+      ctx.moveTo(-8, -2.5);
+      ctx.lineTo(8, -2.5);
+      ctx.lineTo(8, -4.5);
+      ctx.lineTo(4, -5.5);
+      ctx.lineTo(1, -8.5);
+      ctx.lineTo(-4, -8.5);
+      ctx.lineTo(-7, -5.5);
+      ctx.lineTo(-8, -4.5);
+      ctx.closePath();
+
+      if (isLeader) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Cabin window
+        ctx.beginPath();
+        ctx.moveTo(-3.5, -7.5);
+        ctx.lineTo(0.5, -7.5);
+        ctx.lineTo(3.2, -5.5);
+        ctx.lineTo(-5.5, -5.5);
+        ctx.closePath();
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+      // Wheels
+      const wheelRadius = 2.4;
+      const wheelColor = isLeader ? '#0f172a' : 'rgba(30, 41, 59, 0.6)';
+      const hubColor = isLeader ? '#fde047' : '#94a3b8';
+
+      // Rear wheel
+      ctx.beginPath();
+      ctx.arc(-5.5, -1.8, wheelRadius, 0, Math.PI * 2);
+      ctx.fillStyle = wheelColor;
+      ctx.fill();
+      ctx.strokeStyle = hubColor;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      // Front wheel
+      ctx.beginPath();
+      ctx.arc(5.5, -1.8, wheelRadius, 0, Math.PI * 2);
+      ctx.fillStyle = wheelColor;
+      ctx.fill();
+      ctx.strokeStyle = hubColor;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function updateAndDrawParticles(ctx, width, height) {
+      for (let i = dustParticles.length - 1; i >= 0; i--) {
+        const p = dustParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy -= 0.0001; // slight gravity
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          dustParticles.splice(i, 1);
+          continue;
+        }
+
+        const sx = toScreenX(p.x, width);
+        const sy = toScreenY(p.y, height);
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    /* Phase Portrait HUD in Top-Right Corner of Valley Canvas */
+    function drawPhasePortrait(ctx, leaderCar, canvasWidth) {
+      const boxW = 145;
+      const boxH = 92;
+      const boxX = canvasWidth - boxW - 14;
+      const boxY = 12;
+
+      // HUD Container Background
+      ctx.fillStyle = 'rgba(11, 15, 24, 0.82)';
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeStyle = '#27344c';
+      ctx.lineWidth = 1.0;
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+      // Title
+      ctx.font = '9px var(--font-ui)';
+      ctx.fillStyle = '#8292a8';
+      ctx.fillText('PHASE SPACE (x, v)', boxX + 8, boxY + 12);
+
+      // Axes: x in [-1.2, 0.6], v in [-0.07, 0.07]
+      const px = x => boxX + 8 + ((x - (-1.2)) / (0.6 - (-1.2))) * (boxW - 16);
+      const pv = v => boxY + boxH - 8 - ((v - (-0.07)) / (0.07 - (-0.07))) * (boxH - 24);
+
+      // Zero-velocity crosshair
+      const zeroV = pv(0.0);
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(boxX + 6, zeroV);
+      ctx.lineTo(boxX + boxW - 6, zeroV);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+
+      // Valley bottom marker x = -0.5236
+      const bottomX = px(-0.5236);
+      ctx.beginPath();
+      ctx.moveTo(bottomX, boxY + 16);
+      ctx.lineTo(bottomX, boxY + boxH - 8);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Leader Phase Trajectory
+      if (leaderCar.phaseHistory && leaderCar.phaseHistory.length > 1) {
+        ctx.beginPath();
+        for (let i = 0; i < leaderCar.phaseHistory.length; i++) {
+          const pt = leaderCar.phaseHistory[i];
+          const sx = px(pt.x);
+          const sy = pv(pt.v);
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        // Current tip of spiral
+        const lastPt = leaderCar.phaseHistory[leaderCar.phaseHistory.length - 1];
+        ctx.beginPath();
+        ctx.arc(px(lastPt.x), pv(lastPt.v), 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+      }
+    }
+
+    /* =========================================================================
+       11. FITNESS EVOLUTION GRAPH RENDERING
+       Sliding window of last 30 generations, gliding left smoothly
+       Y axis fixed 0 to 1600, dashed line at 1000 labeled "Flag"
+       ========================================================================= */
+    const graphCanvas = document.getElementById('fitness-graph');
+    const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+    function drawFitnessGraph(ctx, width, height) {
+      ctx.clearRect(0, 0, width, height);
+
+      const padL = 34;
+      const padR = 12;
+      const padT = 12;
+      const padB = 22;
+      const plotW = width - padL - padR;
+      const plotH = height - padT - padB;
+
+      // Coordinate transforms
+      const toY = val => padT + (1.0 - (val / 1600)) * plotH;
+
+      // Grid Lines & Ticks (0, 500, 1000, 1500)
+      ctx.font = '9px var(--font-ui)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#64748b';
+
+      const ticks = [0, 500, 1000, 1500];
+      for (const t of ticks) {
+        const y = toY(t);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(width - padR, y);
+
+        if (t === 1000) {
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillText('1000 (Flag)', padL - 4, y);
+        } else {
+          ctx.strokeStyle = '#1b2332';
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(t.toString(), padL - 4, y);
+        }
+      }
+
+      if (generationHistory.length === 0) return;
+
+      // Sliding Window of last 30 generations
+      const windowSize = 30;
+      const historyLen = generationHistory.length;
+      const startIdx = Math.max(0, historyLen - windowSize);
+      const dataSlice = generationHistory.slice(startIdx);
+
+      // Smooth gliding offset animation
+      if (graphGlideOffset > 0.01) {
+        graphGlideOffset *= 0.84;
+      } else {
+        graphGlideOffset = 0;
+      }
+
+      const stepX = plotW / (windowSize - 1);
+      const toX = (i, count) => {
+        // Base X position shifted smoothly left by graphGlideOffset
+        const base = padL + (i + (windowSize - count)) * stepX;
+        return base - (graphGlideOffset * stepX);
+      };
+
+      // 1. Average Fitness Curve (Blue-grey line)
+      ctx.beginPath();
+      for (let i = 0; i < dataSlice.length; i++) {
+        const x = toX(i, dataSlice.length);
+        const y = toY(dataSlice[i].avgFitness);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // 2. Best Fitness Curve (Amber line)
+      ctx.beginPath();
+      for (let i = 0; i < dataSlice.length; i++) {
+        const x = toX(i, dataSlice.length);
+        const y = toY(dataSlice[i].bestFitness);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      // Point on the latest best fitness
+      if (dataSlice.length > 0) {
+        const lastI = dataSlice.length - 1;
+        const lx = toX(lastI, dataSlice.length);
+        const ly = toY(dataSlice[lastI].bestFitness);
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+
+      // X-axis generation labels
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#64748b';
+      const stepLabel = Math.max(1, Math.floor(dataSlice.length / 5));
+      for (let i = 0; i < dataSlice.length; i += stepLabel) {
+        const x = toX(i, dataSlice.length);
+        if (x >= padL && x <= width - padR) {
+          ctx.fillText(`g${dataSlice[i].gen}`, x, height - padB + 6);
+        }
+      }
+    }
+
+    /* =========================================================================
+       12. POPUP MODAL CANVASES ("HOW IT WORKS")
+       - Animated Neural Network Architecture Diagram
+       - Live Champion Replay Mini-Scene
+       ========================================================================= */
+    const netDiagramCanvas = document.getElementById('net-diagram-canvas');
+    const netDiagramCtx = netDiagramCanvas ? netDiagramCanvas.getContext('2d') : null;
+
+    const miniSceneCanvas = document.getElementById('mini-scene-canvas');
+    const miniSceneCtx = miniSceneCanvas ? miniSceneCanvas.getContext('2d') : null;
+
+    let miniCar = null;
+
+    function updateMiniScene() {
+      if (!miniCar && globalChampion.weights) {
+        miniCar = new Car(new NeuralNetwork(globalChampion.weights), -0.5);
+      }
+      if (miniCar) {
+        // If weights changed or car ended, loop it
+        if (miniCar.ended) {
+          miniCar.reset(-0.5);
+        } else {
+          miniCar.step(settings.power, settings.gravity, settings.maxSteps);
+        }
+      }
+    }
+
+    function drawNetDiagram(ctx, width, height, time) {
+      ctx.clearRect(0, 0, width, height);
+
+      const weights = globalChampion.weights || (population[0] ? population[0].network.weights : null);
+      if (!weights) return;
+
+      const layerX = [width * 0.18, width * 0.52, width * 0.86];
+      const inNodes = 4;
+      const hidNodes = 8;
+      const inLabels = ['Position', 'Velocity', 'Slope', 'Prev Force'];
+
+      // Coordinates helper
+      const inY = i => height * 0.18 + (i / (inNodes - 1)) * (height * 0.64);
+      const hidY = j => height * 0.12 + (j / (hidNodes - 1)) * (height * 0.76);
+      const outY = height * 0.50;
+
+      // 1. Draw Synapses (Inputs -> Hidden)
+      for (let i = 0; i < inNodes; i++) {
+        for (let j = 0; j < hidNodes; j++) {
+          const w = weights[i * 8 + j];
+          const x1 = layerX[0];
+          const y1 = inY(i);
+          const x2 = layerX[1];
+          const y2 = hidY(j);
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = w >= 0 ? `rgba(245, 158, 11, ${Math.min(0.85, Math.abs(w) * 0.6 + 0.1)})`
+                                   : `rgba(100, 116, 139, ${Math.min(0.85, Math.abs(w) * 0.6 + 0.1)})`;
+          ctx.lineWidth = Math.min(2.5, Math.max(0.5, Math.abs(w) * 1.5));
+          ctx.stroke();
+
+          // Animated pulse particle
+          const pulseT = ((time * 0.0015 + (i * 0.2 + j * 0.1)) % 1);
+          const px = x1 + (x2 - x1) * pulseT;
+          const py = y1 + (y2 - y1) * pulseT;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+          ctx.fillStyle = w >= 0 ? '#fbbf24' : '#cbd5e1';
+          ctx.fill();
+        }
+      }
+
+      // 2. Draw Synapses (Hidden -> Output)
+      for (let j = 0; j < hidNodes; j++) {
+        const w = weights[40 + j];
+        const x1 = layerX[1];
+        const y1 = hidY(j);
+        const x2 = layerX[2];
+        const y2 = outY;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = w >= 0 ? `rgba(245, 158, 11, ${Math.min(0.85, Math.abs(w) * 0.6 + 0.1)})`
+                                 : `rgba(100, 116, 139, ${Math.min(0.85, Math.abs(w) * 0.6 + 0.1)})`;
+        ctx.lineWidth = Math.min(2.5, Math.max(0.5, Math.abs(w) * 1.5));
+        ctx.stroke();
+
+        const pulseT = ((time * 0.002 + j * 0.12) % 1);
+        const px = x1 + (x2 - x1) * pulseT;
+        const py = y1 + (y2 - y1) * pulseT;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = w >= 0 ? '#fbbf24' : '#cbd5e1';
+        ctx.fill();
+      }
+
+      // 3. Draw Nodes & Labels
+      // Input Nodes
+      ctx.font = '9px var(--font-ui)';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < inNodes; i++) {
+        const x = layerX[0];
+        const y = inY(i);
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(inLabels[i], x - 9, y);
+      }
+
+      // Hidden Nodes
+      for (let j = 0; j < hidNodes; j++) {
+        const x = layerX[1];
+        const y = hidY(j);
+        ctx.beginPath();
+        ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Output Node
+      ctx.beginPath();
+      ctx.arc(layerX[2], outY, 7, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillText('Engine Force [-1, 1]', layerX[2] + 12, outY);
+    }
+
+    function drawMiniScene(ctx, width, height, time) {
+      ctx.clearRect(0, 0, width, height);
+
+      // Mini Valley Terrain
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(-1.2, width), height);
+      for (let i = 0; i <= 80; i++) {
+        const x = -1.2 + (i / 80) * (0.55 - (-1.2));
+        ctx.lineTo(toScreenX(x, width), toScreenY(hillHeight(x), height));
+      }
+      ctx.lineTo(toScreenX(0.55, width), height);
+      ctx.closePath();
+      ctx.fillStyle = '#111722';
+      ctx.fill();
+
+      // Hill Surface
+      ctx.beginPath();
+      for (let i = 0; i <= 80; i++) {
+        const x = -1.2 + (i / 80) * (0.55 - (-1.2));
+        const sx = toScreenX(x, width);
+        const sy = toScreenY(hillHeight(x), height);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Flag
+      drawFlag(ctx, toScreenX(0.45, width), toScreenY(hillHeight(0.45), height), time);
+
+      // Draw Mini Champion Car
+      if (miniCar) {
+        drawCar(ctx, miniCar, width, height, true, time);
+
+        // Status caption overlay
+        ctx.font = '10px var(--font-ui)';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Step: ${miniCar.stepCount} | Force: ${miniCar.lastForce.toFixed(2)}`, 10, 16);
+      }
+    }
+
+    /* =========================================================================
+       13. UI BINDINGS & CONTROLS
+       ========================================================================= */
+    function updatePerformanceUI(bestCar, avgFitness, reachedCount, bestSteps) {
+      document.getElementById('metric-best-fit').textContent = Math.round(bestCar.fitness).toLocaleString();
+      document.getElementById('metric-best-raw').textContent = `Reach: ${(bestCar.maxX).toFixed(2)}`;
+      document.getElementById('metric-avg-fit').textContent = Math.round(avgFitness).toLocaleString();
+
+      if (bestSteps !== null) {
+        document.getElementById('metric-best-steps').textContent = `${bestSteps} steps`;
+        document.getElementById('metric-steps-sub').textContent = 'Summit conquered';
+      } else {
+        document.getElementById('metric-best-steps').textContent = 'Not yet';
+        document.getElementById('metric-steps-sub').textContent = 'Building momentum';
+      }
+
+      document.getElementById('metric-reached-count').textContent = `${reachedCount} of ${population.length}`;
+      const pct = Math.round((reachedCount / population.length) * 100);
+      document.getElementById('metric-reached-pct').textContent = `${pct}% reached flag`;
+    }
+
+    function setupControls() {
+      // Speed buttons
+      const speedBtns = document.querySelectorAll('.btn-speed');
+      speedBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          speedBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          speed = parseInt(btn.dataset.speed, 10);
+        });
+      });
+
+      // Pause button
+      const btnPause = document.getElementById('btn-pause');
+      const pauseIcon = document.getElementById('pause-icon');
+      const pauseText = document.getElementById('pause-text');
+      btnPause.addEventListener('click', () => {
+        isPaused = !isPaused;
+        pauseIcon.textContent = isPaused ? '▶' : '⏸';
+        pauseText.textContent = isPaused ? 'Resume' : 'Pause';
+      });
+
+      // Restart button
+      const btnRestart = document.getElementById('btn-restart');
+      btnRestart.addEventListener('click', () => {
+        // Reseed PRNGs for reproducibility
+        startRng = createMulberry32(12345);
+        evoRng = createMulberry32(20240607);
+        generation = 1;
+        generationHistory = [];
+        dustParticles = [];
+        successMoments.firstSummit = false;
+        successMoments.reliable = false;
+        successMoments.quickClimb = false;
+        document.getElementById('hdr-gen').textContent = '1';
+        initializePopulation();
+      });
+
+      // Reset to Optimal Values Button
+      const btnReset = document.getElementById('btn-reset');
+      btnReset.addEventListener('click', () => {
+        applySettings(DEFAULT_SETTINGS);
+        document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+      });
+
+      // Live Sliders binding
+      bindSlider('population', val => {
+        settings.population = parseInt(val, 10);
+        document.getElementById('val-population').textContent = val;
+      });
+
+      bindSlider('elites', val => {
+        settings.elites = parseInt(val, 10);
+        document.getElementById('val-elites').textContent = val;
+      });
+
+      bindSlider('parentPool', val => {
+        settings.parentPool = parseInt(val, 10);
+        document.getElementById('val-parentPool').textContent = val;
+      });
+
+      bindSlider('mutationChance', val => {
+        settings.mutationChance = parseFloat(val);
+        document.getElementById('val-mutationChance').textContent = `${Math.round(settings.mutationChance * 100)}%`;
+      });
+
+      bindSlider('mutationSize', val => {
+        settings.mutationSize = parseFloat(val);
+        document.getElementById('val-mutationSize').textContent = parseFloat(val).toFixed(2);
+      });
+
+      bindSlider('bigJumpChance', val => {
+        settings.bigJumpChance = parseFloat(val);
+        document.getElementById('val-bigJumpChance').textContent = `${Math.round(settings.bigJumpChance * 100)}%`;
+      });
+
+      bindSlider('power', val => {
+        settings.power = parseFloat(val);
+        document.getElementById('val-power').textContent = parseFloat(val).toFixed(5);
+      });
+
+      bindSlider('gravity', val => {
+        settings.gravity = parseFloat(val);
+        document.getElementById('val-gravity').textContent = parseFloat(val).toFixed(5);
+      });
+
+      bindSlider('maxSteps', val => {
+        settings.maxSteps = parseInt(val, 10);
+        document.getElementById('val-maxSteps').textContent = val;
+      });
+
+      bindSlider('effortCost', val => {
+        settings.effortCost = parseFloat(val);
+        document.getElementById('val-effortCost').textContent = parseFloat(val).toFixed(2);
+      });
+
+      bindSlider('startSpread', val => {
+        settings.startSpread = parseFloat(val);
+        document.getElementById('val-startSpread').textContent = parseFloat(val).toFixed(2);
+      });
+
+      // Shrink Checkbox
+      const chkShrink = document.getElementById('chk-shrink');
+      chkShrink.addEventListener('change', () => {
+        settings.shrinkMutation = chkShrink.checked;
+      });
+
+      // Presets
+      const presetBtns = document.querySelectorAll('.btn-preset');
+      presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          presetBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const presetName = btn.dataset.preset;
+
+          if (presetName === 'reckless') {
+            applySettings({
+              mutationChance: 0.50,
+              mutationSize: 0.60,
+              bigJumpChance: 0.20,
+              shrinkMutation: false
+            });
+          } else if (presetName === 'noelites') {
+            applySettings({ elites: 0 });
+          } else if (presetName === 'tinypop') {
+            applySettings({
+              population: 8,
+              parentPool: 4,
+              elites: 1
+            });
+          } else if (presetName === 'hardworld') {
+            applySettings({
+              power: 0.0009,
+              gravity: 0.0033
+            });
+          }
+        });
+      });
+
+      // "How It Works" Modal Dialog
+      const modal = document.getElementById('how-modal');
+      const btnHow = document.getElementById('btn-how');
+      const btnCloseModal = document.getElementById('btn-close-modal');
+
+      btnHow.addEventListener('click', () => modal.classList.add('open'));
+      btnCloseModal.addEventListener('click', () => modal.classList.remove('open'));
+      modal.addEventListener('click', e => {
+        if (e.target === modal) modal.classList.remove('open');
+      });
+    }
+
+    function bindSlider(id, callback) {
+      const slider = document.getElementById(`slider-${id}`);
+      if (!slider) return;
+      slider.addEventListener('input', e => callback(e.target.value));
+    }
+
+    function applySettings(newVals) {
+      for (const key in newVals) {
+        settings[key] = newVals[key];
+        const slider = document.getElementById(`slider-${key}`);
+        if (slider) slider.value = newVals[key];
+
+        const display = document.getElementById(`val-${key}`);
+        if (display) {
+          if (key === 'mutationChance' || key === 'bigJumpChance') {
+            display.textContent = `${Math.round(newVals[key] * 100)}%`;
+          } else if (key === 'power' || key === 'gravity') {
+            display.textContent = newVals[key].toFixed(5);
+          } else if (key === 'mutationSize' || key === 'effortCost' || key === 'startSpread') {
+            display.textContent = newVals[key].toFixed(2);
+          } else {
+            display.textContent = newVals[key];
+          }
+        }
+      }
+
+      if ('shrinkMutation' in newVals) {
+        const chk = document.getElementById('chk-shrink');
+        if (chk) chk.checked = newVals.shrinkMutation;
+      }
+    }
+
+    /* =========================================================================
+       14. RESIZING & CANVAS HIGH-DPI SUPPORT
+       ========================================================================= */
+    function resizeCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+
+      // 1. Valley Canvas
+      const vContainer = document.getElementById('canvas-container');
+      if (valleyCanvas && vContainer) {
+        const w = vContainer.clientWidth;
+        const h = vContainer.clientHeight;
+        if (w > 0 && h > 0) {
+          valleyCanvas.width = w * dpr;
+          valleyCanvas.height = h * dpr;
+          valleyCanvas.style.width = `${w}px`;
+          valleyCanvas.style.height = `${h}px`;
+          if (valleyCtx) valleyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      // 2. Fitness Graph Canvas
+      const gWrap = document.querySelector('.graph-canvas-wrap');
+      if (graphCanvas && gWrap) {
+        const w = gWrap.clientWidth;
+        const h = gWrap.clientHeight;
+        if (w > 0 && h > 0) {
+          graphCanvas.width = w * dpr;
+          graphCanvas.height = h * dpr;
+          graphCanvas.style.width = `${w}px`;
+          graphCanvas.style.height = `${h}px`;
+          if (graphCtx) graphCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      // 3. Popup Diagram Canvas
+      if (netDiagramCanvas && netDiagramCanvas.parentElement) {
+        const w = netDiagramCanvas.parentElement.clientWidth;
+        const h = netDiagramCanvas.parentElement.clientHeight;
+        if (w > 0 && h > 0) {
+          netDiagramCanvas.width = w * dpr;
+          netDiagramCanvas.height = h * dpr;
+          netDiagramCanvas.style.width = `${w}px`;
+          netDiagramCanvas.style.height = `${h}px`;
+          if (netDiagramCtx) netDiagramCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      // 4. Mini Scene Canvas
+      if (miniSceneCanvas && miniSceneCanvas.parentElement) {
+        const w = miniSceneCanvas.parentElement.clientWidth;
+        const h = miniSceneCanvas.parentElement.clientHeight;
+        if (w > 0 && h > 0) {
+          miniSceneCanvas.width = w * dpr;
+          miniSceneCanvas.height = h * dpr;
+          miniSceneCanvas.style.width = `${w}px`;
+          miniSceneCanvas.style.height = `${h}px`;
+          if (miniSceneCtx) miniSceneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+    }
+
+    /* =========================================================================
+       15. MAIN ANIMATION & RENDERING LOOP
+       ========================================================================= */
+    let lastTime = 0;
+
+    function mainLoop(timestamp) {
+      requestAnimationFrame(mainLoop);
+
+      // Simulation fixed-step updates (handles 1x to 80x fast forward)
+      if (!isPaused) {
+        for (let s = 0; s < speed; s++) {
+          stepSimulation();
+        }
+      }
+
+      // Update Still Running counter
+      const stillRunning = population.filter(c => !c.ended).length;
+      document.getElementById('hdr-running').textContent = `${stillRunning} / ${population.length}`;
+
+      // Render Valley Canvas
+      if (valleyCtx && valleyCanvas) {
+        const w = valleyCanvas.clientWidth;
+        const h = valleyCanvas.clientHeight;
+        if (w > 0 && h > 0) {
+          drawValley(valleyCtx, w, h, timestamp);
+        }
+      }
+
+      // Render Fitness Graph
+      if (graphCtx && graphCanvas) {
+        const w = graphCanvas.clientWidth;
+        const h = graphCanvas.clientHeight;
+        if (w > 0 && h > 0) {
+          drawFitnessGraph(graphCtx, w, h);
+        }
+      }
+
+      // Render Modal Canvases if Open
+      const modal = document.getElementById('how-modal');
+      if (modal && modal.classList.contains('open')) {
+        updateMiniScene();
+        if (netDiagramCtx && netDiagramCanvas) {
+          drawNetDiagram(netDiagramCtx, netDiagramCanvas.clientWidth, netDiagramCanvas.clientHeight, timestamp);
+        }
+        if (miniSceneCtx && miniSceneCanvas) {
+          drawMiniScene(miniSceneCtx, miniSceneCanvas.clientWidth, miniSceneCanvas.clientHeight, timestamp);
+        }
+      }
+
+      lastTime = timestamp;
+    }
+
+    /* =========================================================================
+       16. STARTUP INITIALIZATION
+       ========================================================================= */
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize simulation state & population
+      initializePopulation();
+
+      // 2. Setup event listeners
+      setupControls();
+
+      // 3. Canvas sizing
+      resizeCanvases();
+      window.addEventListener('resize', resizeCanvases);
+
+      // 4. Start main loop
+      requestAnimationFrame(mainLoop);
+    });
+  </script>
+</body>
+</html>
