@@ -2,6 +2,14 @@
 // Newest first. `slug` must match the folder name inside /experiments.
 window.EXPERIMENTS = [
   {
+    slug: "leap",
+    title: "LEAP",
+    blurb: "Fifty tiny neural networks learn the timing of jumping and ducking in an endless runner. Cacti and birds get faster. The runners get smarter.",
+    tags: ["neuroevolution", "genetic algorithm", "control"],
+    meta: "watch generations evolve live",
+    date: "2026-11"
+  },
+  {
     slug: "touchdown",
     title: "Touchdown",
     blurb: "A swarm of tiny neural-net lunar landers learns to land softly. Early generations crash spectacularly. Later ones stick the landing.",

@@ -1,0 +1,3411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEAP — Neuroevolution Runner Laboratory</title>
+  <meta name="description" content="Watch a population of tiny neural networks learn the timing of a jump and duck in an endless runner as speed escalates.">
+
+  <!-- Google Fonts: Bricolage Grotesque (headings/UI) & Newsreader (editorial/prose) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* DESIGN TOKENS */
+    :root {
+      --bg: #090a0f;
+      --surface: #10121a;
+      --surface-card: #151824;
+      --surface-hover: #1c2132;
+      --surface-active: #22283d;
+      --border: #202638;
+      --border-subtle: #171b28;
+      --border-focus: #3b4666;
+      --text: #ede8df;
+      --text-muted: #8e95a5;
+      --text-dim: #545b6e;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --amber-glow: rgba(245, 158, 11, 0.35);
+      --slate: #64748b;
+      --slate-light: #94a3b8;
+      --slate-dim: rgba(100, 116, 139, 0.18);
+      --danger: #ef4444;
+      --danger-dim: rgba(239, 68, 68, 0.2);
+      --success: #10b981;
+
+      --font-display: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-body: 'Newsreader', Georgia, Cambria, "Times New Roman", serif;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --transition-fast: 140ms ease;
+      --transition-smooth: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* BASE RESET */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 13px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    /* APP LAYOUT */
+    #app {
+      display: grid;
+      grid-template-rows: 48px 1fr;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--amber-bright);
+      text-transform: uppercase;
+    }
+
+    .brand-subtitle {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border: 1px solid var(--border);
+      background: var(--surface-card);
+      color: var(--text-dim);
+      transition: all var(--transition-smooth);
+    }
+
+    .badge.achieved {
+      border-color: var(--amber);
+      background: var(--amber-dim);
+      color: var(--amber-bright);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .badge.achieved .badge-dot {
+      background: var(--amber-bright);
+      box-shadow: 0 0 6px var(--amber);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-help {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 5px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-help:hover {
+      background: var(--surface-hover);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* MAIN THREE COLUMN GRID */
+    main {
+      display: grid;
+      grid-template-columns: 290px 1fr 310px;
+      height: calc(100vh - 48px);
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* PANELS */
+    .panel {
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel:last-child {
+      border-right: none;
+      border-left: 1px solid var(--border);
+    }
+
+    /* Custom Scrollbars */
+    .panel::-webkit-scrollbar {
+      width: 5px;
+    }
+    .panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .panel::-webkit-scrollbar-thumb:hover {
+      background: var(--border-focus);
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* PRESETS */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn-preset {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-preset:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+      color: var(--amber-bright);
+    }
+
+    .btn-preset.active {
+      border-color: var(--amber);
+      background: var(--amber-dim);
+      color: var(--amber-bright);
+    }
+
+    /* SLIDERS */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .slider-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .slider-label {
+      color: var(--text-muted);
+    }
+
+    .slider-value {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .slider-input {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--amber);
+      cursor: pointer;
+      transition: transform var(--transition-fast), background var(--transition-fast);
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: var(--amber-bright);
+    }
+
+    .slider-input::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--amber);
+      cursor: pointer;
+      border: none;
+    }
+
+    /* CHECKBOX & ACTIONS */
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      margin-top: 2px;
+    }
+
+    .checkbox-wrap input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .btn-reset {
+      width: 100%;
+      padding: 7px;
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      margin-top: 4px;
+    }
+
+    .btn-reset:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--slate);
+    }
+
+    /* CENTER COLUMN: CANVAS & CONTROLS */
+    .center-panel {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      gap: 10px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    /* HUD ROW */
+    .hud-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .hud-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-card-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+    }
+
+    .hud-card-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: var(--font-display);
+    }
+
+    .hud-card-value.highlight {
+      color: var(--amber-bright);
+    }
+
+    /* CANVAS STAGE */
+    .canvas-stage {
+      position: relative;
+      flex: 1;
+      min-height: 380px;
+      background: #08090d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    #simCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: rgba(16, 18, 26, 0.85);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--slate-light);
+      pointer-events: none;
+      z-index: 4;
+      backdrop-filter: blur(2px);
+    }
+
+    /* CELEBRATION TOAST */
+    .toast-banner {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      background: rgba(16, 18, 26, 0.95);
+      border: 1px solid var(--amber);
+      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+      border-radius: var(--radius-md);
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--amber-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+      opacity: 0;
+      transition: all var(--transition-smooth);
+      z-index: 5;
+    }
+
+    .toast-banner.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* PLAYBACK CONTROLS BAR */
+    .controls-bar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+    }
+
+    .playback-buttons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-ctrl {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-ctrl:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-focus);
+      color: var(--amber-bright);
+    }
+
+    .speed-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .speed-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    .btn-speed {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      padding: 4px 7px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-speed:hover {
+      color: var(--text);
+      border-color: var(--border-focus);
+    }
+
+    .btn-speed.active {
+      background: var(--amber-dim);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* ATMOSPHERE POPOVER */
+    .atmosphere-wrap {
+      position: relative;
+    }
+
+    .btn-atmosphere {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-atmosphere:hover, .btn-atmosphere.active {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+      background: var(--surface-hover);
+    }
+
+    .atmosphere-popover {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      width: 250px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 50;
+    }
+
+    .atmosphere-popover.open {
+      display: flex;
+    }
+
+    .popover-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--amber-bright);
+      margin-bottom: 2px;
+    }
+
+    .popover-select-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .popover-select {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 11px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* RIGHT COLUMN: STATS & GRAPH */
+    .stats-card-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+
+    .stat-val-big {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-val-big.amber-text {
+      color: var(--amber-bright);
+    }
+
+    .stat-val-big.slate-text {
+      color: var(--slate-light);
+    }
+
+    .graph-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .graph-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .graph-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-line {
+      width: 12px;
+      height: 2px;
+      border-radius: 1px;
+    }
+
+    .legend-line.amber { background: var(--amber); }
+    .legend-line.slate { background: var(--slate); }
+
+    .graph-canvas-wrap {
+      width: 100%;
+      height: 140px;
+      background: #090b11;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+    }
+
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .explanation-card {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .explanation-text {
+      font-family: var(--font-body);
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .explanation-text strong {
+      color: var(--text);
+      font-family: var(--font-display);
+      font-weight: 600;
+    }
+
+    /* MODAL POPUP */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 6, 9, 0.85);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity var(--transition-smooth);
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-dialog {
+      width: 880px;
+      max-width: 95vw;
+      max-height: 90vh;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--amber-bright);
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color var(--transition-fast);
+    }
+
+    .btn-close-modal:hover {
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-interactive-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .modal-canvas-box {
+      background: #08090d;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modal-canvas-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    #networkCanvas {
+      width: 100%;
+      height: 230px;
+      background: #0b0d14;
+      border-radius: var(--radius-sm);
+    }
+
+    #miniSimCanvas {
+      width: 100%;
+      height: 230px;
+      background: #0b0d14;
+      border-radius: var(--radius-sm);
+    }
+
+    .modal-readouts {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .modal-readout-item {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+    }
+
+    .modal-readout-item span {
+      font-family: monospace;
+      color: var(--amber-bright);
+      font-weight: 600;
+    }
+
+    .modal-prose {
+      font-family: var(--font-body);
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-prose p strong {
+      font-family: var(--font-display);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* PREFERS-REDUCED-MOTION */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- HEADER -->
+    <header>
+      <div class="brand-wrap">
+        <span class="brand-title">LEAP</span>
+        <span class="brand-subtitle">Neuroevolution Endless Runner Laboratory</span>
+      </div>
+
+      <div class="header-badges">
+        <div id="badgeFirstClear" class="badge">
+          <div class="badge-dot"></div>
+          <span>First Clear (20+)</span>
+        </div>
+        <div id="badgeMarathon" class="badge">
+          <div class="badge-dot"></div>
+          <span>Marathon (80/80)</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnHowItWorks" class="btn-help" title="Inspect Neural Architecture & Live Sensors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          How it works
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN INTERFACE -->
+    <main>
+      <!-- LEFT PANEL: EXPERIMENTS & LIVE TUNING -->
+      <section class="panel">
+        <div>
+          <div class="section-title">
+            <span>Experiment Presets</span>
+          </div>
+          <div class="preset-grid">
+            <button class="btn-preset" data-preset="reckless">Reckless Mutation</button>
+            <button class="btn-preset" data-preset="noElites">No Elites</button>
+            <button class="btn-preset" data-preset="tinyPop">Tiny Population</button>
+            <button class="btn-preset" data-preset="hardWorld">Hard World</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="section-title">
+            <span>Genetics &amp; Population</span>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Population Size</span>
+              <span id="val-population" class="slider-value">50</span>
+            </div>
+            <input id="param-population" class="slider-input" type="range" min="10" max="150" step="2" value="50">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Elite Clones</span>
+              <span id="val-elites" class="slider-value">4</span>
+            </div>
+            <input id="param-elites" class="slider-input" type="range" min="0" max="10" step="1" value="4">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Parent Pool</span>
+              <span id="val-parentPool" class="slider-value">10</span>
+            </div>
+            <input id="param-parentPool" class="slider-input" type="range" min="2" max="25" step="1" value="10">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Chance</span>
+              <span id="val-mutationChance" class="slider-value">0.10</span>
+            </div>
+            <input id="param-mutationChance" class="slider-input" type="range" min="0.01" max="0.50" step="0.01" value="0.10">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Mutation Size</span>
+              <span id="val-mutationSize" class="slider-value">0.25</span>
+            </div>
+            <input id="param-mutationSize" class="slider-input" type="range" min="0.05" max="0.80" step="0.01" value="0.25">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Big-Jump Chance</span>
+              <span id="val-bigJumpChance" class="slider-value">0.05</span>
+            </div>
+            <input id="param-bigJumpChance" class="slider-input" type="range" min="0.00" max="0.30" step="0.01" value="0.05">
+          </div>
+
+          <label class="checkbox-wrap">
+            <input id="param-shrinkMutation" type="checkbox" checked>
+            <span>Shrink mutation near perfect</span>
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="section-title">
+            <span>Physics &amp; Obstacles</span>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Jump Power</span>
+              <span id="val-jumpPower" class="slider-value">11.0</span>
+            </div>
+            <input id="param-jumpPower" class="slider-input" type="range" min="8.0" max="15.0" step="0.5" value="11.0">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Gravity</span>
+              <span id="val-gravity" class="slider-value">0.60</span>
+            </div>
+            <input id="param-gravity" class="slider-input" type="range" min="0.30" max="1.20" step="0.05" value="0.60">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Bird Chance</span>
+              <span id="val-birdChance" class="slider-value">0.25</span>
+            </div>
+            <input id="param-birdChance" class="slider-input" type="range" min="0.00" max="0.60" step="0.05" value="0.25">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Speed-Up / Frame</span>
+              <span id="val-speedUp" class="slider-value">0.0020</span>
+            </div>
+            <input id="param-speedUp" class="slider-input" type="range" min="0.0000" max="0.0080" step="0.0005" value="0.0020">
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label">Obstacle Spacing</span>
+              <span id="val-obstacleSpacing" class="slider-value">1.00</span>
+            </div>
+            <input id="param-obstacleSpacing" class="slider-input" type="range" min="0.60" max="2.00" step="0.05" value="1.00">
+          </div>
+
+          <button id="btnResetDefaults" class="btn-reset">Reset to optimal values</button>
+        </div>
+      </section>
+
+      <!-- CENTER PANEL: LIVE SIMULATION STAGE -->
+      <section class="center-panel">
+        <div class="hud-row">
+          <div class="hud-card">
+            <span class="hud-card-label">Generation</span>
+            <span id="hudGeneration" class="hud-card-value highlight">1</span>
+          </div>
+          <div class="hud-card">
+            <span class="hud-card-label">Still Running</span>
+            <span id="hudAlive" class="hud-card-value">50 / 50</span>
+          </div>
+          <div class="hud-card">
+            <span class="hud-card-label">Obstacles Cleared</span>
+            <span id="hudLeaderScore" class="hud-card-value">0 / 80</span>
+          </div>
+          <div class="hud-card">
+            <span class="hud-card-label">World Speed</span>
+            <span id="hudSpeed" class="hud-card-value">6.0 px/f</span>
+          </div>
+        </div>
+
+        <div class="canvas-stage">
+          <canvas id="simCanvas" width="920" height="460"></canvas>
+          <div id="canvasAtmosphereBadge" class="canvas-badge">SPRING · DAY · CLEAR</div>
+          <div id="celebrationToast" class="toast-banner">Celebration!</div>
+        </div>
+
+        <div class="controls-bar">
+          <div class="playback-buttons">
+            <button id="btnPlayPause" class="btn-ctrl">
+              <svg id="iconPause" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+              <svg id="iconPlay" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span id="lblPlayPause">Pause</span>
+            </button>
+            <button id="btnRestart" class="btn-ctrl">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              Restart
+            </button>
+          </div>
+
+          <div class="speed-group">
+            <span class="speed-label">Speed:</span>
+            <button class="btn-speed active" data-speed="1">1x</button>
+            <button class="btn-speed" data-speed="2">2x</button>
+            <button class="btn-speed" data-speed="5">5x</button>
+            <button class="btn-speed" data-speed="10">10x</button>
+            <button class="btn-speed" data-speed="25">25x</button>
+            <button class="btn-speed" data-speed="80">80x</button>
+          </div>
+
+          <div class="atmosphere-wrap">
+            <button id="btnAtmosphere" class="btn-atmosphere">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              Atmosphere
+            </button>
+
+            <!-- ATMOSPHERE POPOVER -->
+            <div id="atmospherePopover" class="atmosphere-popover">
+              <span class="popover-title">Atmosphere &amp; Climate</span>
+
+              <label class="checkbox-wrap">
+                <input id="chkDayNight" type="checkbox" checked>
+                <span>Day and night cycle</span>
+              </label>
+
+              <label class="checkbox-wrap">
+                <input id="chkSeasons" type="checkbox" checked>
+                <span>Seasons cycle</span>
+              </label>
+
+              <label class="checkbox-wrap">
+                <input id="chkWeather" type="checkbox" checked>
+                <span>Dynamic weather</span>
+              </label>
+
+              <div class="popover-select-row">
+                <span class="slider-label">Season</span>
+                <select id="selSeason" class="popover-select">
+                  <option value="auto">Auto</option>
+                  <option value="spring">Spring</option>
+                  <option value="summer">Summer</option>
+                  <option value="autumn">Autumn</option>
+                  <option value="winter">Winter</option>
+                </select>
+              </div>
+
+              <div class="popover-select-row">
+                <span class="slider-label">Weather</span>
+                <select id="selWeather" class="popover-select">
+                  <option value="auto">Auto</option>
+                  <option value="clear">Clear</option>
+                  <option value="clouds">Clouds</option>
+                  <option value="rain">Rain</option>
+                  <option value="snow">Snow</option>
+                  <option value="fog">Fog</option>
+                  <option value="wind">Wind</option>
+                </select>
+              </div>
+
+              <label class="checkbox-wrap" style="border-top: 1px solid var(--border); padding-top: 6px; margin-top: 2px;">
+                <input id="chkWeatherAffects" type="checkbox">
+                <span title="Wind gusts alter scroll speed by up to ±1.5 px/f">Weather affects game</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: TELEMETRY & GRAPH -->
+      <section class="panel">
+        <div class="stats-card-group">
+          <div class="stat-box">
+            <div class="stat-label">Last Best Cleared</div>
+            <div id="statLastBest" class="stat-val-big amber-text">0 / 80</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Generation Average</div>
+            <div id="statAverage" class="stat-val-big slate-text">0.0 / 80</div>
+          </div>
+        </div>
+
+        <div class="stats-card-group">
+          <div class="stat-box">
+            <div class="stat-label">All-Time Record</div>
+            <div id="statAllTime" class="stat-val-big amber-text">0 / 80</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Total Generations</div>
+            <div id="statTotalGens" class="stat-val-big">1</div>
+          </div>
+        </div>
+
+        <div class="graph-card">
+          <div class="graph-header">
+            <span class="section-title" style="margin:0;">Performance History</span>
+            <div class="graph-legend">
+              <div class="legend-item">
+                <div class="legend-line amber"></div>
+                <span style="color:var(--amber-bright);">Best</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-line slate"></div>
+                <span style="color:var(--slate-light);">Average</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="graph-canvas-wrap">
+            <canvas id="graphCanvas" width="300" height="140"></canvas>
+          </div>
+        </div>
+
+        <div class="explanation-card">
+          <div class="section-title">
+            <span>Reading the graph</span>
+          </div>
+          <p class="explanation-text">
+            <strong>Sliding Window:</strong> Tracks the last 30 generations as they glide smoothly to the left. The amber line charts the top performer's obstacles cleared; the blue-grey line charts the population mean.
+          </p>
+          <p class="explanation-text">
+            <strong>Cacti &amp; Flying Birds:</strong> Obstacles after the 6th include flying birds at low, middle, and high elevations. Birds fly 1.5 px/frame faster than the world scroll, demanding multi-action jumping and ducking reflexes.
+          </p>
+          <p class="explanation-text">
+            <strong>Adaptive Annealing:</strong> When <em>Shrink mutation near perfect</em> is active, mutation step size automatically cools from 0.25 toward 0.03 as the record approaches 80/80, preserving razor-sharp high-speed jump timing.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- HOW IT WORKS MODAL -->
+    <div id="modalHowItWorks" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Neural Circuit &amp; Sensory Perception</div>
+          <button id="btnCloseModal" class="btn-close-modal">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-interactive-grid">
+            <div class="modal-canvas-box">
+              <span class="modal-canvas-title">Synaptic Wiring (10 &rarr; 10 &rarr; 2, 132 weights)</span>
+              <canvas id="networkCanvas" width="400" height="230"></canvas>
+            </div>
+
+            <div class="modal-canvas-box">
+              <span class="modal-canvas-title">Live Sensing, Birds &amp; Multi-Action Trigger</span>
+              <canvas id="miniSimCanvas" width="400" height="230"></canvas>
+            </div>
+          </div>
+
+          <div class="modal-readouts">
+            <div class="modal-readout-item">d (Dist): <span id="tele-dist">0.00</span></div>
+            <div class="modal-readout-item">w (Width): <span id="tele-width">0.00</span></div>
+            <div class="modal-readout-item">h (Height): <span id="tele-height">0.00</span></div>
+            <div class="modal-readout-item">b (Bottom Y): <span id="tele-bot">0.00</span></div>
+            <div class="modal-readout-item">isBird?: <span id="tele-bird">0.0</span></div>
+            <div class="modal-readout-item">g (Gap): <span id="tele-gap">0.00</span></div>
+            <div class="modal-readout-item">v (Speed): <span id="tele-speed">0.00</span></div>
+            <div class="modal-readout-item">y (Elevation): <span id="tele-y">0.00</span></div>
+            <div class="modal-readout-item">vy (Vert Speed): <span id="tele-vy">0.00</span></div>
+            <div class="modal-readout-item">isDucking?: <span id="tele-ducking">0.0</span></div>
+            <div class="modal-readout-item" style="grid-column: span 2;">Jump Out: <span id="tele-out-jump">+0.00</span></div>
+            <div class="modal-readout-item" style="grid-column: span 3;">Duck Out: <span id="tele-out-duck">+0.00</span></div>
+          </div>
+
+          <div class="modal-prose">
+            <p>
+              <strong>10 Sensory Inputs:</strong> Every frame, each runner perceives: distance to the next obstacle, its width, its height, its bottom edge height above the ground, a bird flag (1.0 vs 0.0), gap to the follower obstacle, world speed, runner elevation $y$, vertical velocity $v_y$, and current ducking state.
+            </p>
+            <p>
+              <strong>Architecture &amp; Actions:</strong> 10 inputs feed into 10 $\tanh$ hidden units, driving 2 $\tanh$ output units: <strong>Jump</strong> and <strong>Duck</strong>. The weight budget is $10 \times 10 + 10 + 10 \times 2 + 2 = 132$ flat synaptic parameters.
+            </p>
+            <p>
+              <strong>Three Bird Heights:</strong>
+              <br>&bull; <em>Low Bird (bottom 10px):</em> Hits both standing (48px) and ducking (26px) runners. Must be jumped over.
+              <br>&bull; <em>Middle Bird (bottom 30px):</em> Clears ducking runners (26px &lt; 30px). Must be ducked under (or jumped).
+              <br>&bull; <em>High Bird (bottom 70px):</em> Clears standing runners (48px &lt; 70px). A jump would hit it at its apex (95px). Must be ignored!
+            </p>
+            <p>
+              <strong>Darwinian Fitness:</strong> $\text{Fitness} = \text{Distance} + 50 \times \text{Cleared} - 2 \times \text{Jumps} - 0.5 \times \text{Ducks}$. Penalizing frivolous actions forces the neural networks to jump and duck only when necessary.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       LEAP — NEUROEVOLUTION RUNNER SIMULATION
+       Single-file, dependency-free artificial life laboratory
+       ========================================================================= */
+
+    (function () {
+      'use strict';
+
+      // --- 1. CONFIGURATION & PRESETS ---
+      const DEFAULT_CONFIG = {
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 0.10,
+        mutationSize: 0.25,
+        bigJumpChance: 0.05,
+        shrinkMutation: true,
+        jumpPower: 11.0,
+        gravity: 0.60,
+        startSpeed: 6.0,          // Fixed at 6.0 px/frame
+        birdChance: 0.25,          // Replaces start speed slider
+        speedUp: 0.0020,
+        obstacleSpacing: 1.00,
+        obstaclesPerGeneration: 80
+      };
+
+      const PRESETS = {
+        reckless: {
+          mutationChance: 0.35,
+          mutationSize: 0.60,
+          bigJumpChance: 0.25,
+          shrinkMutation: false
+        },
+        noElites: {
+          elites: 0,
+          parentPool: 10
+        },
+        tinyPop: {
+          population: 12,
+          elites: 1,
+          parentPool: 3
+        },
+        hardWorld: {
+          birdChance: 0.45,
+          speedUp: 0.0040,
+          obstacleSpacing: 0.85
+        }
+      };
+
+      const config = Object.assign({}, DEFAULT_CONFIG);
+
+      // Simulation runtime state
+      let currentGeneration = 1;
+      let worldSpeed = config.startSpeed;
+      let worldDistance = 0;
+      let generationSeed = 1337;
+      let isPaused = false;
+      let speedMultiplier = 1;
+      let firstClearAchieved = false;
+      let marathonAchieved = false;
+      let allTimeRecord = 0;
+
+      // History for telemetry and sliding graph (initialized immediately!)
+      const history = [];
+
+      // Canvas dimensions and constants
+      const RUNNER_X = 140;          // Screen X position where runners run
+      const GROUND_Y = 370;          // Canvas Y for ground line
+      const MAX_SPEED_CAP = 16.0;    // Maximum base world scroll speed
+
+      // Pre-allocated arrays
+      let population = [];
+      let obstacles = [];
+      let particles = [];
+      let dustPuffs = [];
+      let stars = [];
+      let weatherParticles = [];
+
+      // --- 2. SEEDED PRNGs ---
+      // Separate PRNG for obstacles ensures reproducibility independent of visual ambient clock!
+      function mulberry32(a) {
+        return function () {
+          let t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
+      function gaussianRandom(rng) {
+        const rand = rng || Math.random;
+        let u = 0, v = 0;
+        while (u === 0) u = rand();
+        while (v === 0) v = rand();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      function clamp(val, min, max) {
+        return val < min ? min : (val > max ? max : val);
+      }
+
+      // --- 3. AMBIENT CLOCK, SEASONS & WEATHER STATE ---
+      // Independent ambient PRNG
+      const ambientPrng = mulberry32(424242);
+
+      const atmosphere = {
+        enabledDayNight: true,
+        enabledSeasons: true,
+        enabledWeather: true,
+        seasonOverride: 'auto',      // 'auto', 'spring', 'summer', 'autumn', 'winter'
+        weatherOverride: 'auto',     // 'auto', 'clear', 'clouds', 'rain', 'snow', 'fog', 'wind'
+        weatherAffectsGame: false,   // wind gusts alter world speed by up to ±1.5 px/f
+        ambientClock: 0,             // 5400 frames per day/night cycle
+        currentSeason: 'spring',
+        currentWeather: 'clear',
+        previousWeather: 'clear',
+        weatherTransition: 1.0,      // 0 to 1 crossfade
+        weatherDuration: 900,
+        weatherTimer: 0,
+        lightningAlpha: 0,
+        lightningCooldown: 300,
+        windGust: 0,                 // ±1.5 px/frame
+        windGustTarget: 0,
+        windGustTimer: 0,
+        cactusSway: 0
+      };
+
+      const SEASONS_LIST = ['spring', 'summer', 'autumn', 'winter'];
+      const WEATHER_LIST = ['clear', 'clouds', 'rain', 'snow', 'fog', 'wind'];
+
+      // Seasonal weather transition probabilities
+      const SEASON_WEATHER_WEIGHTS = {
+        spring: { rain: 0.40, clouds: 0.25, clear: 0.20, wind: 0.15, fog: 0.0, snow: 0.0 },
+        summer: { clear: 0.50, wind: 0.25, clouds: 0.20, rain: 0.05, fog: 0.0, snow: 0.0 },
+        autumn: { wind: 0.35, fog: 0.30, rain: 0.15, clouds: 0.15, clear: 0.05, snow: 0.0 },
+        winter: { snow: 0.45, fog: 0.30, clouds: 0.15, clear: 0.10, rain: 0.0, wind: 0.0 }
+      };
+
+      // Seasonal Color Palettes
+      const SEASON_PALETTES = {
+        spring: {
+          skyDay: '#13282b',
+          skyNight: '#07090e',
+          ground: '#1d2a2c',
+          cactusTrunk: '#2e5c3e',
+          cactusOutline: '#1b3b26',
+          hasFlowers: true,
+          flowerColor: '#f472b6',
+          snowCover: 0
+        },
+        summer: {
+          skyDay: '#26241b',
+          skyNight: '#0a0a0d',
+          ground: '#2c2518',
+          cactusTrunk: '#425828',
+          cactusOutline: '#283816',
+          hasFlowers: false,
+          snowCover: 0
+        },
+        autumn: {
+          skyDay: '#241b18',
+          skyNight: '#08070b',
+          ground: '#2d1b15',
+          cactusTrunk: '#454124',
+          cactusOutline: '#2b2915',
+          hasFlowers: false,
+          snowCover: 0
+        },
+        winter: {
+          skyDay: '#151c28',
+          skyNight: '#06080f',
+          ground: '#1c2230',
+          cactusTrunk: '#243b3c',
+          cactusOutline: '#152426',
+          hasFlowers: false,
+          snowCover: 1
+        }
+      };
+
+      // --- 4. NEURAL NETWORK ARCHITECTURE ---
+      // 10 Inputs, 10 Hidden units (tanh), 2 Output units (tanh: jump & duck)
+      // Weights: 10*10 = 100 + 10 (biases) + 10*2 = 20 + 2 (biases) = 132 weights
+      const NUM_INPUTS = 10;
+      const NUM_HIDDEN = 10;
+      const NUM_OUTPUTS = 2;
+      const TOTAL_WEIGHTS = (NUM_INPUTS * NUM_HIDDEN) + NUM_HIDDEN + (NUM_HIDDEN * NUM_OUTPUTS) + NUM_OUTPUTS; // 132
+
+      class NeuralNetwork {
+        constructor(weights) {
+          if (weights) {
+            this.weights = new Float32Array(weights);
+          } else {
+            this.weights = new Float32Array(TOTAL_WEIGHTS);
+            this.randomize();
+          }
+          this.lastInputs = new Float32Array(NUM_INPUTS);
+          this.lastHidden = new Float32Array(NUM_HIDDEN);
+          this.lastOutputs = new Float32Array(NUM_OUTPUTS);
+        }
+
+        randomize() {
+          const scaleIH = Math.sqrt(2.0 / NUM_INPUTS);
+          const scaleHO = Math.sqrt(2.0 / NUM_HIDDEN);
+          let idx = 0;
+
+          // Input -> Hidden
+          for (let i = 0; i < NUM_INPUTS * NUM_HIDDEN; i++) {
+            this.weights[idx++] = gaussianRandom() * scaleIH;
+          }
+          // Hidden biases
+          for (let h = 0; h < NUM_HIDDEN; h++) {
+            this.weights[idx++] = (Math.random() * 2 - 1) * 0.1;
+          }
+          // Hidden -> Outputs
+          for (let o = 0; o < NUM_HIDDEN * NUM_OUTPUTS; o++) {
+            this.weights[idx++] = gaussianRandom() * scaleHO;
+          }
+          // Output biases: slight negative bias so naive runners don't flail wildly
+          this.weights[idx++] = -0.25; // jump bias
+          this.weights[idx++] = -0.30; // duck bias
+        }
+
+        clone() {
+          return new NeuralNetwork(this.weights);
+        }
+
+        forward(inputs) {
+          for (let i = 0; i < NUM_INPUTS; i++) {
+            this.lastInputs[i] = inputs[i];
+          }
+
+          let ptr = 0;
+          // Hidden layer (tanh)
+          for (let h = 0; h < NUM_HIDDEN; h++) {
+            let sum = 0;
+            for (let i = 0; i < NUM_INPUTS; i++) {
+              sum += inputs[i] * this.weights[ptr++];
+            }
+            sum += this.weights[NUM_INPUTS * NUM_HIDDEN + h];
+            this.lastHidden[h] = Math.tanh(sum);
+          }
+
+          // Advance ptr past hidden biases
+          ptr = (NUM_INPUTS * NUM_HIDDEN) + NUM_HIDDEN;
+
+          // Output neurons (tanh: 0 = jump, 1 = duck)
+          for (let o = 0; o < NUM_OUTPUTS; o++) {
+            let outSum = 0;
+            for (let h = 0; h < NUM_HIDDEN; h++) {
+              outSum += this.lastHidden[h] * this.weights[ptr++];
+            }
+            outSum += this.weights[ptr + o];
+            this.lastOutputs[o] = Math.tanh(outSum);
+          }
+
+          return this.lastOutputs;
+        }
+      }
+
+      // --- 5. OBSTACLE GENERATOR: CACTI & FLYING BIRDS ---
+      function generateObstacles(seed) {
+        const rng = mulberry32(seed);
+        const list = [];
+        let curX = 850; // Initial runway
+        const airtime = 37;
+
+        for (let i = 0; i < config.obstaclesPerGeneration; i++) {
+          // Birds appear only after the 6th obstacle (index >= 6)
+          const isBird = (i >= 6) && (rng() < config.birdChance);
+          let width, height, bottomY, birdHeightType = null;
+
+          if (isBird) {
+            width = 40;
+            height = 28;
+            const hRoll = rng();
+            if (hRoll < 0.333) {
+              birdHeightType = 'low';    // bottom 10px: must jump
+              bottomY = 10;
+            } else if (hRoll < 0.666) {
+              birdHeightType = 'middle'; // bottom 30px: duck under (or jump)
+              bottomY = 30;
+            } else {
+              birdHeightType = 'high';   // bottom 70px: ignore! Jump hits at apex
+              bottomY = 70;
+            }
+          } else {
+            bottomY = 0;
+            const clusterRoll = rng();
+            if (clusterRoll > 0.65) {
+              width = 52 + rng() * 8;
+              height = 42 + rng() * 28;
+            } else if (clusterRoll > 0.35) {
+              width = 36 + rng() * 8;
+              height = 38 + rng() * 32;
+            } else {
+              width = 24 + rng() * 6;
+              height = 35 + rng() * 35;
+            }
+          }
+
+          // Solvability Guarantee:
+          // Birds approach 1.5 px/frame faster than world scroll.
+          // In worst case with weather gust (+1.5 px/f), max approach speed is 16 + 1.5 + 1.5 = 19 px/frame.
+          const maxApproachSpeed = isBird ? 19.0 : 17.5;
+          const fullJumpDist = maxApproachSpeed * airtime;
+          const minGap = (fullJumpDist + 80) * config.obstacleSpacing;
+          const randomExtra = rng() * 200;
+          const gapToNext = minGap + randomExtra;
+
+          list.push({
+            id: i,
+            x: curX,
+            width: Math.round(width),
+            height: Math.round(height),
+            bottomY: bottomY,
+            isBird: isBird,
+            birdHeightType: birdHeightType,
+            gapToNext: gapToNext,
+            flightOffset: 0,
+            active: false
+          });
+
+          curX += width + gapToNext;
+        }
+
+        return list;
+      }
+
+      // --- 6. LIZARD RUNNER CHARACTER (Standing, Ducking, Fast-falling) ---
+      class Runner {
+        constructor(brain) {
+          this.brain = brain || new NeuralNetwork();
+          this.reset();
+        }
+
+        reset() {
+          this.y = 0;                  // Elevation above ground
+          this.vy = 0;                 // Vertical velocity
+          this.grounded = true;
+          this.isDucking = false;
+          this.alive = true;
+          this.distanceRun = 0;
+          this.obstaclesCleared = 0;
+          this.jumpsStarted = 0;
+          this.ducksStarted = 0;
+          this.runFrame = Math.random() * 20;
+          this.isLeader = false;
+          this.lastNextObstacle = null;
+        }
+
+        jump() {
+          // Can jump only while on ground and NOT ducking
+          if (this.grounded && !this.isDucking && this.alive) {
+            this.vy = config.jumpPower;
+            this.grounded = false;
+            this.jumpsStarted++;
+            spawnDustPuff(RUNNER_X + 6, GROUND_Y);
+          }
+        }
+
+        update(effectiveSpeed) {
+          if (!this.alive) return;
+
+          this.distanceRun += effectiveSpeed;
+          this.runFrame += 0.3 * (effectiveSpeed / 6.0);
+
+          // Sensory Perception: Find next upcoming obstacle not yet cleared
+          let nextObs = null;
+          let followerObs = null;
+
+          for (let i = 0; i < obstacles.length; i++) {
+            const obs = obstacles[i];
+            const obsScreenLeft = obs.x - worldDistance - obs.flightOffset;
+            const obsScreenRight = obsScreenLeft + obs.width;
+
+            if (obsScreenRight > RUNNER_X + 2) {
+              if (!nextObs) {
+                nextObs = obs;
+                if (i + 1 < obstacles.length) followerObs = obstacles[i + 1];
+                break;
+              }
+            }
+          }
+
+          this.lastNextObstacle = nextObs;
+
+          // Compute 10 normalized inputs
+          let distNorm = 1.0;
+          let widthNorm = 0.0;
+          let heightNorm = 0.0;
+          let bottomNorm = 0.0;
+          let isBirdNorm = 0.0;
+          let gapNorm = 1.0;
+
+          if (nextObs) {
+            const obsLeft = nextObs.x - worldDistance - nextObs.flightOffset;
+            const distPx = Math.max(0, obsLeft - (RUNNER_X + 28));
+            distNorm = clamp(distPx / 600.0, 0, 1);
+            widthNorm = clamp(nextObs.width / 60.0, 0, 1);
+            heightNorm = clamp(nextObs.height / 70.0, 0, 1);
+            bottomNorm = clamp(nextObs.bottomY / 70.0, 0, 1);
+            isBirdNorm = nextObs.isBird ? 1.0 : 0.0;
+
+            if (followerObs) {
+              const followerLeft = followerObs.x - worldDistance - followerObs.flightOffset;
+              const gapPx = followerLeft - (obsLeft + nextObs.width);
+              gapNorm = clamp(gapPx / 600.0, 0, 1);
+            }
+          }
+
+          const speedNorm = clamp(effectiveSpeed / (MAX_SPEED_CAP + 1.5), 0, 1);
+          const elevNorm = clamp(this.y / 100.0, 0, 1.2);
+          const vyNorm = clamp(this.vy / config.jumpPower, -1, 1);
+          const duckNorm = this.isDucking ? 1.0 : 0.0;
+
+          const inputs = [
+            distNorm,
+            widthNorm,
+            heightNorm,
+            bottomNorm,
+            isBirdNorm,
+            gapNorm,
+            speedNorm,
+            elevNorm,
+            vyNorm,
+            duckNorm
+          ];
+
+          // Forward neural pass (2 outputs: [0] = jump, [1] = duck)
+          const outputs = this.brain.forward(inputs);
+          const wantsJump = outputs[0] > 0;
+          const wantsDuck = outputs[1] > 0;
+
+          // Ducking action logic:
+          // A runner can duck only while on the ground.
+          // Ducking while in the air makes it fall 3 times faster (fast-fall).
+          let effectiveGravity = config.gravity;
+
+          if (!this.grounded) {
+            if (wantsDuck) {
+              effectiveGravity *= 3.0; // Fast-fall!
+            }
+            this.isDucking = false;
+          } else {
+            // Grounded ducking state
+            if (wantsDuck && !this.isDucking) {
+              this.ducksStarted++;
+            }
+            this.isDucking = wantsDuck;
+          }
+
+          // Physics integration
+          if (!this.grounded) {
+            this.vy -= effectiveGravity;
+            this.y += this.vy;
+
+            if (this.y <= 0) {
+              this.y = 0;
+              this.vy = 0;
+              this.grounded = true;
+              spawnDustPuff(RUNNER_X + 10, GROUND_Y);
+            }
+          }
+
+          // Jump action: only if grounded and NOT ducking
+          if (wantsJump && this.grounded && !this.isDucking) {
+            this.jump();
+          }
+
+          // Hitbox definition:
+          // Standing runner: hitbox 48 px tall
+          // Ducking runner: hitbox 26 px tall
+          const runnerHeight = this.isDucking ? 26 : 48;
+          const rMinX = RUNNER_X + 4;
+          const rMaxX = RUNNER_X + 28;
+          const rBottom = this.y;
+          const rTop = this.y + runnerHeight;
+
+          // Check collisions with active obstacles
+          for (let i = 0; i < obstacles.length; i++) {
+            const obs = obstacles[i];
+            const obsLeft = obs.x - worldDistance - obs.flightOffset;
+            const obsRight = obsLeft + obs.width;
+
+            if (obsRight < RUNNER_X + 4 && obs.id >= this.obstaclesCleared) {
+              this.obstaclesCleared = obs.id + 1;
+            }
+
+            const oMinX = obsLeft + 2;
+            const oMaxX = obsRight - 2;
+            const oBottom = obs.bottomY;
+            const oTop = obs.bottomY + obs.height;
+
+            // Overlap check
+            if (rMaxX > oMinX && rMinX < oMaxX && rTop > oBottom && rBottom < oTop) {
+              this.alive = false;
+              spawnDeathBurst(RUNNER_X + 16, GROUND_Y - this.y - (runnerHeight / 2));
+              break;
+            }
+          }
+        }
+
+        // Explicit Fitness Formula:
+        // fitness = distanceRun + 50 * obstaclesCleared - 2 * jumpsStarted - 0.5 * ducksStarted
+        get fitness() {
+          return this.distanceRun + (50 * this.obstaclesCleared) - (2 * this.jumpsStarted) - (0.5 * this.ducksStarted);
+        }
+      }
+
+      // --- 7. AMBIENT ATMOSPHERE UPDATE ---
+      function updateAtmosphere(effectiveSpeed) {
+        // Ambient clock runs at most 4x faster during fast-forward so visuals stay calm
+        const clockAdvance = Math.min(4, speedMultiplier) / speedMultiplier;
+        atmosphere.ambientClock += clockAdvance;
+
+        // Seasons update: 1 season every 2 day/night cycles (10800 frames)
+        if (atmosphere.enabledSeasons) {
+          if (atmosphere.seasonOverride !== 'auto') {
+            atmosphere.currentSeason = atmosphere.seasonOverride;
+          } else {
+            const seasonIdx = Math.floor(atmosphere.ambientClock / 10800) % 4;
+            atmosphere.currentSeason = SEASONS_LIST[seasonIdx];
+          }
+        }
+
+        // Weather state machine update: changes every 600 to 1200 frames
+        if (atmosphere.enabledWeather) {
+          if (atmosphere.weatherOverride !== 'auto') {
+            atmosphere.currentWeather = atmosphere.weatherOverride;
+            atmosphere.weatherTransition = 1.0;
+          } else {
+            atmosphere.weatherTimer += clockAdvance;
+            if (atmosphere.weatherTimer >= atmosphere.weatherDuration) {
+              atmosphere.weatherTimer = 0;
+              atmosphere.weatherDuration = 600 + Math.floor(ambientPrng() * 600);
+              atmosphere.previousWeather = atmosphere.currentWeather;
+
+              // Pick new weather based on seasonal weights
+              const weights = SEASON_WEATHER_WEIGHTS[atmosphere.currentSeason] || SEASON_WEATHER_WEIGHTS.spring;
+              let roll = ambientPrng();
+              let chosen = 'clear';
+              for (const [wState, prob] of Object.entries(weights)) {
+                if (roll < prob) {
+                  chosen = wState;
+                  break;
+                }
+                roll -= prob;
+              }
+              atmosphere.currentWeather = chosen;
+              atmosphere.weatherTransition = 0.0;
+            }
+
+            if (atmosphere.weatherTransition < 1.0) {
+              atmosphere.weatherTransition = Math.min(1.0, atmosphere.weatherTransition + 0.005);
+            }
+          }
+        } else {
+          atmosphere.currentWeather = 'clear';
+        }
+
+        // Weather affects game: Wind gusts change world speed by up to ±1.5 px/f for 3 to 6s (180 to 360f)
+        if (atmosphere.weatherAffectsGame && atmosphere.currentWeather === 'wind') {
+          atmosphere.windGustTimer -= clockAdvance;
+          if (atmosphere.windGustTimer <= 0) {
+            atmosphere.windGustTimer = 180 + Math.floor(ambientPrng() * 180);
+            atmosphere.windGustTarget = (ambientPrng() * 3.0 - 1.5); // ±1.5 px/f
+          }
+          atmosphere.windGust += (atmosphere.windGustTarget - atmosphere.windGust) * 0.03;
+        } else {
+          atmosphere.windGust *= 0.95;
+        }
+
+        // Lightning in rain: soft glow, at most once every 8 seconds (480 frames)
+        if (atmosphere.currentWeather === 'rain') {
+          atmosphere.lightningCooldown -= clockAdvance;
+          if (atmosphere.lightningCooldown <= 0 && ambientPrng() < 0.004) {
+            atmosphere.lightningAlpha = 0.35; // gentle soft glow
+            atmosphere.lightningCooldown = 480;
+          }
+          if (atmosphere.lightningAlpha > 0) {
+            atmosphere.lightningAlpha *= 0.88;
+          }
+        } else {
+          atmosphere.lightningAlpha = 0;
+        }
+
+        // Cactus sway in wind
+        if (atmosphere.currentWeather === 'wind') {
+          atmosphere.cactusSway = Math.sin(atmosphere.ambientClock * 0.08) * 0.06;
+        } else {
+          atmosphere.cactusSway *= 0.92;
+        }
+
+        // Update badge text
+        const badge = document.getElementById('canvasAtmosphereBadge');
+        if (badge) {
+          const dayNightText = getDayNightPhase().name.toUpperCase();
+          badge.textContent = `${atmosphere.currentSeason.toUpperCase()} · ${dayNightText} · ${atmosphere.currentWeather.toUpperCase()}`;
+        }
+      }
+
+      function getDayNightPhase() {
+        if (!atmosphere.enabledDayNight) {
+          return { name: 'Day', factor: 1.0 }; // constant day if disabled
+        }
+        const cycleFrame = atmosphere.ambientClock % 5400;
+        // Day: 2700, Dusk: 400, Night: 1900, Dawn: 400
+        if (cycleFrame < 2700) {
+          return { name: 'Day', factor: 1.0, progress: cycleFrame / 2700 };
+        } else if (cycleFrame < 3100) {
+          const t = (cycleFrame - 2700) / 400;
+          return { name: 'Dusk', factor: 1.0 - t, progress: t };
+        } else if (cycleFrame < 5000) {
+          return { name: 'Night', factor: 0.0, progress: (cycleFrame - 3100) / 1900 };
+        } else {
+          const t = (cycleFrame - 5000) / 400;
+          return { name: 'Dawn', factor: t, progress: t };
+        }
+      }
+
+      // --- 8. VISUAL FX & WEATHER PARTICLES (Capped at 300) ---
+      function initStars(width, height) {
+        stars = [];
+        for (let i = 0; i < 70; i++) {
+          stars.push({
+            x: Math.random() * width,
+            y: Math.random() * (GROUND_Y - 80),
+            size: Math.random() * 1.5 + 0.5,
+            alpha: Math.random() * 0.7 + 0.3,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      function spawnDustPuff(x, y) {
+        for (let i = 0; i < 4; i++) {
+          dustPuffs.push({
+            x: x - Math.random() * 6,
+            y: y - Math.random() * 3,
+            vx: -(worldSpeed * 0.4 + Math.random() * 1.2),
+            vy: -(Math.random() * 0.8 + 0.2),
+            size: Math.random() * 3 + 2,
+            alpha: 0.5,
+            decay: 0.04
+          });
+        }
+      }
+
+      function spawnDeathBurst(x, y) {
+        for (let i = 0; i < 14; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 4.5 + 1.5;
+          particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed - (worldSpeed * 0.2),
+            vy: Math.sin(angle) * speed - 1.5,
+            size: Math.random() * 4 + 2,
+            color: Math.random() > 0.5 ? '#f59e0b' : '#94a3b8',
+            rotation: Math.random() * Math.PI,
+            vRot: (Math.random() - 0.5) * 0.3,
+            alpha: 1.0,
+            decay: 0.025
+          });
+        }
+      }
+
+      function updateFX(w, h) {
+        // Dust puffs
+        for (let i = dustPuffs.length - 1; i >= 0; i--) {
+          const p = dustPuffs[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= p.decay;
+          if (p.alpha <= 0) dustPuffs.splice(i, 1);
+        }
+
+        // Death fragments
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.25;
+          p.rotation += p.vRot;
+          p.alpha -= p.decay;
+          if (p.alpha <= 0 || p.y > GROUND_Y + 20) particles.splice(i, 1);
+        }
+
+        // Weather particles (Strictly capped at 300)
+        const curWeather = atmosphere.currentWeather;
+        if (curWeather === 'rain' && weatherParticles.length < 180) {
+          weatherParticles.push({
+            type: 'rain',
+            x: Math.random() * (w + 100),
+            y: -10,
+            vx: -3.0 - (worldSpeed * 0.2),
+            vy: 9.0 + Math.random() * 3.0,
+            len: 12 + Math.random() * 6
+          });
+        } else if (curWeather === 'snow' && weatherParticles.length < 160) {
+          weatherParticles.push({
+            type: 'snow',
+            x: Math.random() * w,
+            y: -10,
+            vx: (Math.random() - 0.6) * 1.5,
+            vy: 1.2 + Math.random() * 1.2,
+            size: Math.random() * 2.5 + 1.2,
+            phase: Math.random() * Math.PI * 2
+          });
+        } else if (curWeather === 'wind' && weatherParticles.length < 120) {
+          const isAutumn = atmosphere.currentSeason === 'autumn';
+          weatherParticles.push({
+            type: isAutumn ? 'leaf' : 'dust',
+            x: w + 20,
+            y: Math.random() * (GROUND_Y - 20),
+            vx: -(worldSpeed + 4.0 + Math.random() * 3.0),
+            vy: (Math.random() - 0.5) * 1.5,
+            size: isAutumn ? (Math.random() * 5 + 4) : (Math.random() * 3 + 1),
+            color: isAutumn ? (Math.random() > 0.5 ? '#b45309' : '#d97706') : '#d4b483',
+            rot: Math.random() * Math.PI,
+            vRot: (Math.random() - 0.5) * 0.2
+          });
+        }
+
+        for (let i = weatherParticles.length - 1; i >= 0; i--) {
+          const wp = weatherParticles[i];
+          wp.x += wp.vx;
+          wp.y += wp.vy;
+          if (wp.type === 'snow') {
+            wp.x += Math.sin(wp.phase += 0.05) * 0.5;
+          }
+          if (wp.y > GROUND_Y || wp.x < -30 || wp.x > w + 120) {
+            weatherParticles.splice(i, 1);
+          }
+        }
+
+        while (weatherParticles.length > 300) {
+          weatherParticles.shift();
+        }
+      }
+
+      // --- 9. CANVAS RENDERING: LIZARD RUNNER (Standing & Ducking) ---
+      function drawLizard(ctx, x, y, vy, grounded, isDucking, runFrame, isLeader, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(x, y);
+
+        const tilt = grounded ? 0 : clamp(-vy * 0.03, -0.4, 0.4);
+        ctx.rotate(tilt);
+
+        const mainColor = isLeader ? '#f59e0b' : '#8e95a5';
+        const darkColor = isLeader ? '#b45309' : '#545b6e';
+        const brightColor = isLeader ? '#fbbf24' : '#cbd5e1';
+        const eyeColor = isLeader ? '#ffffff' : '#e2e8f0';
+
+        if (isDucking) {
+          // --- DUCKING POSE (Height 26px, stretched low) ---
+          // Tail
+          ctx.beginPath();
+          ctx.moveTo(-6, -6);
+          ctx.quadraticCurveTo(-18, -8, -32, -4);
+          ctx.quadraticCurveTo(-16, -2, -4, -2);
+          ctx.fillStyle = darkColor;
+          ctx.fill();
+
+          // Low stretched body
+          ctx.beginPath();
+          ctx.moveTo(-6, -6);
+          ctx.quadraticCurveTo(8, -14, 26, -10); // low back arch
+          ctx.quadraticCurveTo(34, -8, 36, -5);   // elongated snout
+          ctx.quadraticCurveTo(24, -2, 6, -2);    // flat belly
+          ctx.quadraticCurveTo(-2, -2, -6, -6);
+          ctx.closePath();
+          ctx.fillStyle = mainColor;
+          ctx.fill();
+
+          // Eye
+          ctx.fillStyle = eyeColor;
+          ctx.beginPath();
+          ctx.arc(28, -8, 2.0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#090a0f';
+          ctx.beginPath();
+          ctx.arc(28.8, -8, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Tucked legs
+          ctx.fillStyle = mainColor;
+          ctx.beginPath();
+          ctx.ellipse(14, -2, 4, 2.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // --- STANDING POSE (Height 48px) ---
+          // Tail
+          ctx.beginPath();
+          const tailWag = grounded ? Math.sin(runFrame) * 4 : Math.min(6, vy * 0.5);
+          ctx.moveTo(-6, -10);
+          ctx.quadraticCurveTo(-16, -14 + tailWag, -28, -8 + tailWag * 1.5);
+          ctx.quadraticCurveTo(-14, -6, -4, -4);
+          ctx.fillStyle = darkColor;
+          ctx.fill();
+
+          // Back leg
+          const legPhase = runFrame;
+          const backLegAngle = grounded ? Math.sin(legPhase) * 0.6 : 0.4;
+          ctx.save();
+          ctx.translate(0, -6);
+          ctx.rotate(-backLegAngle);
+          ctx.fillStyle = darkColor;
+          ctx.beginPath();
+          ctx.ellipse(0, 5, 2.5, 7, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Torso / Body (48px visual height)
+          ctx.beginPath();
+          ctx.moveTo(-6, -8);
+          ctx.quadraticCurveTo(2, -24, 14, -18);
+          ctx.quadraticCurveTo(22, -14, 24, -8);
+          ctx.quadraticCurveTo(16, -3, 4, -4);
+          ctx.quadraticCurveTo(-2, -3, -6, -8);
+          ctx.closePath();
+          ctx.fillStyle = mainColor;
+          ctx.fill();
+
+          // Dorsal Crest
+          ctx.beginPath();
+          ctx.moveTo(0, -18);
+          ctx.lineTo(2, -22);
+          ctx.lineTo(5, -18);
+          ctx.lineTo(8, -21);
+          ctx.lineTo(11, -17);
+          ctx.strokeStyle = brightColor;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // Eye
+          ctx.fillStyle = eyeColor;
+          ctx.beginPath();
+          ctx.arc(17, -13, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#090a0f';
+          ctx.beginPath();
+          ctx.arc(17.8, -13, 1.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Front leg
+          const frontLegAngle = grounded ? Math.sin(legPhase + Math.PI) * 0.6 : -0.3;
+          ctx.save();
+          ctx.translate(8, -5);
+          ctx.rotate(-frontLegAngle);
+          ctx.fillStyle = mainColor;
+          ctx.beginPath();
+          ctx.ellipse(0, 6, 2.5, 7.5, -0.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        if (isLeader) {
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(10, isDucking ? -6 : -11, 15, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      // --- 10. CANVAS RENDERING: FLYING BIRD (Original Flyer) ---
+      function drawFlyingBird(ctx, screenX, bottomY, groundY, flapPhase) {
+        ctx.save();
+        const birdY = groundY - bottomY - 14; // Center Y of bird (height 28)
+        ctx.translate(screenX + 20, birdY);
+
+        // Flapping wing cycle
+        const wingWing = Math.sin(flapPhase) * 12;
+
+        // Far wing
+        ctx.beginPath();
+        ctx.moveTo(-4, -2);
+        ctx.lineTo(-8, -14 - wingWing * 0.5);
+        ctx.lineTo(6, -2);
+        ctx.fillStyle = '#78350f';
+        ctx.fill();
+
+        // Sleek bird body (40px wide, 28px tall)
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);                 // tail
+        ctx.quadraticCurveTo(-6, -7, 6, -6); // back
+        ctx.lineTo(16, -2);                 // beak tip
+        ctx.lineTo(8, 3);                   // throat
+        ctx.quadraticCurveTo(-2, 7, -12, 4); // underbelly
+        ctx.closePath();
+        ctx.fillStyle = '#9a3412';
+        ctx.fill();
+        ctx.strokeStyle = '#431407';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Near wing
+        ctx.beginPath();
+        ctx.moveTo(-2, 0);
+        ctx.quadraticCurveTo(2, -16 + wingWing, 10, -18 + wingWing);
+        ctx.lineTo(4, 2);
+        ctx.closePath();
+        ctx.fillStyle = '#c2410c';
+        ctx.fill();
+        ctx.strokeStyle = '#431407';
+        ctx.stroke();
+
+        // Eye
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(8, -2, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#090a0f';
+        ctx.beginPath();
+        ctx.arc(9, -2, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // --- 11. CANVAS RENDERING: CACTI WITH SEASONAL PALETTES ---
+      function drawCactus(ctx, screenX, groundY, width, height, cluster, palette, sway) {
+        ctx.save();
+        ctx.fillStyle = palette.cactusTrunk;
+        ctx.strokeStyle = palette.cactusOutline;
+        ctx.lineWidth = 1.5;
+
+        // Apply wind sway
+        ctx.translate(screenX + width / 2, groundY);
+        ctx.rotate(sway);
+        ctx.translate(-(screenX + width / 2), -groundY);
+
+        if (cluster === 1) {
+          drawSingleCactus(ctx, screenX, groundY, width, height, true, palette);
+        } else if (cluster === 2) {
+          const w1 = width * 0.52;
+          const w2 = width * 0.48;
+          drawSingleCactus(ctx, screenX, groundY, w1, height, true, palette);
+          drawSingleCactus(ctx, screenX + w1 - 2, groundY, w2, height * 0.72, false, palette);
+        } else {
+          const w = width / 3;
+          drawSingleCactus(ctx, screenX, groundY, w + 2, height * 0.65, false, palette);
+          drawSingleCactus(ctx, screenX + w, groundY, w + 4, height, true, palette);
+          drawSingleCactus(ctx, screenX + w * 2 + 2, groundY, w + 2, height * 0.8, false, palette);
+        }
+
+        ctx.restore();
+      }
+
+      function drawSingleCactus(ctx, x, groundY, w, h, hasArms, palette) {
+        const r = w / 2;
+        const topY = groundY - h;
+
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x, topY + r);
+        ctx.arc(x + r, topY + r, r, Math.PI, 0, false);
+        ctx.lineTo(x + w, groundY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (hasArms && h > 45) {
+          const armY = topY + h * 0.42;
+          const armH = h * 0.32;
+          const armW = w * 0.45;
+
+          ctx.beginPath();
+          ctx.moveTo(x, armY);
+          ctx.lineTo(x - armW, armY);
+          ctx.lineTo(x - armW, armY - armH + armW);
+          ctx.arc(x - armW + armW / 2, armY - armH + armW, armW / 2, Math.PI, 0, false);
+          ctx.lineTo(x - armW + armW, armY + armW);
+          ctx.lineTo(x, armY + armW);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Ribs
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(x + r, topY + r);
+        ctx.lineTo(x + r, groundY - 2);
+        ctx.stroke();
+
+        // Spring Flowers
+        if (palette.hasFlowers) {
+          ctx.fillStyle = palette.flowerColor;
+          ctx.beginPath();
+          ctx.arc(x + r, topY + 2, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Winter Snow Cap
+        if (palette.snowCover > 0) {
+          ctx.fillStyle = '#e2e8f0';
+          ctx.beginPath();
+          ctx.ellipse(x + r, topY + 2, r + 1, 3.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // --- 12. EVOLUTIONARY ENGINE & POPULATION MANAGEMENT ---
+      function initPopulation() {
+        population = [];
+        for (let i = 0; i < config.population; i++) {
+          population.push(new Runner());
+        }
+      }
+
+      function startGeneration() {
+        worldSpeed = config.startSpeed;
+        worldDistance = 0;
+        obstacles = generateObstacles(generationSeed + currentGeneration * 997);
+
+        for (let i = 0; i < population.length; i++) {
+          population[i].reset();
+        }
+
+        dustPuffs = [];
+        particles = [];
+      }
+
+      function evolvePopulation() {
+        population.sort((a, b) => b.fitness - a.fitness);
+
+        const bestRunner = population[0];
+        const bestCleared = bestRunner.obstaclesCleared;
+        let sumCleared = 0;
+        for (let i = 0; i < population.length; i++) {
+          sumCleared += population[i].obstaclesCleared;
+        }
+        const avgCleared = sumCleared / population.length;
+
+        history.push({
+          generation: currentGeneration,
+          bestCleared: bestCleared,
+          avgCleared: avgCleared,
+          record: Math.max(allTimeRecord, bestCleared)
+        });
+
+        if (bestCleared > allTimeRecord) {
+          allTimeRecord = bestCleared;
+        }
+
+        if (bestCleared >= 20 && !firstClearAchieved) {
+          firstClearAchieved = true;
+          triggerCelebration('First Clear! 20+ Obstacles Cleared');
+          const b1 = document.getElementById('badgeFirstClear');
+          if (b1) b1.classList.add('achieved');
+        }
+
+        if (bestCleared >= 80 && !marathonAchieved) {
+          marathonAchieved = true;
+          triggerCelebration('Marathon! Survived All 80 Obstacles');
+          const b2 = document.getElementById('badgeMarathon');
+          if (b2) b2.classList.add('achieved');
+        }
+
+        const nextPop = [];
+        const eliteCount = Math.min(config.elites, population.length);
+        for (let i = 0; i < eliteCount; i++) {
+          nextPop.push(new Runner(population[i].brain.clone()));
+        }
+
+        const parentPoolSize = Math.min(config.parentPool, population.length);
+        const childrenNeeded = config.population - nextPop.length;
+
+        let normalStep = config.mutationSize;
+        if (config.shrinkMutation) {
+          const ratio = clamp(bestCleared / config.obstaclesPerGeneration, 0, 1);
+          normalStep = Math.max(0.03, config.mutationSize * (1.0 - ratio));
+        }
+
+        for (let c = 0; c < childrenNeeded; c++) {
+          const idxA = Math.floor(Math.random() * parentPoolSize);
+          let idxB = Math.floor(Math.random() * parentPoolSize);
+          if (parentPoolSize > 1 && idxB === idxA) {
+            idxB = (idxA + 1) % parentPoolSize;
+          }
+
+          const brainA = population[idxA].brain;
+          const brainB = population[idxB].brain;
+          const childWeights = new Float32Array(TOTAL_WEIGHTS);
+
+          const crossPoint = Math.floor(Math.random() * (TOTAL_WEIGHTS - 2)) + 1;
+          for (let w = 0; w < TOTAL_WEIGHTS; w++) {
+            childWeights[w] = w < crossPoint ? brainA.weights[w] : brainB.weights[w];
+          }
+
+          const isBigJump = Math.random() < config.bigJumpChance;
+          const stepSize = isBigJump ? 0.60 : normalStep;
+
+          for (let w = 0; w < TOTAL_WEIGHTS; w++) {
+            if (Math.random() < config.mutationChance) {
+              childWeights[w] += gaussianRandom() * stepSize;
+            }
+          }
+
+          nextPop.push(new Runner(new NeuralNetwork(childWeights)));
+        }
+
+        population = nextPop;
+        currentGeneration++;
+        startGeneration();
+      }
+
+      function triggerCelebration(msg) {
+        const toast = document.getElementById('celebrationToast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3200);
+      }
+
+      // --- 13. SIMULATION STEP & TICK ---
+      function stepSimulation() {
+        // Effective speed accounts for weather gusts if enabled
+        const effectiveSpeed = Math.max(3.0, Math.min(MAX_SPEED_CAP + 1.5, worldSpeed + atmosphere.windGust));
+        worldDistance += effectiveSpeed;
+        worldSpeed = Math.min(MAX_SPEED_CAP, worldSpeed + config.speedUp);
+
+        // Update atmosphere & birds flight
+        updateAtmosphere(effectiveSpeed);
+
+        // Birds fly 1.5 px/frame faster than ground scrolls once entering the screen
+        for (let i = 0; i < obstacles.length; i++) {
+          const obs = obstacles[i];
+          if (obs.isBird) {
+            if (!obs.active && (obs.x - worldDistance) <= 920) {
+              obs.active = true;
+            }
+            if (obs.active) {
+              obs.flightOffset += 1.5;
+            }
+          }
+        }
+
+        let aliveCount = 0;
+        let bestObstaclesCleared = 0;
+        let leadRunner = null;
+
+        for (let i = 0; i < population.length; i++) {
+          const r = population[i];
+          if (r.alive) {
+            r.update(effectiveSpeed);
+            if (r.alive) {
+              aliveCount++;
+              if (r.obstaclesCleared > bestObstaclesCleared || !leadRunner) {
+                bestObstaclesCleared = r.obstaclesCleared;
+                leadRunner = r;
+              }
+            }
+          }
+        }
+
+        for (let i = 0; i < population.length; i++) {
+          population[i].isLeader = (population[i] === leadRunner);
+        }
+
+        updateFX(920, 460);
+
+        const generationFinished = (aliveCount === 0) || (bestObstaclesCleared >= config.obstaclesPerGeneration);
+        if (generationFinished) {
+          evolvePopulation();
+        }
+      }
+
+      // --- 14. CANVAS RENDERING: MAIN SIMULATION ---
+      const simCanvas = document.getElementById('simCanvas');
+      const simCtx = simCanvas ? simCanvas.getContext('2d') : null;
+
+      function renderSimulation() {
+        if (!simCtx) return;
+
+        const w = simCanvas.width;
+        const h = simCanvas.height;
+        const palette = SEASON_PALETTES[atmosphere.currentSeason] || SEASON_PALETTES.spring;
+        const dayNight = getDayNightPhase();
+
+        // 1. Sky Rendering: Smoothly blends between Night and Day palette
+        const dayFactor = dayNight.factor;
+        simCtx.fillStyle = dayFactor > 0.5 ? palette.skyDay : palette.skyNight;
+        simCtx.fillRect(0, 0, w, h);
+
+        // Soft lightning glow during heavy rain
+        if (atmosphere.lightningAlpha > 0) {
+          simCtx.fillStyle = `rgba(255, 255, 255, ${atmosphere.lightningAlpha})`;
+          simCtx.fillRect(0, 0, w, h);
+        }
+
+        // 2. Stars at night
+        if (dayFactor < 0.8) {
+          const starAlphaBase = (1.0 - dayFactor);
+          const now = Date.now() * 0.002;
+          simCtx.fillStyle = '#ffffff';
+          for (let i = 0; i < stars.length; i++) {
+            const s = stars[i];
+            const a = starAlphaBase * s.alpha * (0.7 + 0.3 * Math.sin(now + s.phase));
+            simCtx.globalAlpha = a;
+            simCtx.fillRect(s.x, s.y, s.size, s.size);
+          }
+          simCtx.globalAlpha = 1.0;
+
+          // Moon crossing sky with rotating phase
+          const nightProgress = dayNight.progress || 0.5;
+          const moonX = 120 + nightProgress * (w - 240);
+          const moonY = 60 + Math.sin(nightProgress * Math.PI) * -30;
+          drawMoon(simCtx, moonX, moonY, Math.floor(atmosphere.ambientClock / 5400) % 8);
+        } else {
+          // Pale Sun during day
+          const dayProgress = dayNight.progress || 0.5;
+          const sunX = 100 + dayProgress * (w - 200);
+          const sunY = 70 + Math.sin(dayProgress * Math.PI) * -35;
+          simCtx.fillStyle = 'rgba(254, 240, 138, 0.65)';
+          simCtx.beginPath();
+          simCtx.arc(sunX, sunY, 18, 0, Math.PI * 2);
+          simCtx.fill();
+        }
+
+        // 3. Parallax Layer 1: Mountains
+        drawParallaxMountains(simCtx, w, h, worldDistance * 0.08, dayFactor > 0.5 ? '#151f28' : '#0d1017', 160);
+
+        // Fog layer reduces contrast of far mountains
+        if (atmosphere.currentWeather === 'fog') {
+          simCtx.fillStyle = 'rgba(148, 163, 184, 0.22)';
+          simCtx.fillRect(0, GROUND_Y - 220, w, 220);
+        }
+
+        // 4. Parallax Layer 2: Mid dunes
+        drawParallaxDunes(simCtx, w, h, worldDistance * 0.25, dayFactor > 0.5 ? '#1a2732' : '#121622', 90);
+
+        // 5. Speed lines
+        if (worldSpeed > 8.0) {
+          const density = (worldSpeed - 8.0) / (MAX_SPEED_CAP - 8.0);
+          drawSpeedLines(simCtx, w, h, density);
+        }
+
+        // 6. Ground strip
+        simCtx.fillStyle = palette.ground;
+        simCtx.fillRect(0, GROUND_Y, w, h - GROUND_Y);
+
+        simCtx.strokeStyle = '#2d354d';
+        simCtx.lineWidth = 2;
+        simCtx.beginPath();
+        simCtx.moveTo(0, GROUND_Y);
+        simCtx.lineTo(w, GROUND_Y);
+        simCtx.stroke();
+
+        // Snow dusting on ground in winter
+        if (palette.snowCover > 0) {
+          simCtx.fillStyle = 'rgba(226, 232, 240, 0.45)';
+          simCtx.fillRect(0, GROUND_Y, w, 3);
+        }
+
+        // Scrolling ground dashes
+        simCtx.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+        simCtx.lineWidth = 1.5;
+        const dashOffset = (worldDistance % 40);
+        for (let gx = -dashOffset; gx < w; gx += 40) {
+          simCtx.beginPath();
+          simCtx.moveTo(gx, GROUND_Y + 8);
+          simCtx.lineTo(gx + 12, GROUND_Y + 8);
+          simCtx.moveTo(gx + 20, GROUND_Y + 18);
+          simCtx.lineTo(gx + 30, GROUND_Y + 18);
+          simCtx.stroke();
+        }
+
+        // 7. Obstacles (Cacti & Flying Birds)
+        const flapPhase = (Date.now() * 0.015);
+        for (let i = 0; i < obstacles.length; i++) {
+          const obs = obstacles[i];
+          const screenX = obs.x - worldDistance - obs.flightOffset;
+          if (screenX + obs.width > -40 && screenX < w + 40) {
+            if (obs.isBird) {
+              drawFlyingBird(simCtx, screenX, obs.bottomY, GROUND_Y, flapPhase + obs.id);
+            } else {
+              drawCactus(simCtx, screenX, GROUND_Y, obs.width, obs.height, obs.cluster || 1, palette, atmosphere.cactusSway);
+            }
+          }
+        }
+
+        // 8. Dust puffs
+        for (let i = 0; i < dustPuffs.length; i++) {
+          const d = dustPuffs[i];
+          simCtx.fillStyle = `rgba(148, 163, 184, ${d.alpha})`;
+          simCtx.beginPath();
+          simCtx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+          simCtx.fill();
+        }
+
+        // 9. Sensory Ray from Leader to Next Obstacle
+        let leadRunner = null;
+        for (let i = 0; i < population.length; i++) {
+          if (population[i].alive && population[i].isLeader) {
+            leadRunner = population[i];
+            break;
+          }
+        }
+
+        if (leadRunner && leadRunner.lastNextObstacle) {
+          const nextObs = leadRunner.lastNextObstacle;
+          const obsLeft = nextObs.x - worldDistance - nextObs.flightOffset;
+          if (obsLeft > RUNNER_X) {
+            simCtx.save();
+            simCtx.strokeStyle = '#f59e0b';
+            simCtx.lineWidth = 1.5;
+            simCtx.setLineDash([5, 5]);
+            simCtx.lineDashOffset = -(Date.now() * 0.03) % 10;
+            simCtx.beginPath();
+            simCtx.moveTo(RUNNER_X + 26, GROUND_Y - leadRunner.y - (leadRunner.isDucking ? 10 : 20));
+            simCtx.lineTo(obsLeft, GROUND_Y - nextObs.bottomY - nextObs.height / 2);
+            simCtx.stroke();
+            simCtx.restore();
+          }
+        }
+
+        // 10. Runners Swarm (Ghost Pack + Vibrant Leader)
+        for (let i = 0; i < population.length; i++) {
+          const r = population[i];
+          if (r.alive && !r.isLeader) {
+            drawLizard(simCtx, RUNNER_X, GROUND_Y - r.y, r.vy, r.grounded, r.isDucking, r.runFrame, false, 0.28);
+          }
+        }
+
+        if (leadRunner) {
+          drawLizard(simCtx, RUNNER_X, GROUND_Y - leadRunner.y, leadRunner.vy, leadRunner.grounded, leadRunner.isDucking, leadRunner.runFrame, true, 1.0);
+        }
+
+        // 11. Death fragment particles
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          simCtx.save();
+          simCtx.translate(p.x, p.y);
+          simCtx.rotate(p.rotation);
+          simCtx.globalAlpha = p.alpha;
+          simCtx.fillStyle = p.color;
+          simCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          simCtx.restore();
+        }
+
+        // 12. Weather Particles (Rain, Snow, Wind/Leaves)
+        drawWeatherParticles(simCtx);
+      }
+
+      function drawMoon(ctx, x, y, phase) {
+        ctx.save();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shadow for crescent/quarter moon phases
+        if (phase !== 4) { // 4 = full moon
+          ctx.fillStyle = '#07090e';
+          ctx.beginPath();
+          const shadowOffset = (phase - 4) * 3.5;
+          ctx.arc(x + shadowOffset, y, 13.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawWeatherParticles(ctx) {
+        ctx.save();
+        for (let i = 0; i < weatherParticles.length; i++) {
+          const wp = weatherParticles[i];
+          if (wp.type === 'rain') {
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(wp.x, wp.y);
+            ctx.lineTo(wp.x + wp.vx * 1.5, wp.y + wp.len);
+            ctx.stroke();
+          } else if (wp.type === 'snow') {
+            ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+            ctx.beginPath();
+            ctx.arc(wp.x, wp.y, wp.size, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (wp.type === 'leaf' || wp.type === 'dust') {
+            ctx.fillStyle = wp.color;
+            ctx.save();
+            ctx.translate(wp.x, wp.y);
+            ctx.rotate(wp.rot += wp.vRot);
+            ctx.fillRect(-wp.size / 2, -wp.size / 4, wp.size, wp.size / 2);
+            ctx.restore();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawParallaxMountains(ctx, w, h, offset, color, peakHeight) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        const step = 90;
+        const startX = -(offset % step);
+        for (let x = startX - step; x <= w + step * 2; x += step) {
+          const py = GROUND_Y - peakHeight - Math.sin((x + offset) * 0.005) * 40;
+          ctx.lineTo(x, py);
+        }
+        ctx.lineTo(w, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawParallaxDunes(ctx, w, h, offset, color, height) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        const step = 60;
+        const startX = -(offset % step);
+        for (let x = startX - step; x <= w + step * 2; x += step) {
+          const py = GROUND_Y - height + Math.cos((x + offset) * 0.012) * 24;
+          ctx.lineTo(x, py);
+        }
+        ctx.lineTo(w, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawSpeedLines(ctx, w, h, density) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(245, 158, 11, ${density * 0.35})`;
+        ctx.lineWidth = 1;
+        const lineCount = Math.floor(density * 12);
+        for (let i = 0; i < lineCount; i++) {
+          const ly = 30 + (i * 24) % (GROUND_Y - 100);
+          const lx = ((worldDistance * 1.5 + i * 180) % (w + 200)) - 100;
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(lx + 60 + density * 80, ly);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // --- 15. TELEMETRY, SLIDING GRAPH & HUD ---
+      const graphCanvas = document.getElementById('graphCanvas');
+      const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+      function renderGraph() {
+        if (!graphCtx) return;
+
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+
+        graphCtx.fillStyle = '#090b11';
+        graphCtx.fillRect(0, 0, w, h);
+
+        const padLeft = 24;
+        const padRight = 12;
+        const padTop = 14;
+        const padBottom = 20;
+        const plotW = w - padLeft - padRight;
+        const plotH = h - padTop - padBottom;
+
+        const maxVal = config.obstaclesPerGeneration; // 80
+        const gridMarks = [20, 40, 60, 80];
+
+        graphCtx.strokeStyle = '#171b28';
+        graphCtx.lineWidth = 1;
+        graphCtx.fillStyle = '#545b6e';
+        graphCtx.font = '9px monospace';
+        graphCtx.textAlign = 'right';
+
+        for (let i = 0; i < gridMarks.length; i++) {
+          const val = gridMarks[i];
+          const y = padTop + plotH * (1.0 - val / maxVal);
+          graphCtx.beginPath();
+          graphCtx.moveTo(padLeft, y);
+          graphCtx.lineTo(w - padRight, y);
+          graphCtx.stroke();
+          graphCtx.fillText(String(val), padLeft - 4, y + 3);
+        }
+
+        if (history.length === 0) return;
+
+        const WINDOW_SIZE = 30;
+        const startIndex = Math.max(0, history.length - WINDOW_SIZE);
+        const windowData = history.slice(startIndex);
+        const n = windowData.length;
+
+        function getX(idx) {
+          if (n <= 1) return padLeft;
+          return padLeft + (idx / (WINDOW_SIZE - 1)) * plotW;
+        }
+
+        function getY(val) {
+          return padTop + plotH * (1.0 - clamp(val / maxVal, 0, 1));
+        }
+
+        // Draw Average line (Slate)
+        graphCtx.strokeStyle = '#64748b';
+        graphCtx.lineWidth = 1.8;
+        graphCtx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const x = getX(i);
+          const y = getY(windowData[i].avgCleared);
+          if (i === 0) graphCtx.moveTo(x, y);
+          else graphCtx.lineTo(x, y);
+        }
+        graphCtx.stroke();
+
+        // Draw Best line (Amber)
+        graphCtx.strokeStyle = '#f59e0b';
+        graphCtx.lineWidth = 2.2;
+        graphCtx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const x = getX(i);
+          const y = getY(windowData[i].bestCleared);
+          if (i === 0) graphCtx.moveTo(x, y);
+          else graphCtx.lineTo(x, y);
+        }
+        graphCtx.stroke();
+
+        if (n > 0) {
+          const lastX = getX(n - 1);
+          const lastBestY = getY(windowData[n - 1].bestCleared);
+          const lastAvgY = getY(windowData[n - 1].avgCleared);
+
+          graphCtx.fillStyle = '#f59e0b';
+          graphCtx.beginPath();
+          graphCtx.arc(lastX, lastBestY, 3.5, 0, Math.PI * 2);
+          graphCtx.fill();
+
+          graphCtx.fillStyle = '#94a3b8';
+          graphCtx.beginPath();
+          graphCtx.arc(lastX, lastAvgY, 3, 0, Math.PI * 2);
+          graphCtx.fill();
+        }
+      }
+
+      function updateHUD() {
+        let alive = 0;
+        let bestCleared = 0;
+        for (let i = 0; i < population.length; i++) {
+          if (population[i].alive) {
+            alive++;
+            if (population[i].obstaclesCleared > bestCleared) {
+              bestCleared = population[i].obstaclesCleared;
+            }
+          }
+        }
+
+        const elGen = document.getElementById('hudGeneration');
+        if (elGen) elGen.textContent = String(currentGeneration);
+
+        const elAlive = document.getElementById('hudAlive');
+        if (elAlive) elAlive.textContent = `${alive} / ${config.population}`;
+
+        const elScore = document.getElementById('hudLeaderScore');
+        if (elScore) elScore.textContent = `${bestCleared} / ${config.obstaclesPerGeneration}`;
+
+        const elSpeed = document.getElementById('hudSpeed');
+        if (elSpeed) elSpeed.textContent = `${worldSpeed.toFixed(1)} px/f`;
+
+        if (history.length > 0) {
+          const last = history[history.length - 1];
+          const elBest = document.getElementById('statLastBest');
+          if (elBest) elBest.textContent = `${last.bestCleared} / ${config.obstaclesPerGeneration}`;
+
+          const elAvg = document.getElementById('statAverage');
+          if (elAvg) elAvg.textContent = `${last.avgCleared.toFixed(1)} / ${config.obstaclesPerGeneration}`;
+        }
+
+        const elRecord = document.getElementById('statAllTime');
+        if (elRecord) elRecord.textContent = `${allTimeRecord} / ${config.obstaclesPerGeneration}`;
+
+        const elTotalGens = document.getElementById('statTotalGens');
+        if (elTotalGens) elTotalGens.textContent = String(currentGeneration);
+      }
+
+      // --- 16. MODAL: NETWORK DIAGRAM & LIVE MINI SCENE ---
+      const networkCanvas = document.getElementById('networkCanvas');
+      const netCtx = networkCanvas ? networkCanvas.getContext('2d') : null;
+
+      const miniSimCanvas = document.getElementById('miniSimCanvas');
+      const miniCtx = miniSimCanvas ? miniSimCanvas.getContext('2d') : null;
+
+      let modalOpen = false;
+      let miniWorldDist = 0;
+      let miniRunnerY = 0;
+      let miniRunnerVy = 0;
+      let miniGrounded = true;
+      let miniDucking = false;
+      let miniObstacleCycle = 0;
+
+      function renderNetworkDiagram(brain) {
+        if (!netCtx) return;
+        const w = networkCanvas.width;
+        const h = networkCanvas.height;
+
+        netCtx.fillStyle = '#0b0d14';
+        netCtx.fillRect(0, 0, w, h);
+
+        const xIn = 45;
+        const xHid = 200;
+        const xOut = 350;
+
+        const inputLabels = ['dist', 'width', 'height', 'bottom', 'bird?', 'gap', 'speed', 'elev', 'vy', 'duck?'];
+        const inputY = [];
+        for (let i = 0; i < NUM_INPUTS; i++) {
+          inputY.push(16 + i * (h - 32) / (NUM_INPUTS - 1));
+        }
+
+        const hiddenY = [];
+        for (let j = 0; j < NUM_HIDDEN; j++) {
+          hiddenY.push(16 + j * (h - 32) / (NUM_HIDDEN - 1));
+        }
+
+        const outputY = [h * 0.35, h * 0.65];
+        const outputLabels = ['JUMP', 'DUCK'];
+
+        // Draw connections Input -> Hidden
+        let ptr = 0;
+        for (let j = 0; j < NUM_HIDDEN; j++) {
+          for (let i = 0; i < NUM_INPUTS; i++) {
+            const weight = brain ? brain.weights[ptr++] : 0;
+            const alpha = clamp(Math.abs(weight), 0.08, 0.85);
+            netCtx.strokeStyle = weight >= 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+            netCtx.lineWidth = clamp(Math.abs(weight) * 1.2, 0.5, 2.5);
+            netCtx.beginPath();
+            netCtx.moveTo(xIn, inputY[i]);
+            netCtx.lineTo(xHid, hiddenY[j]);
+            netCtx.stroke();
+          }
+        }
+
+        // Advance past hidden biases
+        ptr = (NUM_INPUTS * NUM_HIDDEN) + NUM_HIDDEN;
+
+        // Draw connections Hidden -> Outputs
+        for (let o = 0; o < NUM_OUTPUTS; o++) {
+          for (let j = 0; j < NUM_HIDDEN; j++) {
+            const weight = brain ? brain.weights[ptr++] : 0;
+            const alpha = clamp(Math.abs(weight), 0.08, 0.85);
+            netCtx.strokeStyle = weight >= 0 ? `rgba(245, 158, 11, ${alpha})` : `rgba(100, 116, 139, ${alpha})`;
+            netCtx.lineWidth = clamp(Math.abs(weight) * 1.2, 0.5, 2.5);
+            netCtx.beginPath();
+            netCtx.moveTo(xHid, hiddenY[j]);
+            netCtx.lineTo(xOut, outputY[o]);
+            netCtx.stroke();
+          }
+        }
+
+        // Draw Nodes
+        // Input nodes
+        for (let i = 0; i < NUM_INPUTS; i++) {
+          const val = brain ? brain.lastInputs[i] : 0;
+          netCtx.fillStyle = '#151824';
+          netCtx.strokeStyle = '#202638';
+          netCtx.lineWidth = 1.5;
+          netCtx.beginPath();
+          netCtx.arc(xIn, inputY[i], 6, 0, Math.PI * 2);
+          netCtx.fill();
+          netCtx.stroke();
+
+          netCtx.fillStyle = `rgba(245, 158, 11, ${clamp(Math.abs(val), 0.2, 1.0)})`;
+          netCtx.beginPath();
+          netCtx.arc(xIn, inputY[i], 3, 0, Math.PI * 2);
+          netCtx.fill();
+
+          netCtx.fillStyle = '#8e95a5';
+          netCtx.font = '8px monospace';
+          netCtx.textAlign = 'right';
+          netCtx.fillText(inputLabels[i], xIn - 10, inputY[i] + 3);
+        }
+
+        // Hidden nodes
+        for (let j = 0; j < NUM_HIDDEN; j++) {
+          const val = brain ? brain.lastHidden[j] : 0;
+          netCtx.fillStyle = '#151824';
+          netCtx.strokeStyle = '#202638';
+          netCtx.lineWidth = 1.5;
+          netCtx.beginPath();
+          netCtx.arc(xHid, hiddenY[j], 6, 0, Math.PI * 2);
+          netCtx.fill();
+          netCtx.stroke();
+
+          netCtx.fillStyle = val >= 0 ? `rgba(245, 158, 11, ${clamp(Math.abs(val), 0.2, 1.0)})` : `rgba(100, 116, 139, ${clamp(Math.abs(val), 0.2, 1.0)})`;
+          netCtx.beginPath();
+          netCtx.arc(xHid, hiddenY[j], 3, 0, Math.PI * 2);
+          netCtx.fill();
+        }
+
+        // Output nodes (2 outputs)
+        for (let o = 0; o < NUM_OUTPUTS; o++) {
+          const outVal = brain ? brain.lastOutputs[o] : 0;
+          netCtx.fillStyle = '#151824';
+          netCtx.strokeStyle = outVal > 0 ? '#f59e0b' : '#202638';
+          netCtx.lineWidth = 2;
+          netCtx.beginPath();
+          netCtx.arc(xOut, outputY[o], 9, 0, Math.PI * 2);
+          netCtx.fill();
+          netCtx.stroke();
+
+          netCtx.fillStyle = outVal > 0 ? '#fbbf24' : '#545b6e';
+          netCtx.beginPath();
+          netCtx.arc(xOut, outputY[o], 5, 0, Math.PI * 2);
+          netCtx.fill();
+
+          netCtx.fillStyle = outVal > 0 ? '#fbbf24' : '#8e95a5';
+          netCtx.font = '9px var(--font-display)';
+          netCtx.textAlign = 'left';
+          netCtx.fillText(`${outputLabels[o]}: ${outVal > 0 ? 'ON' : 'off'}`, xOut + 14, outputY[o] + 3);
+        }
+      }
+
+      function renderMiniSim(brain) {
+        if (!miniCtx) return;
+        const w = miniSimCanvas.width;
+        const h = miniSimCanvas.height;
+        const mGroundY = 185;
+
+        miniCtx.fillStyle = '#0b0d14';
+        miniCtx.fillRect(0, 0, w, h);
+
+        miniWorldDist += 3.5;
+        const cycleLength = 360;
+        const phase = Math.floor(miniWorldDist / cycleLength) % 4; // 0: cactus, 1: low bird, 2: mid bird, 3: high bird
+        const obstacleScreenX = w - (miniWorldDist % cycleLength);
+
+        // Ground line
+        miniCtx.strokeStyle = '#202638';
+        miniCtx.lineWidth = 2;
+        miniCtx.beginPath();
+        miniCtx.moveTo(0, mGroundY);
+        miniCtx.lineTo(w, mGroundY);
+        miniCtx.stroke();
+
+        let obsType = 'cactus';
+        let obsBottom = 0;
+        let obsHeight = 50;
+        let obsWidth = 26;
+        let obsIsBird = false;
+
+        if (phase === 0) {
+          obsType = 'cactus';
+          drawCactus(miniCtx, obstacleScreenX, mGroundY, 26, 50, 1, SEASON_PALETTES.spring, 0);
+        } else if (phase === 1) {
+          obsType = 'low bird';
+          obsIsBird = true;
+          obsBottom = 10;
+          obsHeight = 28;
+          obsWidth = 40;
+          drawFlyingBird(miniCtx, obstacleScreenX, 10, mGroundY, Date.now() * 0.015);
+        } else if (phase === 2) {
+          obsType = 'middle bird';
+          obsIsBird = true;
+          obsBottom = 30;
+          obsHeight = 28;
+          obsWidth = 40;
+          drawFlyingBird(miniCtx, obstacleScreenX, 30, mGroundY, Date.now() * 0.015);
+        } else {
+          obsType = 'high bird';
+          obsIsBird = true;
+          obsBottom = 70;
+          obsHeight = 28;
+          obsWidth = 40;
+          drawFlyingBird(miniCtx, obstacleScreenX, 70, mGroundY, Date.now() * 0.015);
+        }
+
+        // Mini runner physics
+        const runnerScreenX = 60;
+        if (!miniGrounded) {
+          let effG = config.gravity;
+          if (miniDucking) effG *= 3.0;
+          miniRunnerVy -= effG;
+          miniRunnerY += miniRunnerVy;
+          if (miniRunnerY <= 0) {
+            miniRunnerY = 0;
+            miniRunnerVy = 0;
+            miniGrounded = true;
+          }
+        }
+
+        // Mini inputs
+        const distPx = Math.max(0, obstacleScreenX - (runnerScreenX + 28));
+        const dNorm = clamp(distPx / 300.0, 0, 1);
+        const wNorm = clamp(obsWidth / 60.0, 0, 1);
+        const hNorm = clamp(obsHeight / 70.0, 0, 1);
+        const bNorm = clamp(obsBottom / 70.0, 0, 1);
+        const birdNorm = obsIsBird ? 1.0 : 0.0;
+        const gNorm = 0.8;
+        const sNorm = 0.5;
+        const yNorm = clamp(miniRunnerY / 100.0, 0, 1);
+        const vyNorm = clamp(miniRunnerVy / config.jumpPower, -1, 1);
+        const duckNorm = miniDucking ? 1.0 : 0.0;
+
+        const miniInputs = [dNorm, wNorm, hNorm, bNorm, birdNorm, gNorm, sNorm, yNorm, vyNorm, duckNorm];
+        let jumpOut = -0.5, duckOut = -0.5;
+
+        if (brain) {
+          const outputs = brain.forward(miniInputs);
+          jumpOut = outputs[0];
+          duckOut = outputs[1];
+
+          if (miniGrounded) {
+            miniDucking = duckOut > 0;
+            if (jumpOut > 0 && !miniDucking) {
+              miniRunnerVy = config.jumpPower;
+              miniGrounded = false;
+            }
+          }
+        }
+
+        drawLizard(miniCtx, runnerScreenX, mGroundY - miniRunnerY, miniRunnerVy, miniGrounded, miniDucking, Date.now() * 0.015, true, 1.0);
+
+        // Sensory ray
+        miniCtx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+        miniCtx.lineWidth = 1;
+        miniCtx.setLineDash([3, 3]);
+        miniCtx.beginPath();
+        miniCtx.moveTo(runnerScreenX + 24, mGroundY - miniRunnerY - (miniDucking ? 8 : 18));
+        miniCtx.lineTo(obstacleScreenX, mGroundY - obsBottom - obsHeight / 2);
+        miniCtx.stroke();
+        miniCtx.setLineDash([]);
+
+        // Action annotation text
+        miniCtx.fillStyle = '#94a3b8';
+        miniCtx.font = '9px monospace';
+        miniCtx.textAlign = 'left';
+        miniCtx.fillText(`Obstacle: ${obsType.toUpperCase()}`, 10, 18);
+
+        // Update modal readouts
+        const setTxt = (id, txt) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = txt;
+        };
+        setTxt('tele-dist', dNorm.toFixed(2));
+        setTxt('tele-width', wNorm.toFixed(2));
+        setTxt('tele-height', hNorm.toFixed(2));
+        setTxt('tele-bot', bNorm.toFixed(2));
+        setTxt('tele-bird', birdNorm.toFixed(1));
+        setTxt('tele-gap', gNorm.toFixed(2));
+        setTxt('tele-speed', sNorm.toFixed(2));
+        setTxt('tele-y', yNorm.toFixed(2));
+        setTxt('tele-vy', vyNorm.toFixed(2));
+        setTxt('tele-ducking', duckNorm.toFixed(1));
+        setTxt('tele-out-jump', (jumpOut >= 0 ? '+' : '') + jumpOut.toFixed(2));
+        setTxt('tele-out-duck', (duckOut >= 0 ? '+' : '') + duckOut.toFixed(2));
+      }
+
+      // --- 17. DOM BINDINGS, PRESETS & ATMOSPHERE POPOVER ---
+      function setupUI() {
+        const sliderMap = [
+          { id: 'param-population', key: 'population', valId: 'val-population', isInt: true },
+          { id: 'param-elites', key: 'elites', valId: 'val-elites', isInt: true },
+          { id: 'param-parentPool', key: 'parentPool', valId: 'val-parentPool', isInt: true },
+          { id: 'param-mutationChance', key: 'mutationChance', valId: 'val-mutationChance', decimals: 2 },
+          { id: 'param-mutationSize', key: 'mutationSize', valId: 'val-mutationSize', decimals: 2 },
+          { id: 'param-bigJumpChance', key: 'bigJumpChance', valId: 'val-bigJumpChance', decimals: 2 },
+          { id: 'param-jumpPower', key: 'jumpPower', valId: 'val-jumpPower', decimals: 1 },
+          { id: 'param-gravity', key: 'gravity', valId: 'val-gravity', decimals: 2 },
+          { id: 'param-birdChance', key: 'birdChance', valId: 'val-birdChance', decimals: 2 },
+          { id: 'param-speedUp', key: 'speedUp', valId: 'val-speedUp', decimals: 4 },
+          { id: 'param-obstacleSpacing', key: 'obstacleSpacing', valId: 'val-obstacleSpacing', decimals: 2 }
+        ];
+
+        sliderMap.forEach(item => {
+          const el = document.getElementById(item.id);
+          const valEl = document.getElementById(item.valId);
+          if (!el) return;
+
+          el.addEventListener('input', (e) => {
+            const num = item.isInt ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
+            config[item.key] = num;
+            if (valEl) {
+              valEl.textContent = item.isInt ? String(num) : num.toFixed(item.decimals || 2);
+            }
+            if (item.key === 'population') {
+              while (population.length < config.population) {
+                population.push(new Runner());
+              }
+            }
+          });
+        });
+
+        // Checkbox: shrinkMutation
+        const chkShrink = document.getElementById('param-shrinkMutation');
+        if (chkShrink) {
+          chkShrink.checked = config.shrinkMutation;
+          chkShrink.addEventListener('change', (e) => {
+            config.shrinkMutation = e.target.checked;
+          });
+        }
+
+        // Reset Defaults Button
+        const btnReset = document.getElementById('btnResetDefaults');
+        if (btnReset) {
+          btnReset.addEventListener('click', () => {
+            Object.assign(config, DEFAULT_CONFIG);
+            sliderMap.forEach(item => {
+              const el = document.getElementById(item.id);
+              const valEl = document.getElementById(item.valId);
+              if (el) el.value = config[item.key];
+              if (valEl) {
+                valEl.textContent = item.isInt ? String(config[item.key]) : config[item.key].toFixed(item.decimals || 2);
+              }
+            });
+            if (chkShrink) chkShrink.checked = config.shrinkMutation;
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+          });
+        }
+
+        // Presets
+        document.querySelectorAll('.btn-preset').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pKey = btn.dataset.preset;
+            const preset = PRESETS[pKey];
+            if (!preset) return;
+
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            Object.assign(config, preset);
+
+            sliderMap.forEach(item => {
+              if (preset[item.key] !== undefined) {
+                const el = document.getElementById(item.id);
+                const valEl = document.getElementById(item.valId);
+                if (el) el.value = preset[item.key];
+                if (valEl) {
+                  valEl.textContent = item.isInt ? String(preset[item.key]) : preset[item.key].toFixed(item.decimals || 2);
+                }
+              }
+            });
+            if (preset.shrinkMutation !== undefined && chkShrink) {
+              chkShrink.checked = preset.shrinkMutation;
+            }
+          });
+        });
+
+        // Speed Buttons
+        const speedButtons = document.querySelectorAll('.btn-speed');
+        speedButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            speedButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            speedMultiplier = parseInt(btn.dataset.speed, 10) || 1;
+          });
+        });
+
+        // Play / Pause Button
+        const btnPlayPause = document.getElementById('btnPlayPause');
+        const iconPause = document.getElementById('iconPause');
+        const iconPlay = document.getElementById('iconPlay');
+        const lblPlayPause = document.getElementById('lblPlayPause');
+
+        if (btnPlayPause) {
+          btnPlayPause.addEventListener('click', () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+              if (iconPause) iconPause.style.display = 'none';
+              if (iconPlay) iconPlay.style.display = 'inline';
+              if (lblPlayPause) lblPlayPause.textContent = 'Play';
+            } else {
+              if (iconPause) iconPause.style.display = 'inline';
+              if (iconPlay) iconPlay.style.display = 'none';
+              if (lblPlayPause) lblPlayPause.textContent = 'Pause';
+            }
+          });
+        }
+
+        // Restart Button
+        const btnRestart = document.getElementById('btnRestart');
+        if (btnRestart) {
+          btnRestart.addEventListener('click', () => {
+            currentGeneration = 1;
+            allTimeRecord = 0;
+            history.length = 0;
+            initPopulation();
+            startGeneration();
+            updateHUD();
+            renderGraph();
+          });
+        }
+
+        // Atmosphere Popover controls
+        const btnAtmosphere = document.getElementById('btnAtmosphere');
+        const atmospherePopover = document.getElementById('atmospherePopover');
+
+        if (btnAtmosphere && atmospherePopover) {
+          btnAtmosphere.addEventListener('click', (e) => {
+            e.stopPropagation();
+            atmospherePopover.classList.toggle('open');
+            btnAtmosphere.classList.toggle('active');
+          });
+
+          document.addEventListener('click', (e) => {
+            if (!atmospherePopover.contains(e.target) && e.target !== btnAtmosphere) {
+              atmospherePopover.classList.remove('open');
+              btnAtmosphere.classList.remove('active');
+            }
+          });
+        }
+
+        const chkDN = document.getElementById('chkDayNight');
+        if (chkDN) {
+          chkDN.addEventListener('change', (e) => { atmosphere.enabledDayNight = e.target.checked; });
+        }
+        const chkSeas = document.getElementById('chkSeasons');
+        if (chkSeas) {
+          chkSeas.addEventListener('change', (e) => { atmosphere.enabledSeasons = e.target.checked; });
+        }
+        const chkWeath = document.getElementById('chkWeather');
+        if (chkWeath) {
+          chkWeath.addEventListener('change', (e) => { atmosphere.enabledWeather = e.target.checked; });
+        }
+        const selSeas = document.getElementById('selSeason');
+        if (selSeas) {
+          selSeas.addEventListener('change', (e) => { atmosphere.seasonOverride = e.target.value; });
+        }
+        const selWeath = document.getElementById('selWeather');
+        if (selWeath) {
+          selWeath.addEventListener('change', (e) => { atmosphere.weatherOverride = e.target.value; });
+        }
+        const chkWeathAff = document.getElementById('chkWeatherAffects');
+        if (chkWeathAff) {
+          chkWeathAff.addEventListener('change', (e) => { atmosphere.weatherAffectsGame = e.target.checked; });
+        }
+
+        // Modal Open / Close
+        const modal = document.getElementById('modalHowItWorks');
+        const btnHelp = document.getElementById('btnHowItWorks');
+        const btnClose = document.getElementById('btnCloseModal');
+
+        if (btnHelp && modal) {
+          btnHelp.addEventListener('click', () => {
+            modal.classList.add('open');
+            modalOpen = true;
+          });
+        }
+
+        if (btnClose && modal) {
+          btnClose.addEventListener('click', () => {
+            modal.classList.remove('open');
+            modalOpen = false;
+          });
+        }
+
+        if (modal) {
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+              modal.classList.remove('open');
+              modalOpen = false;
+            }
+          });
+        }
+      }
+
+      // --- 18. MAIN ANIMATION LOOP & INIT ---
+      function mainLoop() {
+        if (!isPaused) {
+          for (let s = 0; s < speedMultiplier; s++) {
+            stepSimulation();
+          }
+        }
+
+        renderSimulation();
+        updateHUD();
+        renderGraph();
+
+        if (modalOpen) {
+          const leader = population.find(r => r.alive && r.isLeader) || population[0];
+          renderNetworkDiagram(leader ? leader.brain : null);
+          renderMiniSim(leader ? leader.brain : null);
+        }
+
+        requestAnimationFrame(mainLoop);
+      }
+
+      // Pre-initialize everything safely before loop
+      initStars(920, 460);
+      initPopulation();
+      startGeneration();
+      setupUI();
+
+      requestAnimationFrame(mainLoop);
+
+      // Expose test hooks on window for verification suite
+      window.__LEAP__ = {
+        config: config,
+        atmosphere: atmosphere,
+        generation: () => currentGeneration,
+        history: () => history,
+        population: () => population,
+        obstacles: () => obstacles,
+        tickSimulation: stepSimulation,
+        reset: () => {
+          currentGeneration = 1;
+          allTimeRecord = 0;
+          history.length = 0;
+          initPopulation();
+          startGeneration();
+        }
+      };
+
+    })();
+  </script>
+</body>
+</html>
