@@ -1,0 +1,2772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stride — Bipedal Neuroevolution Simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090b0e;
+      --bg-panel: #11141a;
+      --bg-card: #161a22;
+      --bg-card-hover: #1c222d;
+      --border: #212733;
+      --border-focus: #3b4455;
+      --text: #ede8df;
+      --text-muted: #8c97a8;
+      --text-dim: #546074;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-dim: #925c07;
+      --amber-glow: rgba(245, 158, 11, 0.22);
+      --bluegrey: #75869c;
+      --bluegrey-dim: #384252;
+      --danger: #ef4444;
+      --success: #10b981;
+      --font-ui: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Staggered Load-In Animation */
+    @keyframes panelIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .app-container {
+      display: grid;
+      grid-template-columns: 270px 1fr 290px;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* Panels */
+    .panel-left {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 16px;
+      animation: panelIn 0.4s ease-out both;
+    }
+
+    .panel-center {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--bg);
+      overflow: hidden;
+      animation: panelIn 0.4s ease-out 0.08s both;
+    }
+
+    .panel-right {
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 16px;
+      animation: panelIn 0.4s ease-out 0.16s both;
+    }
+
+    /* Typography & Header */
+    .brand {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--amber-bright);
+      text-transform: uppercase;
+    }
+
+    .brand-tag {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    /* Presets */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      line-height: 1.25;
+    }
+
+    .preset-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+      color: #fff;
+    }
+
+    .preset-btn.active {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    /* Sliders List */
+    .controls-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 500;
+    }
+
+    .control-name {
+      color: var(--text);
+    }
+
+    .control-val {
+      font-family: var(--font-ui);
+      font-weight: 700;
+      color: var(--amber-bright);
+      font-size: 11.5px;
+    }
+
+    .control-timing {
+      font-size: 9.5px;
+      color: var(--text-dim);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+
+    input[type="range"]:hover {
+      background: var(--border-focus);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--amber);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+      transition: transform 0.1s ease, background 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: var(--amber-bright);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      background: var(--amber);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border-focus);
+      border-radius: 3px;
+      background: var(--bg-card);
+      cursor: pointer;
+      position: relative;
+      outline: none;
+    }
+
+    .checkbox-container input[type="checkbox"]:checked {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .checkbox-container input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 3px;
+      height: 7px;
+      border: solid #000;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .btn-reset {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .btn-reset:hover {
+      background: var(--bg-card-hover);
+      color: var(--text);
+      border-color: var(--border-focus);
+    }
+
+    /* Middle Simulation Bar */
+    .sim-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .stat-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-pill-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .stat-pill-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .stat-pill-val.amber {
+      color: var(--amber-bright);
+    }
+
+    .sim-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .speed-group {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .speed-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 8px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+
+    .speed-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .speed-btn.active {
+      background: var(--amber);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+    }
+
+    .btn-action.primary {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: var(--amber-dim);
+      color: var(--amber-bright);
+    }
+
+    .btn-action.primary:hover {
+      background: rgba(245, 158, 11, 0.25);
+    }
+
+    /* Simulation Canvas Container */
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    canvas#simCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Celebratory Banner */
+    .moment-banner {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(17, 20, 26, 0.94);
+      border: 1px solid var(--amber);
+      box-shadow: 0 0 24px var(--amber-glow);
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 20;
+    }
+
+    .moment-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .moment-star {
+      width: 8px;
+      height: 8px;
+      background: var(--amber-bright);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--amber-bright);
+    }
+
+    .moment-text-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--amber-bright);
+    }
+
+    .moment-text-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Right Column Stats & Graph */
+    .metrics-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .metric-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .metric-val.amber {
+      color: var(--amber-bright);
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .distance-progress {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .distance-progress-fill {
+      height: 100%;
+      background: var(--amber);
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+
+    /* Graph Container */
+    .graph-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .graph-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .graph-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-line {
+      width: 12px;
+      height: 2px;
+      border-radius: 1px;
+    }
+
+    .legend-line.best {
+      background: var(--amber);
+    }
+
+    .legend-line.avg {
+      background: var(--bluegrey);
+    }
+
+    .graph-canvas-wrap {
+      width: 100%;
+      height: 120px;
+      position: relative;
+    }
+
+    canvas#fitnessGraph {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Reading the graph explanation */
+    .explanation-card {
+      background: rgba(22, 26, 34, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .explanation-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--amber-bright);
+      font-weight: 700;
+    }
+
+    .explanation-text {
+      font-family: var(--font-serif);
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #c5cedb;
+    }
+
+    /* Popup Modal ("How it works") */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 10, 0.78);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-focus);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+      border-radius: 10px;
+      width: 820px;
+      max-width: 94vw;
+      max-height: 88vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 18px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .modal-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .diagram-wrap {
+      width: 100%;
+      height: 280px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#netCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .mini-scene-wrap {
+      width: 100%;
+      height: 150px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#miniCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .servos-comparison {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .servo-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .servo-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .servo-bar-track {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .servo-target-fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      background: var(--amber);
+      opacity: 0.6;
+      border-radius: 2px;
+    }
+
+    .servo-actual-needle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #fff;
+      margin-left: -1.5px;
+      border-radius: 1px;
+      box-shadow: 0 0 4px #fff;
+    }
+
+    /* Responsive & Reduced Motion */
+    @media (max-width: 1100px) {
+      .app-container {
+        grid-template-columns: 240px 1fr 250px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body {
+        overflow-y: auto;
+        height: auto;
+      }
+      .app-container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      .panel-left, .panel-right {
+        border: none;
+        max-height: none;
+      }
+      .canvas-container {
+        height: 480px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001s !important;
+        transition-duration: 0.001s !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- LEFT PANEL: Presets & Controls -->
+    <div class="panel-left">
+      <div class="brand">
+        <div class="brand-title">Stride</div>
+        <div class="brand-tag">Biped Neuroevolution</div>
+      </div>
+
+      <!-- Presets -->
+      <div>
+        <div class="section-title">Experiment Presets</div>
+        <div class="presets-grid">
+          <button class="preset-btn" id="presetReckless">Reckless Mutation</button>
+          <button class="preset-btn" id="presetNoElites">No Elites</button>
+          <button class="preset-btn" id="presetTinyPop">Tiny Population</button>
+          <button class="preset-btn" id="presetHardWorld">Hard World</button>
+        </div>
+      </div>
+
+      <!-- Sliders List -->
+      <div class="controls-list">
+        <div class="section-title">Live Parameters</div>
+
+        <!-- Population -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Population</span>
+            <span class="control-val" id="valPopulation">40</span>
+          </div>
+          <input type="range" id="slPopulation" min="5" max="100" step="1" value="40">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Elites -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Elites</span>
+            <span class="control-val" id="valElites">3</span>
+          </div>
+          <input type="range" id="slElites" min="0" max="10" step="1" value="3">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Parent Pool -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Parent Pool</span>
+            <span class="control-val" id="valParentPool">8</span>
+          </div>
+          <input type="range" id="slParentPool" min="2" max="20" step="1" value="8">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Mutation Chance -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Mutation Chance</span>
+            <span class="control-val" id="valMutationChance">10%</span>
+          </div>
+          <input type="range" id="slMutationChance" min="1" max="100" step="1" value="10">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Mutation Size -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Mutation Size</span>
+            <span class="control-val" id="valMutationSize">0.25</span>
+          </div>
+          <input type="range" id="slMutationSize" min="0.05" max="1.50" step="0.01" value="0.25">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Big-Jump Chance -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Big-Jump Chance</span>
+            <span class="control-val" id="valBigJumpChance">5%</span>
+          </div>
+          <input type="range" id="slBigJumpChance" min="0" max="50" step="1" value="5">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Motor Strength -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Motor Strength</span>
+            <span class="control-val" id="valMotorStrength">0.35</span>
+          </div>
+          <input type="range" id="slMotorStrength" min="0.10" max="1.00" step="0.05" value="0.35">
+          <span class="control-timing">Applies next physics step</span>
+        </div>
+
+        <!-- Foot Grip -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Foot Grip</span>
+            <span class="control-val" id="valFootGrip">0.90</span>
+          </div>
+          <input type="range" id="slFootGrip" min="0.10" max="1.00" step="0.05" value="0.90">
+          <span class="control-timing">Applies next physics step</span>
+        </div>
+
+        <!-- Gravity -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Gravity</span>
+            <span class="control-val" id="valGravity">980</span>
+          </div>
+          <input type="range" id="slGravity" min="200" max="2000" step="20" value="980">
+          <span class="control-timing">Applies next physics step</span>
+        </div>
+
+        <!-- Ground Roughness -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Ground Roughness</span>
+            <span class="control-val" id="valRoughness">2 px</span>
+          </div>
+          <input type="range" id="slRoughness" min="0" max="8" step="0.5" value="2">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Episode Length -->
+        <div class="control-item">
+          <div class="control-header">
+            <span class="control-name">Episode Length</span>
+            <span class="control-val" id="valEpisodeLength">20 s</span>
+          </div>
+          <input type="range" id="slEpisodeLength" min="8" max="30" step="1" value="20">
+          <span class="control-timing">Applies next generation</span>
+        </div>
+
+        <!-- Shrink checkbox -->
+        <label class="checkbox-container">
+          <input type="checkbox" id="chkShrink" checked>
+          <span>Shrink mutation near perfect</span>
+        </label>
+
+        <!-- Reset button -->
+        <button class="btn-reset" id="btnReset">Reset to optimal values</button>
+      </div>
+    </div>
+
+    <!-- MIDDLE PANEL: Simulation Canvas -->
+    <div class="panel-center">
+      <div class="sim-topbar">
+        <div class="stat-badge-group">
+          <div class="stat-pill">
+            <span class="stat-pill-label">Generation</span>
+            <span class="stat-pill-val amber" id="topGen">0</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-label">Still Walking</span>
+            <span class="stat-pill-val" id="topWalking">40 / 40</span>
+          </div>
+        </div>
+
+        <div class="sim-controls">
+          <div class="speed-group">
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="5">5x</button>
+            <button class="speed-btn" data-speed="10">10x</button>
+            <button class="speed-btn" data-speed="20">20x</button>
+            <button class="speed-btn" data-speed="40">40x</button>
+            <button class="speed-btn" data-speed="80">80x</button>
+          </div>
+          <button class="btn-action" id="btnPause">Pause</button>
+          <button class="btn-action primary" id="btnRestart">Restart</button>
+        </div>
+      </div>
+
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="simCanvas"></canvas>
+
+        <!-- Celebratory Toast Banner -->
+        <div class="moment-banner" id="momentBanner">
+          <div class="moment-star"></div>
+          <div>
+            <div class="moment-text-title" id="momentTitle">First steps</div>
+            <div class="moment-text-desc" id="momentDesc">A walker traveled 3m upright!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Metrics, Graph & Explanation -->
+    <div class="panel-right">
+      <div class="section-title">Performance Metrics</div>
+
+      <div class="metrics-group">
+        <div class="metric-card">
+          <span class="metric-label">Best Fitness</span>
+          <span class="metric-val amber" id="metricBestFit">0.0</span>
+          <span class="metric-sub" id="metricRecordFit">Record: 0.0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Avg Fitness</span>
+          <span class="metric-val" id="metricAvgFit">0.0</span>
+          <span class="metric-sub">Current generation</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span class="metric-label">Best Distance</span>
+          <span class="metric-val amber" id="metricDistance" style="font-size:15px;">0.0 m of 25 m</span>
+        </div>
+        <div class="distance-progress">
+          <div class="distance-progress-fill" id="distanceFill"></div>
+        </div>
+        <span class="metric-sub" id="metricUpright">Upright time: 0.0 s</span>
+        <span class="metric-sub" id="metricDownWhy">Down: fell 0 · scooting 0 · too high 0 · airborne 0</span>
+      </div>
+
+      <!-- Graph -->
+      <div class="graph-card">
+        <div class="graph-header">
+          <span class="section-title" style="margin-bottom:0;">Fitness History</span>
+          <div class="graph-legend">
+            <div class="legend-item"><div class="legend-line best"></div><span>Best</span></div>
+            <div class="legend-item"><div class="legend-line avg"></div><span>Avg</span></div>
+          </div>
+        </div>
+        <div class="graph-canvas-wrap">
+          <canvas id="fitnessGraph"></canvas>
+        </div>
+      </div>
+
+      <!-- Reading the graph -->
+      <div class="explanation-card">
+        <div class="explanation-title">Reading the graph</div>
+        <p class="explanation-text">
+          The best line jumps when a walker first discovers a rhythm that carries it forward, the average follows as the rhythm spreads through crossover, and a flat average far below the best usually means mutation is too large.
+        </p>
+      </div>
+
+      <button class="btn-action primary" id="btnHowItWorks" style="padding:10px; text-align:center;">
+        How It Works — Architecture
+      </button>
+    </div>
+
+  </div>
+
+  <!-- HOW IT WORKS MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Neural Network & Joint Servos</div>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Neural Net Diagram -->
+        <div class="modal-col">
+          <span class="section-title">9 Inputs &rarr; 8 Tanh Hidden &rarr; 4 Tanh Outputs (116 Weights)</span>
+          <div class="diagram-wrap">
+            <canvas id="netCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Leader Joint Servos & Mini Scene -->
+        <div class="modal-col">
+          <span class="section-title">Leader Posture & Real-time Servos</span>
+          <div class="mini-scene-wrap">
+            <canvas id="miniCanvas"></canvas>
+          </div>
+
+          <div class="servos-comparison">
+            <!-- Hip Left -->
+            <div class="servo-row">
+              <div class="servo-labels">
+                <span>Left Hip (Target vs Actual)</span>
+                <span id="txtHipL">0.00 / 0.00 rad</span>
+              </div>
+              <div class="servo-bar-track">
+                <div class="servo-target-fill" id="barTargetHipL"></div>
+                <div class="servo-actual-needle" id="needleActualHipL"></div>
+              </div>
+            </div>
+            <!-- Hip Right -->
+            <div class="servo-row">
+              <div class="servo-labels">
+                <span>Right Hip (Target vs Actual)</span>
+                <span id="txtHipR">0.00 / 0.00 rad</span>
+              </div>
+              <div class="servo-bar-track">
+                <div class="servo-target-fill" id="barTargetHipR"></div>
+                <div class="servo-actual-needle" id="needleActualHipR"></div>
+              </div>
+            </div>
+            <!-- Knee Left -->
+            <div class="servo-row">
+              <div class="servo-labels">
+                <span>Left Knee (Target vs Actual)</span>
+                <span id="txtKneeL">0.00 / 0.00 rad</span>
+              </div>
+              <div class="servo-bar-track">
+                <div class="servo-target-fill" id="barTargetKneeL"></div>
+                <div class="servo-actual-needle" id="needleActualKneeL"></div>
+              </div>
+            </div>
+            <!-- Knee Right -->
+            <div class="servo-row">
+              <div class="servo-labels">
+                <span>Right Knee (Target vs Actual)</span>
+                <span id="txtKneeR">0.00 / 0.00 rad</span>
+              </div>
+              <div class="servo-bar-track">
+                <div class="servo-target-fill" id="barTargetKneeR"></div>
+                <div class="servo-actual-needle" id="needleActualKneeR"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       STRIDE: BIPEDAL NEUROEVOLUTION SIMULATION
+       ========================================================================= */
+
+    // --- 1. SETTINGS AND CONSTANTS ---
+    const DEFAULTS = {
+      population: 40,
+      elites: 3,
+      parentPool: 8,
+      mutationChance: 0.10,
+      mutationSize: 0.25,
+      bigJumpChance: 0.05,
+      motorStrength: 0.35,
+      footGrip: 0.90,
+      gravity: 980,
+      roughness: 2.0,
+      episodeLength: 20,
+      shrinkMutation: true
+    };
+
+    const settings = { ...DEFAULTS };
+
+    // --- 2. RANDOM NUMBER GENERATORS ---
+    // Mulberry32 for deterministic terrain and start pose
+    function createPRNG(seed) {
+      let s = seed >>> 0;
+      return function() {
+        s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // Box-Muller Gaussian for mutation
+    function gaussianRandom() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    // Separate unseeded RNG for visual dust particles
+    function dustRandom() {
+      return Math.random();
+    }
+
+    // --- 3. TERRAIN GENERATION ---
+    // Human joint ranges in walking (radians).
+    // Hip: about 35 deg forward (flexion) and only 20 deg backward (extension). Knee: 0 to 72 deg, never backwards.
+    // The hard stops sit a little beyond the target range, like real joint limits.
+    const HIP_FWD = 0.60, HIP_BACK = 0.35;
+    const HIP_STOP_FWD = 0.75, HIP_STOP_BACK = 0.50;
+    const KNEE_MAX = 1.25, KNEE_STOP = 1.40;
+    const HIP_RANGE = HIP_FWD; // used to scale bars in the popup
+    const hipTarget = (o) => (o >= 0 ? HIP_FWD * o : HIP_BACK * o);
+    const hipNorm = (a) => Math.max(-1, Math.min(1, a >= 0 ? a / HIP_FWD : a / HIP_BACK));
+    const SPINE_GAIN = 0.12; // trunk-balancing reflex: pulls the torso back toward upright
+    const POSTURE = { minHipHeight: 45, maxTilt: 0.30, sameSideSteps: 36 };
+    const NOMINAL_GROUND_Y = 520;
+
+    function getTerrainHeight(x, roughness, seed) {
+      // First 3m (300 px from start x=100 -> x <= 400) is flat
+      if (x <= 400 || roughness === 0) return NOMINAL_GROUND_Y;
+
+      const nodeIndex = Math.floor(x / 50);
+      const t = (x - nodeIndex * 50) / 50;
+
+      function getNodeBump(idx) {
+        if (idx <= 8) return 0;
+        const nodeSeed = (seed + idx * 2654435761) >>> 0;
+        const rng = createPRNG(nodeSeed);
+        return rng() * roughness;
+      }
+
+      const b1 = getNodeBump(nodeIndex);
+      const b2 = getNodeBump(nodeIndex + 1);
+      const cosT = (1 - Math.cos(t * Math.PI)) / 2;
+      const bump = b1 + (b2 - b1) * cosT;
+      return NOMINAL_GROUND_Y - bump;
+    }
+
+    // --- 4. WALKER BODY & VERLET PHYSICS ---
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.prevX = x;
+        this.prevY = y;
+      }
+    }
+
+    class Walker {
+      constructor(x = 100, y = 444) {
+        this.T = new Particle(x, y - 44);
+        this.H = new Particle(x, y);
+        this.KL = new Particle(x, y + 38);
+        this.FL = new Particle(x, y + 76);
+        this.KR = new Particle(x, y + 38);
+        this.FR = new Particle(x, y + 76);
+
+        this.particles = [this.T, this.H, this.KL, this.FL, this.KR, this.FR];
+        this.bones = [
+          [this.T, this.H, 44],
+          [this.H, this.KL, 38],
+          [this.KL, this.FL, 38],
+          [this.H, this.KR, 38],
+          [this.KR, this.FR, 38],
+        ];
+
+        this.prevOutputs = [0, 0, 0, 0];
+        this.totalOutputChange = 0;
+        this.stepCount = 0;
+        this.isDown = false;
+        this.isFinished = false;
+        this.secondsUpright = 0;
+        this.hipTrail = [];
+
+        this.contactL = false;
+        this.contactR = false;
+        this.prevContactL = false;
+        this.prevContactR = false;
+        this.airSteps = 0;
+        this.sameSideSteps = 0;
+        this.tallSeconds = 0;
+        this.swingL = 0; this.swingR = 0; this.lastStepFoot = 0; this.altSteps = 0; this.repeatSteps = 0;
+        this.downReason = null;
+        this.deathX = null;
+      }
+
+      getAngles() {
+        // Torso vector d: T to H
+        const dhx = this.H.x - this.T.x;
+        const dhy = this.H.y - this.T.y;
+        const dlen = Math.hypot(dhx, dhy) || 1;
+        const dx = dhx / dlen;
+        const dy = dhy / dlen;
+
+        // Left knee vector t: H to KL
+        const tlx = this.KL.x - this.H.x;
+        const tly = this.KL.y - this.H.y;
+        const tllen = Math.hypot(tlx, tly) || 1;
+        const txL = tlx / tllen;
+        const tyL = tly / tllen;
+
+        // Right knee vector t: H to KR
+        const trx = this.KR.x - this.H.x;
+        const try_y = this.KR.y - this.H.y;
+        const trlen = Math.hypot(trx, try_y) || 1;
+        const txR = trx / trlen;
+        const tyR = try_y / trlen;
+
+        // Left foot vector s: KL to FL
+        const slx = this.FL.x - this.KL.x;
+        const sly = this.FL.y - this.KL.y;
+        const sllen = Math.hypot(slx, sly) || 1;
+        const sxL = slx / sllen;
+        const syL = sly / sllen;
+
+        // Right foot vector s: KR to FR
+        const srx = this.FR.x - this.KR.x;
+        const sry = this.FR.y - this.KR.y;
+        const srlen = Math.hypot(srx, sry) || 1;
+        const sxR = srx / srlen;
+        const syR = sry / srlen;
+
+        // Hip angles: alpha = atan2(d.y*t.x - d.x*t.y, d.x*t.x + d.y*t.y)
+        const alphaL = Math.atan2(dy * txL - dx * tyL, dx * txL + dy * tyL);
+        const alphaR = Math.atan2(dy * txR - dx * tyR, dx * txR + dy * tyR);
+
+        // Knee angles: beta = atan2(t.x*s.y - t.y*s.x, t.x*s.x + t.y*s.y)
+        const betaL = Math.atan2(txL * syL - tyL * sxL, txL * sxL + tyL * syL);
+        const betaR = Math.atan2(txR * syR - tyR * sxR, txR * sxR + tyR * syR);
+
+        return { alphaL, alphaR, betaL, betaR };
+      }
+
+      applyServos(outputs, motorStrength = 0.5) {
+        const { alphaL, alphaR, betaL, betaR } = this.getAngles();
+        const hipTargetL = hipTarget(outputs[0]);
+        const hipTargetR = hipTarget(outputs[1]);
+        const kneeTargetL = KNEE_MAX * (outputs[2] + 1) / 2;
+        const kneeTargetR = KNEE_MAX * (outputs[3] + 1) / 2;
+
+        const clamp = (val, maxVal) => Math.max(-maxVal, Math.min(maxVal, val));
+
+        const eHipL = clamp(hipTargetL - alphaL, 0.2);
+        const eHipR = clamp(hipTargetR - alphaR, 0.2);
+        const eKneeL = clamp(kneeTargetL - betaL, 0.2);
+        const eKneeR = clamp(kneeTargetR - betaR, 0.2);
+
+        const deltaHipL = motorStrength * eHipL;
+        const deltaHipR = motorStrength * eHipR;
+        const deltaKneeL = motorStrength * eKneeL;
+        const deltaKneeR = motorStrength * eKneeR;
+
+        function rotatePoint(px, py, ox, oy, theta) {
+          const cos = Math.cos(theta);
+          const sin = Math.sin(theta);
+          const rx = px - ox;
+          const ry = py - oy;
+          return {
+            x: ox + rx * cos - ry * sin,
+            y: oy + rx * sin + ry * cos
+          };
+        }
+
+        // Spine servo: a weak reflex that keeps the trunk upright (internal force, COM restored by caller)
+        {
+          const tiltNow = Math.atan2(this.T.x - this.H.x, -(this.T.y - this.H.y));
+          const th = -SPINE_GAIN * Math.max(-0.5, Math.min(0.5, tiltNow));
+          const nT = rotatePoint(this.T.x, this.T.y, this.H.x, this.H.y, th);
+          this.T.x = nT.x; this.T.y = nT.y;
+        }
+
+        if (Math.abs(deltaHipL) > 1e-6) {
+          const theta = -deltaHipL;
+          const nKL = rotatePoint(this.KL.x, this.KL.y, this.H.x, this.H.y, theta);
+          const nFL = rotatePoint(this.FL.x, this.FL.y, this.H.x, this.H.y, theta);
+          this.KL.x = nKL.x; this.KL.y = nKL.y;
+          this.FL.x = nFL.x; this.FL.y = nFL.y;
+        }
+
+        if (Math.abs(deltaHipR) > 1e-6) {
+          const theta = -deltaHipR;
+          const nKR = rotatePoint(this.KR.x, this.KR.y, this.H.x, this.H.y, theta);
+          const nFR = rotatePoint(this.FR.x, this.FR.y, this.H.x, this.H.y, theta);
+          this.KR.x = nKR.x; this.KR.y = nKR.y;
+          this.FR.x = nFR.x; this.FR.y = nFR.y;
+        }
+
+        if (Math.abs(deltaKneeL) > 1e-6) {
+          const theta = deltaKneeL;
+          const nFL = rotatePoint(this.FL.x, this.FL.y, this.KL.x, this.KL.y, theta);
+          this.FL.x = nFL.x; this.FL.y = nFL.y;
+        }
+
+        if (Math.abs(deltaKneeR) > 1e-6) {
+          const theta = deltaKneeR;
+          const nFR = rotatePoint(this.FR.x, this.FR.y, this.KR.x, this.KR.y, theta);
+          this.FR.x = nFR.x; this.FR.y = nFR.y;
+        }
+      }
+
+      step(outputs, currentSettings, terrainSeed) {
+        if (this.isFinished) return;
+        // A walker that is down goes limp: it keeps falling to the ground under gravity, but
+        // its score is frozen at the moment it went down.
+        const passive = this.isDown;
+
+        const dt = 1 / 60;
+        const g = currentSettings.gravity;
+        const footGrip = currentSettings.footGrip;
+        const roughness = currentSettings.roughness;
+
+        if (!passive) {
+          let stepOutputChange = 0;
+          for (let j = 0; j < 4; j++) {
+            stepOutputChange += Math.abs(outputs[j] - this.prevOutputs[j]);
+            this.prevOutputs[j] = outputs[j];
+          }
+          this.totalOutputChange += stepOutputChange;
+          this.stepCount++;
+        }
+
+        // 1. Position Verlet on all particles
+        for (let i = 0; i < this.particles.length; i++) {
+          const p = this.particles[i];
+          const newX = p.x + (p.x - p.prevX) * 0.995;
+          const newY = p.y + (p.y - p.prevY) * 0.995 + g * dt * dt;
+          p.prevX = p.x;
+          p.prevY = p.y;
+          p.x = newX;
+          p.y = newY;
+        }
+
+        // 2. Servos (before bone relaxation)
+        // Muscles are internal forces: keep the body's center of mass where it was
+        if (!passive) {
+          let cx0 = 0, cy0 = 0;
+          for (const p of this.particles) { cx0 += p.x; cy0 += p.y; }
+          this.applyServos(outputs, currentSettings.motorStrength);
+          let cx1 = 0, cy1 = 0;
+          for (const p of this.particles) { cx1 += p.x; cy1 += p.y; }
+          const comShiftX = (cx0 - cx1) / this.particles.length;
+          const comShiftY = (cy0 - cy1) / this.particles.length;
+          for (const p of this.particles) { p.x += comShiftX; p.y += comShiftY; }
+        }
+
+        // 3. Ground collision & horizontal friction
+        this.prevContactL = this.contactL;
+        this.prevContactR = this.contactR;
+
+        for (let i = 0; i < this.particles.length; i++) {
+          const p = this.particles[i];
+          const gy = getTerrainHeight(p.x, roughness, terrainSeed);
+          if (p.y >= gy) {
+            p.y = gy;
+            p.prevY = p.y;
+            const isFoot = (p === this.FL || p === this.FR);
+            const grip = isFoot ? footGrip : 0.5;
+            p.x -= (p.x - p.prevX) * grip;
+          }
+        }
+
+        // 4. Bone relaxation (10 iterations) with solid ground projection
+        for (let iter = 0; iter < 10; iter++) {
+          for (let i = 0; i < this.bones.length; i++) {
+            const [p1, p2, restLen] = this.bones[i];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const dist = Math.hypot(dx, dy) || 1e-6;
+            const diff = (dist - restLen) / dist;
+            const offsetX = dx * 0.5 * diff;
+            const offsetY = dy * 0.5 * diff;
+            p1.x += offsetX;
+            p1.y += offsetY;
+            p2.x -= offsetX;
+            p2.y -= offsetY;
+          }
+          for (let i = 0; i < this.particles.length; i++) {
+            const p = this.particles[i];
+            const gy = getTerrainHeight(p.x, roughness, terrainSeed);
+            if (p.y > gy) p.y = gy;
+          }
+        }
+
+        // Joint stops: hips and knees can not go past a human range of motion (a knee can not bend
+        // backwards). Corrected by rotating the limb, then restoring the center of mass so the
+        // stops can never add thrust.
+        if (!passive) {
+          const ang = this.getAngles();
+          const rot = (P, O, th) => {
+            const c = Math.cos(th), sn = Math.sin(th), rx = P.x - O.x, ry = P.y - O.y;
+            P.x = O.x + rx * c - ry * sn; P.y = O.y + rx * sn + ry * c;
+          };
+          const ops = [];
+          const hipFix = (alpha, K, F) => {
+            if (alpha > HIP_STOP_FWD) ops.push(() => { rot(K, this.H, alpha - HIP_STOP_FWD); rot(F, this.H, alpha - HIP_STOP_FWD); });
+            else if (alpha < -HIP_STOP_BACK) ops.push(() => { rot(K, this.H, alpha + HIP_STOP_BACK); rot(F, this.H, alpha + HIP_STOP_BACK); });
+          };
+          const kneeFix = (beta, K, F) => {
+            if (beta < -0.02) ops.push(() => rot(F, K, -beta));
+            else if (beta > KNEE_STOP) ops.push(() => rot(F, K, -(beta - KNEE_STOP)));
+          };
+          hipFix(ang.alphaL, this.KL, this.FL); hipFix(ang.alphaR, this.KR, this.FR);
+          kneeFix(ang.betaL, this.KL, this.FL); kneeFix(ang.betaR, this.KR, this.FR);
+          if (ops.length) {
+            let ax = 0, ay = 0;
+            for (const p of this.particles) { ax += p.x; ay += p.y; }
+            for (const op of ops) op();
+            let bx = 0, by = 0;
+            for (const p of this.particles) { bx += p.x; by += p.y; }
+            const sx = (ax - bx) / this.particles.length, sy = (ay - by) / this.particles.length;
+            for (const p of this.particles) {
+              p.x += sx; p.y += sy;
+              const gyk = getTerrainHeight(p.x, roughness, terrainSeed);
+              if (p.y > gyk) p.y = gyk;
+            }
+          }
+        }
+
+        // Body speed limits: the body as a whole can not lunge or launch itself.
+        // Forward/backward speed is capped at 2.5 m/s and upward speed at 1.2 m/s.
+        if (!passive) {
+          const n = this.particles.length;
+          let mvx = 0, mvy = 0;
+          for (const p of this.particles) { mvx += p.x - p.prevX; mvy += p.y - p.prevY; }
+          mvx /= n; mvy /= n;
+          const maxDX = 250 * dt, maxUp = 120 * dt;
+          let cutX = 0, cutY = 0;
+          if (mvx > maxDX) cutX = mvx - maxDX; else if (mvx < -maxDX) cutX = mvx + maxDX;
+          if (mvy < -maxUp) cutY = mvy + maxUp;
+          if (cutX !== 0 || cutY !== 0) {
+            for (const p of this.particles) { p.x -= cutX; p.y -= cutY; }
+          }
+        }
+
+        // Foot contacts
+        const gyL = getTerrainHeight(this.FL.x, roughness, terrainSeed);
+        const gyR = getTerrainHeight(this.FR.x, roughness, terrainSeed);
+        this.contactL = (gyL - this.FL.y <= 2);
+        this.contactR = (gyR - this.FR.y <= 2);
+
+        if (passive) return;
+
+        // Emit dust when foot lands
+        if (!this.prevContactL && this.contactL) {
+          spawnDust(this.FL.x, gyL);
+        }
+        if (!this.prevContactR && this.contactR) {
+          spawnDust(this.FR.x, gyR);
+        }
+
+        // Termination checks
+        const hipGY = getTerrainHeight(this.H.x, roughness, terrainSeed);
+        const headGY = getTerrainHeight(this.T.x, roughness, terrainSeed);
+        const hipHeight = hipGY - this.H.y;
+        const headHeight = headGY - this.T.y;
+
+        // Step counting: a step is a foot that was off the ground for at least 8 steps (0.13 s) and lands.
+        // Steps should alternate left, right, left, right.
+        if (this.contactL) {
+          if (this.swingL >= 8) { if (this.lastStepFoot !== 1) this.altSteps++; else this.repeatSteps++; this.lastStepFoot = 1; }
+          this.swingL = 0;
+        } else this.swingL++;
+        if (this.contactR) {
+          if (this.swingR >= 8) { if (this.lastStepFoot !== 2) this.altSteps++; else this.repeatSteps++; this.lastStepFoot = 2; }
+          this.swingR = 0;
+        } else this.swingR++;
+
+        // Airborne counter: walking always has a foot planted
+        if (this.contactL || this.contactR) this.airSteps = 0; else this.airSteps++;
+
+        // Posture: torso lean and a step requirement (both feet on the same side of the hip
+        // for too long means scooting along on the heels, not walking)
+        const tilt = Math.atan2(this.T.x - this.H.x, -(this.T.y - this.H.y));
+        const footAheadL = this.FL.x - this.H.x;
+        const footAheadR = this.FR.x - this.H.x;
+        if ((footAheadL > 4 && footAheadR > 4) || (footAheadL < -4 && footAheadR < -4)) this.sameSideSteps++;
+        else this.sameSideSteps = 0;
+
+        let downReason = null;
+        if (hipHeight < POSTURE.minHipHeight || headHeight < 50) downReason = 'fell';
+        else if (Math.abs(tilt) > POSTURE.maxTilt) downReason = 'fell';
+        else if (hipHeight > 92) downReason = 'too high';
+        else if (this.airSteps > 5) downReason = 'airborne';
+        else if (this.sameSideSteps > POSTURE.sameSideSteps) downReason = 'scooting';
+
+        if (downReason) {
+          this.isDown = true;
+          this.deathX = this.H.x;
+          this.downReason = downReason;
+          spawnDownCross(this.H.x, this.H.y);
+        } else {
+          this.secondsUpright = this.stepCount * dt;
+          // Height reward: full credit at a standing hip height (about 72 px or more), none at 40 px or below
+          this.tallSeconds += dt * Math.max(0, Math.min(1, (hipHeight - 40) / 32));
+        }
+
+        if (this.H.x >= 2600) {
+          this.isFinished = true;
+          if (this.deathX === null) this.deathX = this.H.x;
+        }
+
+        // Hip trail for leader
+        this.hipTrail.push({ x: this.H.x, y: this.H.y });
+        if (this.hipTrail.length > 22) this.hipTrail.shift();
+      }
+
+      // Distance used for scoring: frozen at the moment a walker went down or finished
+      scoreDistance() {
+        const x = (this.deathX !== null && this.deathX !== undefined) ? this.deathX : this.H.x;
+        return (x - 100) / 100;
+      }
+
+      getFitness() {
+        const distance = this.scoreDistance();
+        const meanOutputChange = this.stepCount > 0 ? (this.totalOutputChange / (4 * this.stepCount)) : 0;
+        // Distance only pays in full if the walker survives the whole run, so lunging forward and
+        // collapsing is not worth it; staying up AND standing tall is worth up to 3 points per second (scaled by hip height).
+        const surv = this.isFinished ? 1 : Math.min(1, this.secondsUpright / settings.episodeLength);
+        // Gait reward: alternating steps at a human cadence (up to 2.4 steps per second) earn points,
+        // repeating the same foot (limping, hopping) and shuffling faster than that lose points.
+        const cadenceCap = 2.4 * this.secondsUpright;
+        const goodSteps = Math.min(this.altSteps, cadenceCap);
+        const tooFast = Math.max(0, this.altSteps - cadenceCap);
+        const gait = Math.max(-15, 2 * goodSteps - 2 * tooFast - 1.5 * this.repeatSteps);
+        return 10 * distance * (0.2 + 0.8 * surv) + 3 * this.tallSeconds + gait - 60 * meanOutputChange;
+      }
+    }
+
+    function initWalkerPose(w, randVal = 0) {
+      const hx = 100, hy = 444;
+      w.T.x = hx; w.T.y = hy - 44;
+      w.T.prevX = hx; w.T.prevY = hy - 44;
+      w.H.x = hx; w.H.y = hy;
+      w.H.prevX = hx; w.H.prevY = hy;
+
+      const thL = -(0.1 + randVal);
+      const cosL = Math.cos(thL), sinL = Math.sin(thL);
+      w.KL.x = hx - 38 * sinL; w.KL.y = hy + 38 * cosL;
+      w.KL.prevX = w.KL.x; w.KL.prevY = w.KL.y;
+      w.FL.x = hx - 76 * sinL; w.FL.y = hy + 76 * cosL;
+      w.FL.prevX = w.FL.x; w.FL.prevY = w.FL.y;
+
+      const thR = +(0.1 + randVal);
+      const cosR = Math.cos(thR), sinR = Math.sin(thR);
+      w.KR.x = hx - 38 * sinR; w.KR.y = hy + 38 * cosR;
+      w.KR.prevX = w.KR.x; w.KR.prevY = w.KR.y;
+      w.FR.x = hx - 76 * sinR; w.FR.y = hy + 76 * cosR;
+      w.FR.prevX = w.FR.x; w.FR.prevY = w.FR.y;
+
+      w.isDown = false;
+      w.isFinished = false;
+      w.stepCount = 0;
+      w.totalOutputChange = 0;
+      w.prevOutputs = [0, 0, 0, 0];
+      w.secondsUpright = 0;
+      w.hipTrail = [];
+      w.contactL = false;
+      w.contactR = false;
+      w.prevContactL = false;
+      w.prevContactR = false;
+      w.airSteps = 0;
+      w.sameSideSteps = 0;
+      w.tallSeconds = 0;
+      w.swingL = 0; w.swingR = 0; w.lastStepFoot = 0; w.altSteps = 0; w.repeatSteps = 0;
+      w.downReason = null;
+      w.deathX = null;
+    }
+
+    // --- 5. NEURAL NETWORK ---
+    class NeuralNet {
+      constructor(weights) {
+        if (weights) {
+          this.weights = new Float32Array(weights);
+        } else {
+          this.weights = new Float32Array(116);
+          // Xavier initialization
+          for (let i = 0; i < 72; i++) this.weights[i] = (Math.random() * 2 - 1) * 0.5;
+          for (let i = 72; i < 80; i++) this.weights[i] = 0;
+          for (let i = 80; i < 112; i++) this.weights[i] = (Math.random() * 2 - 1) * 0.5;
+          for (let i = 112; i < 116; i++) this.weights[i] = 0;
+        }
+      }
+
+      forward(inputs) {
+        const hidden = new Float32Array(8);
+        for (let j = 0; j < 8; j++) {
+          let sum = this.weights[72 + j];
+          for (let i = 0; i < 9; i++) {
+            sum += inputs[i] * this.weights[i * 8 + j];
+          }
+          hidden[j] = Math.tanh(sum);
+        }
+
+        const outputs = [0, 0, 0, 0];
+        for (let k = 0; k < 4; k++) {
+          let sum = this.weights[112 + k];
+          for (let j = 0; j < 8; j++) {
+            sum += hidden[j] * this.weights[80 + j * 4 + k];
+          }
+          outputs[k] = Math.tanh(sum);
+        }
+        return { hidden, outputs };
+      }
+    }
+
+    function getNetworkInputs(w, t, roughness, terrainSeed) {
+      const clockSin = Math.sin(2 * Math.PI * t / 0.9);
+      const clockCos = Math.cos(2 * Math.PI * t / 0.9);
+
+      // Torso tilt: angle of vector H to T away from straight up, positive when leaning forward
+      const dx = w.T.x - w.H.x;
+      const dy = w.T.y - w.H.y;
+      const tilt = Math.max(-1, Math.min(1, Math.atan2(dx, -dy) / 1.0));
+
+      const { alphaL, alphaR, betaL, betaR } = w.getAngles();
+      const normAlphaL = hipNorm(alphaL);
+      const normAlphaR = hipNorm(alphaR);
+      const normBetaL = Math.max(-1, Math.min(1, betaL / KNEE_MAX));
+      const normBetaR = Math.max(-1, Math.min(1, betaR / KNEE_MAX));
+
+      const gyL = getTerrainHeight(w.FL.x, roughness, terrainSeed);
+      const gyR = getTerrainHeight(w.FR.x, roughness, terrainSeed);
+      const contactL = (gyL - w.FL.y <= 2) ? 1 : 0;
+      const contactR = (gyR - w.FR.y <= 2) ? 1 : 0;
+
+      return [clockSin, clockCos, tilt, normAlphaL, normAlphaR, normBetaL, normBetaR, contactL, contactR];
+    }
+
+    // --- 6. SIMULATION STATE & ORCHESTRATION ---
+    let generation = 0;
+    let stepInGeneration = 0;
+    let isPaused = false;
+    let speedMultiplier = 1;
+    let allTimeRecordFitness = -999;
+    let activePreset = null;
+
+    let population = [];
+    let walkers = [];
+    let currentTerrainSeed = 0;
+    let leaderIndex = 0;
+
+    // Visual particles & pulses
+    let dustParticles = [];
+    let downCrosses = [];
+    let leaderPulses = [];
+    let recordBeatenThisGen = false;
+
+    // Graph history
+    let fitnessHistory = []; // { gen, best, avg }
+    let graphYMin = 0;
+    let graphYMax = 50;
+
+    // Success moments flags
+    const successMoments = {
+      firstSteps: false,
+      striding: false,
+      finishLine: false
+    };
+
+    // Camera smoothing
+    const camera = {
+      x: 100,
+      targetX: 100
+    };
+
+    function initPopulation() {
+      population = [];
+      const popSize = settings.population;
+      for (let i = 0; i < popSize; i++) {
+        population.push({
+          net: new NeuralNet(),
+          fitness: 0,
+          dist: 0,
+          secondsUpright: 0
+        });
+      }
+    }
+
+    function startGeneration() {
+      currentTerrainSeed = (generation * 7919 + 12345) >>> 0;
+      const terrainPRNG = createPRNG(currentTerrainSeed);
+      const startRand = (terrainPRNG() - 0.5) * 0.1;
+
+      walkers = [];
+      for (let i = 0; i < population.length; i++) {
+        const w = new Walker(100, 444);
+        initWalkerPose(w, startRand);
+        walkers.push(w);
+      }
+
+      stepInGeneration = 0;
+      leaderIndex = 0;
+      recordBeatenThisGen = false;
+      camera.targetX = 100;
+    }
+
+    function triggerSuccessMoment(type, title, desc) {
+      if (successMoments[type]) return;
+      successMoments[type] = true;
+
+      const banner = document.getElementById("momentBanner");
+      const titleEl = document.getElementById("momentTitle");
+      const descEl = document.getElementById("momentDesc");
+
+      if (banner && titleEl && descEl) {
+        titleEl.textContent = title;
+        descEl.textContent = desc;
+        banner.classList.add("show");
+        setTimeout(() => {
+          banner.classList.remove("show");
+        }, 4000);
+      }
+
+      // Celebratory canvas pulse
+      leaderPulses.push({
+        x: walkers[leaderIndex].H.x,
+        y: walkers[leaderIndex].H.y,
+        radius: 10,
+        maxRadius: 90,
+        alpha: 1.0,
+        color: '#fbbf24'
+      });
+    }
+
+    function evolve() {
+      // 1. Evaluate fitness
+      let sumFitness = 0;
+      for (let i = 0; i < population.length; i++) {
+        const fit = walkers[i].getFitness();
+        const dist = walkers[i].scoreDistance();
+        population[i].fitness = fit;
+        population[i].dist = dist;
+        population[i].secondsUpright = walkers[i].secondsUpright;
+        sumFitness += fit;
+      }
+
+      // Remember which walker did best before the sort reorders the population
+      let bestWalkerIdx = 0;
+      for (let i = 1; i < population.length; i++) {
+        if (population[i].fitness > population[bestWalkerIdx].fitness) bestWalkerIdx = i;
+      }
+
+      // Sort descending
+      population.sort((a, b) => b.fitness - a.fitness);
+
+      const genBestFit = population[0].fitness;
+      const genBestDist = population[0].dist;
+      const genAvgFit = sumFitness / population.length;
+
+      // Check record
+      if (genBestFit > allTimeRecordFitness) {
+        if (generation > 0 && !recordBeatenThisGen) {
+          leaderPulses.push({
+            x: walkers[leaderIndex].H.x,
+            y: walkers[leaderIndex].H.y,
+            radius: 8,
+            maxRadius: 60,
+            alpha: 1.0,
+            color: '#f59e0b'
+          });
+        }
+        allTimeRecordFitness = genBestFit;
+      }
+
+      // Record history
+      fitnessHistory.push({
+        gen: generation,
+        best: genBestFit,
+        avg: genAvgFit
+      });
+
+      // Check success moment: "Striding" (>= 10m and still upright at end of run)
+      if (!successMoments.striding && genBestDist >= 10.0 && !walkers[bestWalkerIdx].isDown) {
+        triggerSuccessMoment("striding", "Striding", "A walker covered 10m and stayed upright!");
+      }
+
+      // Update right panel metrics
+      updateMetricsUI(genBestFit, genAvgFit, genBestDist, population[0].secondsUpright);
+
+      // 2. Next generation creation
+      const nextPop = [];
+      const popSize = settings.population;
+      const elitesCount = Math.min(settings.elites, popSize);
+      const poolSize = Math.min(settings.parentPool, population.length);
+
+      // Elites preserved
+      for (let i = 0; i < elitesCount; i++) {
+        nextPop.push({
+          net: new NeuralNet(population[i].net.weights),
+          fitness: 0, dist: 0, secondsUpright: 0
+        });
+      }
+
+      // Parent pool
+      const pool = population.slice(0, poolSize);
+      const progress = Math.max(0, Math.min(1, genBestDist / 25));
+
+      while (nextPop.length < popSize) {
+        const p1 = pool[Math.floor(Math.random() * poolSize)];
+        const p2 = pool[Math.floor(Math.random() * poolSize)];
+
+        // Single-point crossover
+        const cp = 1 + Math.floor(Math.random() * 115);
+        const childWeights = new Float32Array(116);
+        for (let w = 0; w < 116; w++) {
+          childWeights[w] = (w < cp) ? p1.net.weights[w] : p2.net.weights[w];
+        }
+
+        // Mutation
+        const isBigJump = Math.random() < settings.bigJumpChance;
+        let stdDev;
+        if (isBigJump) {
+          stdDev = 0.60;
+        } else if (settings.shrinkMutation) {
+          stdDev = Math.max(0.03, settings.mutationSize * (1 - progress));
+        } else {
+          stdDev = settings.mutationSize;
+        }
+
+        for (let w = 0; w < 116; w++) {
+          if (Math.random() < settings.mutationChance) {
+            childWeights[w] += gaussianRandom() * stdDev;
+          }
+        }
+
+        nextPop.push({
+          net: new NeuralNet(childWeights),
+          fitness: 0, dist: 0, secondsUpright: 0
+        });
+      }
+
+      population = nextPop;
+      generation++;
+      startGeneration();
+    }
+
+    function restartSimulation() {
+      generation = 0;
+      stepInGeneration = 0;
+      allTimeRecordFitness = -999;
+      fitnessHistory = [];
+      dustParticles = [];
+      downCrosses = [];
+      leaderPulses = [];
+      successMoments.firstSteps = false;
+      successMoments.striding = false;
+      successMoments.finishLine = false;
+
+      initPopulation();
+      startGeneration();
+      updateMetricsUI(0, 0, 0, 0);
+    }
+
+    // --- 7. VISUAL EFFECTS HELPERS ---
+    function spawnDust(x, y) {
+      if (dustParticles.length >= 120) return;
+      const count = 3 + Math.floor(dustRandom() * 3);
+      for (let i = 0; i < count; i++) {
+        if (dustParticles.length >= 120) break;
+        dustParticles.push({
+          x: x + (dustRandom() - 0.5) * 8,
+          y: y - 1,
+          vx: (dustRandom() - 0.5) * 1.5,
+          vy: -0.6 - dustRandom() * 1.0,
+          radius: 1.5 + dustRandom() * 1.8,
+          alpha: 0.6,
+          life: 25 + Math.floor(dustRandom() * 20)
+        });
+      }
+    }
+
+    function spawnDownCross(x, y) {
+      downCrosses.push({
+        x: x,
+        y: y,
+        size: 7,
+        alpha: 0.85,
+        life: 45
+      });
+    }
+
+    // --- 8. RENDERING & CANVAS ART ---
+    const simCanvas = document.getElementById("simCanvas");
+    const simCtx = simCanvas.getContext("2d");
+    const container = document.getElementById("canvasContainer");
+
+    function resizeCanvas() {
+      if (!simCanvas || !container) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w === 0 || h === 0) return;
+      simCanvas.width = w * dpr;
+      simCanvas.height = h * dpr;
+      simCanvas.style.width = w + "px";
+      simCanvas.style.height = h + "px";
+      simCtx.scale(dpr, dpr);
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+
+    function drawSimulation() {
+      const w = simCanvas.clientWidth;
+      const h = simCanvas.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      simCtx.clearRect(0, 0, w, h);
+
+      // Smooth camera follow
+      const targetHipX = walkers[leaderIndex] ? walkers[leaderIndex].H.x : 100;
+      camera.targetX = targetHipX;
+      camera.x += (camera.targetX - camera.x) * 0.08;
+
+      // Keep leader at ~28% canvas width
+      const camOffset = w * 0.28;
+      const viewLeft = camera.x - camOffset;
+      const viewRight = viewLeft + w;
+
+      simCtx.save();
+      simCtx.translate(camOffset - camera.x, 0);
+
+      // 1. Draw Distance Marks & Finish Line
+      simCtx.lineWidth = 1;
+      simCtx.font = "10px 'Bricolage Grotesque', sans-serif";
+      simCtx.textAlign = "center";
+
+      const firstMeter = Math.max(0, Math.floor((viewLeft - 100) / 100));
+      const lastMeter = Math.ceil((viewRight - 100) / 100);
+
+      for (let m = firstMeter; m <= lastMeter; m++) {
+        const mx = 100 + m * 100;
+        const gy = getTerrainHeight(mx, settings.roughness, currentTerrainSeed);
+
+        // Every 5m label
+        if (m % 5 === 0) {
+          simCtx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+          simCtx.fillStyle = "rgba(245, 158, 11, 0.75)";
+          simCtx.beginPath();
+          simCtx.moveTo(mx, gy - 12);
+          simCtx.lineTo(mx, gy);
+          simCtx.stroke();
+          simCtx.fillText(m + " m", mx, gy - 16);
+        } else {
+          // 1m tick
+          simCtx.strokeStyle = "rgba(148, 163, 184, 0.22)";
+          simCtx.beginPath();
+          simCtx.moveTo(mx, gy - 6);
+          simCtx.lineTo(mx, gy);
+          simCtx.stroke();
+        }
+      }
+
+      // Finish Line at 25m (x = 2600 px)
+      const finishX = 2600;
+      const finishGY = getTerrainHeight(finishX, settings.roughness, currentTerrainSeed);
+
+      // Flagpole
+      simCtx.strokeStyle = "#fbbf24";
+      simCtx.lineWidth = 2.5;
+      simCtx.beginPath();
+      simCtx.moveTo(finishX, finishGY);
+      simCtx.lineTo(finishX, finishGY - 68);
+      simCtx.stroke();
+
+      // Flag pennant
+      simCtx.fillStyle = "rgba(245, 158, 11, 0.9)";
+      simCtx.beginPath();
+      simCtx.moveTo(finishX, finishGY - 68);
+      simCtx.lineTo(finishX + 32, finishGY - 52);
+      simCtx.lineTo(finishX, finishGY - 36);
+      simCtx.closePath();
+      simCtx.fill();
+
+      // Finish line text
+      simCtx.fillStyle = "#fbbf24";
+      simCtx.font = "bold 10px 'Bricolage Grotesque', sans-serif";
+      simCtx.fillText("FINISH 25m", finishX + 4, finishGY - 74);
+
+      // 2. Draw Ground
+      simCtx.fillStyle = "#11151c";
+      simCtx.strokeStyle = "#273243";
+      simCtx.lineWidth = 2;
+
+      simCtx.beginPath();
+      const startX = Math.floor(viewLeft / 10) * 10 - 20;
+      const endX = Math.ceil(viewRight / 10) * 10 + 20;
+
+      simCtx.moveTo(startX, getTerrainHeight(startX, settings.roughness, currentTerrainSeed));
+      for (let gx = startX + 5; gx <= endX; gx += 5) {
+        simCtx.lineTo(gx, getTerrainHeight(gx, settings.roughness, currentTerrainSeed));
+      }
+      simCtx.lineTo(endX, h + 200);
+      simCtx.lineTo(startX, h + 200);
+      simCtx.closePath();
+      simCtx.fill();
+      simCtx.stroke();
+
+      // 3. Draw Hip Trail for Leader
+      const leader = walkers[leaderIndex];
+      if (leader && leader.hipTrail.length > 1) {
+        simCtx.lineWidth = 2.5;
+        for (let t = 1; t < leader.hipTrail.length; t++) {
+          const pt1 = leader.hipTrail[t - 1];
+          const pt2 = leader.hipTrail[t];
+          const alpha = (t / leader.hipTrail.length) * 0.45;
+          simCtx.strokeStyle = `rgba(245, 158, 11, ${alpha})`;
+          simCtx.beginPath();
+          simCtx.moveTo(pt1.x, pt1.y);
+          simCtx.lineTo(pt2.x, pt2.y);
+          simCtx.stroke();
+        }
+      }
+
+      // 4. Draw Walkers (Non-leaders first, leader last on top)
+      function drawStickFigure(wkr, isLead) {
+        // Colours: near-side limbs bright, far-side limbs a little darker for depth
+        let near, far, boneWidth, jointRadius, headRadius;
+        if (isLead) {
+          near = wkr.isDown ? "rgba(245, 158, 11, 0.45)" : "#f59e0b";
+          far = wkr.isDown ? "rgba(180, 100, 10, 0.40)" : "#b8730a";
+          boneWidth = 3.4; jointRadius = 2.6; headRadius = 7.0;
+        } else if (wkr.isDown) {
+          near = far = "rgba(100, 116, 139, 0.12)";
+          boneWidth = 1.0; jointRadius = 1.4; headRadius = 4.0;
+        } else {
+          near = "rgba(148, 163, 184, 0.30)"; far = "rgba(110, 125, 145, 0.24)";
+          boneWidth = 1.5; jointRadius = 1.8; headRadius = 4.6;
+        }
+        const ang = wkr.getAngles();
+
+        // Torso direction (from head down to hip) and the shoulder point
+        let dx = wkr.H.x - wkr.T.x, dy = wkr.H.y - wkr.T.y;
+        const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+        const shoulder = { x: wkr.T.x + dx * 6, y: wkr.T.y + dy * 6 };
+        // Direction rotated by phi (positive = forward, toward +x, when the torso is upright)
+        const dirAt = (phi) => ({ x: dx * Math.cos(phi) + dy * Math.sin(phi), y: -dx * Math.sin(phi) + dy * Math.cos(phi) });
+        const armLen1 = 17, armLen2 = 15;
+        const drawArm = (swing, color) => {
+          const u = dirAt(swing);
+          const elbow = { x: shoulder.x + u.x * armLen1, y: shoulder.y + u.y * armLen1 };
+          const bend = 0.25 + 0.5 * Math.max(0, swing);   // elbow bends more as the arm swings forward
+          const f = dirAt(swing + bend);
+          const hand = { x: elbow.x + f.x * armLen2, y: elbow.y + f.y * armLen2 };
+          simCtx.strokeStyle = color; simCtx.lineWidth = boneWidth * 0.8;
+          simCtx.beginPath(); simCtx.moveTo(shoulder.x, shoulder.y); simCtx.lineTo(elbow.x, elbow.y); simCtx.lineTo(hand.x, hand.y); simCtx.stroke();
+          simCtx.fillStyle = color; simCtx.beginPath(); simCtx.arc(elbow.x, elbow.y, jointRadius * 0.8, 0, Math.PI * 2); simCtx.fill();
+        };
+        const drawLeg = (K, F, color) => {
+          simCtx.strokeStyle = color; simCtx.lineWidth = boneWidth;
+          simCtx.beginPath(); simCtx.moveTo(wkr.H.x, wkr.H.y); simCtx.lineTo(K.x, K.y); simCtx.lineTo(F.x, F.y);
+          // Foot: a short toe pointing forward
+          simCtx.lineTo(F.x + (isLead ? 10 : 6), F.y);
+          simCtx.stroke();
+          simCtx.fillStyle = color; simCtx.beginPath(); simCtx.arc(K.x, K.y, jointRadius, 0, Math.PI * 2); simCtx.fill();
+        };
+        simCtx.lineCap = "round"; simCtx.lineJoin = "round";
+
+        // Far side first (right leg, left arm swinging with the right leg), then torso, then near side
+        drawLeg(wkr.KR, wkr.FR, far);
+        drawArm(-0.9 * Math.max(-0.5, Math.min(0.7, ang.alphaL)) , far);
+
+        // Torso and neck
+        simCtx.strokeStyle = near; simCtx.lineWidth = boneWidth * 1.15;
+        simCtx.beginPath(); simCtx.moveTo(wkr.H.x, wkr.H.y); simCtx.lineTo(wkr.T.x, wkr.T.y); simCtx.stroke();
+
+        drawLeg(wkr.KL, wkr.FL, near);
+        drawArm(-0.9 * Math.max(-0.5, Math.min(0.7, ang.alphaR)), near);
+
+        // Hip joint
+        simCtx.fillStyle = near; simCtx.beginPath(); simCtx.arc(wkr.H.x, wkr.H.y, jointRadius * 1.1, 0, Math.PI * 2); simCtx.fill();
+
+        // Head sits on top of the torso, with a face that always looks forward (+x)
+        const hc = { x: wkr.T.x - dx * (headRadius * 0.8), y: wkr.T.y - dy * (headRadius * 0.8) };
+        simCtx.fillStyle = near; simCtx.beginPath(); simCtx.arc(hc.x, hc.y, headRadius, 0, Math.PI * 2); simCtx.fill();
+        if (isLead && !wkr.isDown) {
+          simCtx.fillStyle = "#1a1207";
+          simCtx.beginPath(); simCtx.arc(hc.x + headRadius * 0.45, hc.y - headRadius * 0.15, 1.3, 0, Math.PI * 2); simCtx.fill(); // eye
+          simCtx.strokeStyle = near; simCtx.lineWidth = 2;
+          simCtx.beginPath(); simCtx.moveTo(hc.x + headRadius * 0.9, hc.y + headRadius * 0.05); simCtx.lineTo(hc.x + headRadius * 1.5, hc.y + headRadius * 0.25); simCtx.lineTo(hc.x + headRadius * 0.9, hc.y + headRadius * 0.4); simCtx.stroke(); // nose
+        }
+      }
+
+      for (let i = 0; i < walkers.length; i++) {
+        if (i !== leaderIndex) drawStickFigure(walkers[i], false);
+      }
+      if (walkers[leaderIndex]) {
+        drawStickFigure(walkers[leaderIndex], true);
+      }
+
+      // 5. Draw Fading Down Crosses
+      for (let i = downCrosses.length - 1; i >= 0; i--) {
+        const dc = downCrosses[i];
+        simCtx.strokeStyle = `rgba(239, 68, 68, ${dc.alpha})`;
+        simCtx.lineWidth = 1.5;
+        simCtx.beginPath();
+        simCtx.moveTo(dc.x - dc.size, dc.y - dc.size);
+        simCtx.lineTo(dc.x + dc.size, dc.y + dc.size);
+        simCtx.moveTo(dc.x + dc.size, dc.y - dc.size);
+        simCtx.lineTo(dc.x - dc.size, dc.y + dc.size);
+        simCtx.stroke();
+
+        dc.alpha -= 0.02;
+        dc.life--;
+        if (dc.life <= 0 || dc.alpha <= 0) downCrosses.splice(i, 1);
+      }
+
+      // 6. Draw Dust Particles
+      for (let i = dustParticles.length - 1; i >= 0; i--) {
+        const dp = dustParticles[i];
+        simCtx.fillStyle = `rgba(148, 163, 184, ${dp.alpha})`;
+        simCtx.beginPath();
+        simCtx.arc(dp.x, dp.y, dp.radius, 0, Math.PI * 2);
+        simCtx.fill();
+
+        dp.x += dp.vx;
+        dp.y += dp.vy;
+        dp.alpha -= 0.025;
+        dp.life--;
+        if (dp.life <= 0 || dp.alpha <= 0) dustParticles.splice(i, 1);
+      }
+
+      // 7. Draw Leader / Celebratory Pulses
+      for (let i = leaderPulses.length - 1; i >= 0; i--) {
+        const lp = leaderPulses[i];
+        simCtx.strokeStyle = lp.color;
+        simCtx.globalAlpha = lp.alpha;
+        simCtx.lineWidth = 2;
+        simCtx.beginPath();
+        simCtx.arc(lp.x, lp.y, lp.radius, 0, Math.PI * 2);
+        simCtx.stroke();
+        simCtx.globalAlpha = 1.0;
+
+        lp.radius += 2.0;
+        lp.alpha -= 0.025;
+        if (lp.radius >= lp.maxRadius || lp.alpha <= 0) {
+          leaderPulses.splice(i, 1);
+        }
+      }
+
+      simCtx.restore();
+    }
+
+    // --- 9. FITNESS GRAPH RENDERING ---
+    const graphCanvas = document.getElementById("fitnessGraph");
+    const graphCtx = graphCanvas.getContext("2d");
+
+    function drawGraph() {
+      if (!graphCanvas) return;
+      const w = graphCanvas.clientWidth;
+      const h = graphCanvas.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      if (graphCanvas.width !== w * dpr || graphCanvas.height !== h * dpr) {
+        graphCanvas.width = w * dpr;
+        graphCanvas.height = h * dpr;
+        graphCtx.scale(dpr, dpr);
+      }
+
+      graphCtx.clearRect(0, 0, w, h);
+
+      // Sliding window of last 30 generations
+      const maxGens = 30;
+      const historySlice = fitnessHistory.slice(-maxGens);
+      if (historySlice.length < 2) {
+        // Placeholder text
+        graphCtx.fillStyle = "rgba(140, 151, 168, 0.4)";
+        graphCtx.font = "11px 'Bricolage Grotesque', sans-serif";
+        graphCtx.textAlign = "center";
+        graphCtx.fillText("Awaiting generations...", w / 2, h / 2);
+        return;
+      }
+
+      // Compute range
+      let minVal = Infinity, maxVal = -Infinity;
+      for (let pt of historySlice) {
+        if (pt.best < minVal) minVal = pt.best;
+        if (pt.best > maxVal) maxVal = pt.best;
+        if (pt.avg < minVal) minVal = pt.avg;
+        if (pt.avg > maxVal) maxVal = pt.avg;
+      }
+
+      // Add 10% headroom
+      const pad = Math.max(10, (maxVal - minVal) * 0.10);
+      const targetMin = minVal - pad;
+      const targetMax = maxVal + pad;
+
+      // Smooth easing on Y range
+      graphYMin += (targetMin - graphYMin) * 0.15;
+      graphYMax += (targetMax - graphYMax) * 0.15;
+      const range = (graphYMax - graphYMin) || 1;
+
+      // Grid line at 0
+      const zeroY = h - ((0 - graphYMin) / range) * (h - 20) - 10;
+      if (zeroY >= 0 && zeroY <= h) {
+        graphCtx.strokeStyle = "rgba(140, 151, 168, 0.15)";
+        graphCtx.lineWidth = 1;
+        graphCtx.setLineDash([3, 3]);
+        graphCtx.beginPath();
+        graphCtx.moveTo(0, zeroY);
+        graphCtx.lineTo(w, zeroY);
+        graphCtx.stroke();
+        graphCtx.setLineDash([]);
+      }
+
+      const count = historySlice.length;
+      const stepX = w / (Math.max(count - 1, 1));
+
+      // Draw Average Line (blue-grey)
+      graphCtx.strokeStyle = "#75869c";
+      graphCtx.lineWidth = 1.6;
+      graphCtx.beginPath();
+      for (let i = 0; i < count; i++) {
+        const x = i * stepX;
+        const y = h - ((historySlice[i].avg - graphYMin) / range) * (h - 20) - 10;
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.stroke();
+
+      // Draw Best Line (amber)
+      graphCtx.strokeStyle = "#f59e0b";
+      graphCtx.lineWidth = 2.2;
+      graphCtx.beginPath();
+      for (let i = 0; i < count; i++) {
+        const x = i * stepX;
+        const y = h - ((historySlice[i].best - graphYMin) / range) * (h - 20) - 10;
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.stroke();
+
+      // Point dots on latest
+      const lastX = (count - 1) * stepX;
+      const lastBestY = h - ((historySlice[count - 1].best - graphYMin) / range) * (h - 20) - 10;
+      graphCtx.fillStyle = "#fbbf24";
+      graphCtx.beginPath();
+      graphCtx.arc(lastX, lastBestY, 3, 0, Math.PI * 2);
+      graphCtx.fill();
+    }
+
+    // --- 10. "HOW IT WORKS" DIAGRAM & MINI SCENE ---
+    const netCanvas = document.getElementById("netCanvas");
+    const netCtx = netCanvas ? netCanvas.getContext("2d") : null;
+    const miniCanvas = document.getElementById("miniCanvas");
+    const miniCtx = miniCanvas ? miniCanvas.getContext("2d") : null;
+    let animPulsePhase = 0;
+
+    function drawNetworkDiagram(inputs, hidden, outputs) {
+      if (!netCanvas || !netCtx) return;
+      const w = netCanvas.clientWidth;
+      const h = netCanvas.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      if (netCanvas.width !== w * dpr || netCanvas.height !== h * dpr) {
+        netCanvas.width = w * dpr;
+        netCanvas.height = h * dpr;
+        netCtx.scale(dpr, dpr);
+      }
+
+      netCtx.clearRect(0, 0, w, h);
+
+      animPulsePhase = (animPulsePhase + 0.05) % (Math.PI * 2);
+
+      const inLabels = ["clk sin", "clk cos", "tilt", "hip L", "hip R", "knee L", "knee R", "foot L", "foot R"];
+      const outLabels = ["hip L", "hip R", "knee L", "knee R"];
+
+      const xIn = 45;
+      const xHid = w / 2;
+      const xOut = w - 45;
+
+      const inY = [];
+      const hidY = [];
+      const outY = [];
+
+      // Calculate node positions
+      for (let i = 0; i < 9; i++) inY.push(22 + (i * (h - 44)) / 8);
+      for (let j = 0; j < 8; j++) hidY.push(30 + (j * (h - 60)) / 7);
+      for (let k = 0; k < 4; k++) outY.push(48 + (k * (h - 96)) / 3);
+
+      // Draw Connections (Input -> Hidden)
+      netCtx.lineWidth = 1;
+      for (let i = 0; i < 9; i++) {
+        for (let j = 0; j < 8; j++) {
+          const pulse = (Math.sin(animPulsePhase + (i + j) * 0.5) + 1) / 2;
+          netCtx.strokeStyle = `rgba(117, 134, 156, ${0.06 + pulse * 0.16})`;
+          netCtx.beginPath();
+          netCtx.moveTo(xIn, inY[i]);
+          netCtx.lineTo(xHid, hidY[j]);
+          netCtx.stroke();
+        }
+      }
+
+      // Draw Connections (Hidden -> Output)
+      for (let j = 0; j < 8; j++) {
+        for (let k = 0; k < 4; k++) {
+          const pulse = (Math.sin(animPulsePhase + (j + k) * 0.6) + 1) / 2;
+          netCtx.strokeStyle = `rgba(245, 158, 11, ${0.08 + pulse * 0.22})`;
+          netCtx.beginPath();
+          netCtx.moveTo(xHid, hidY[j]);
+          netCtx.lineTo(xOut, outY[k]);
+          netCtx.stroke();
+        }
+      }
+
+      // Draw Nodes: Inputs
+      netCtx.font = "9px 'Bricolage Grotesque', sans-serif";
+      netCtx.textAlign = "right";
+      for (let i = 0; i < 9; i++) {
+        const val = inputs ? inputs[i] : 0;
+        netCtx.fillStyle = (val >= 0) ? "#f59e0b" : "#75869c";
+        netCtx.beginPath();
+        netCtx.arc(xIn, inY[i], 4, 0, Math.PI * 2);
+        netCtx.fill();
+        netCtx.fillStyle = "#8c97a8";
+        netCtx.fillText(inLabels[i], xIn - 8, inY[i] + 3);
+      }
+
+      // Draw Nodes: Hidden
+      for (let j = 0; j < 8; j++) {
+        const val = hidden ? hidden[j] : 0;
+        netCtx.fillStyle = (val >= 0) ? "#fbbf24" : "#475569";
+        netCtx.beginPath();
+        netCtx.arc(xHid, hidY[j], 4.5, 0, Math.PI * 2);
+        netCtx.fill();
+      }
+
+      // Draw Nodes: Outputs
+      netCtx.textAlign = "left";
+      for (let k = 0; k < 4; k++) {
+        const val = outputs ? outputs[k] : 0;
+        netCtx.fillStyle = (val >= 0) ? "#f59e0b" : "#75869c";
+        netCtx.beginPath();
+        netCtx.arc(xOut, outY[k], 5, 0, Math.PI * 2);
+        netCtx.fill();
+        netCtx.fillStyle = "#ede8df";
+        netCtx.fillText(outLabels[k], xOut + 8, outY[k] + 3);
+      }
+    }
+
+    function drawMiniScene() {
+      if (!miniCanvas || !miniCtx) return;
+      const w = miniCanvas.clientWidth;
+      const h = miniCanvas.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      if (miniCanvas.width !== w * dpr || miniCanvas.height !== h * dpr) {
+        miniCanvas.width = w * dpr;
+        miniCanvas.height = h * dpr;
+        miniCtx.scale(dpr, dpr);
+      }
+
+      miniCtx.clearRect(0, 0, w, h);
+
+      const leader = walkers[leaderIndex];
+      if (!leader) return;
+
+      // Draw ground strip in mini scene
+      const groundY = h - 25;
+      miniCtx.fillStyle = "#1e2430";
+      miniCtx.fillRect(0, groundY, w, 25);
+      miniCtx.strokeStyle = "#334155";
+      miniCtx.lineWidth = 1;
+      miniCtx.beginPath();
+      miniCtx.moveTo(0, groundY);
+      miniCtx.lineTo(w, groundY);
+      miniCtx.stroke();
+
+      // Transform leader coordinates centered
+      const cx = w / 2;
+      const cy = groundY;
+      const offsetX = cx - leader.H.x;
+      const offsetY = cy - 520;
+
+      miniCtx.save();
+      miniCtx.translate(offsetX, offsetY);
+
+      const bones = [
+        [leader.T, leader.H],
+        [leader.H, leader.KL],
+        [leader.KL, leader.FL],
+        [leader.H, leader.KR],
+        [leader.KR, leader.FR]
+      ];
+
+      miniCtx.strokeStyle = "#f59e0b";
+      miniCtx.lineWidth = 3.0;
+      miniCtx.lineCap = "round";
+      miniCtx.beginPath();
+      for (let b of bones) {
+        miniCtx.moveTo(b[0].x, b[0].y);
+        miniCtx.lineTo(b[1].x, b[1].y);
+      }
+      miniCtx.stroke();
+
+      miniCtx.fillStyle = "#fbbf24";
+      miniCtx.beginPath();
+      miniCtx.arc(leader.T.x, leader.T.y, 4.5, 0, Math.PI * 2);
+      miniCtx.arc(leader.H.x, leader.H.y, 3, 0, Math.PI * 2);
+      miniCtx.arc(leader.KL.x, leader.KL.y, 3, 0, Math.PI * 2);
+      miniCtx.arc(leader.FL.x, leader.FL.y, 3, 0, Math.PI * 2);
+      miniCtx.arc(leader.KR.x, leader.KR.y, 3, 0, Math.PI * 2);
+      miniCtx.arc(leader.FR.x, leader.FR.y, 3, 0, Math.PI * 2);
+      miniCtx.fill();
+
+      miniCtx.restore();
+
+      // Update Servos comparison bars
+      const { alphaL, alphaR, betaL, betaR } = leader.getAngles();
+      const outs = leader.prevOutputs;
+      const targetHipL = hipTarget(outs[0]);
+      const targetHipR = hipTarget(outs[1]);
+      const targetKneeL = KNEE_MAX * (outs[2] + 1) / 2;
+      const targetKneeR = KNEE_MAX * (outs[3] + 1) / 2;
+
+      function updateBar(barId, needleId, txtId, target, actual, maxAngle) {
+        const bar = document.getElementById(barId);
+        const needle = document.getElementById(needleId);
+        const txt = document.getElementById(txtId);
+        if (!bar || !needle || !txt) return;
+
+        txt.textContent = `${target.toFixed(2)} / ${actual.toFixed(2)} rad`;
+
+        // Bar fill from center (50%) to target
+        const normTarget = Math.max(-1, Math.min(1, target / maxAngle));
+        const normActual = Math.max(-1, Math.min(1, actual / maxAngle));
+
+        const targetPct = (normTarget + 1) * 50;
+        const actualPct = (normActual + 1) * 50;
+
+        if (targetPct >= 50) {
+          bar.style.left = "50%";
+          bar.style.width = (targetPct - 50) + "%";
+        } else {
+          bar.style.left = targetPct + "%";
+          bar.style.width = (50 - targetPct) + "%";
+        }
+
+        needle.style.left = actualPct + "%";
+      }
+
+      updateBar("barTargetHipL", "needleActualHipL", "txtHipL", targetHipL, alphaL, HIP_RANGE);
+      updateBar("barTargetHipR", "needleActualHipR", "txtHipR", targetHipR, alphaR, HIP_RANGE);
+      updateBar("barTargetKneeL", "needleActualKneeL", "txtKneeL", targetKneeL, betaL, KNEE_MAX);
+      updateBar("barTargetKneeR", "needleActualKneeR", "txtKneeR", targetKneeR, betaR, KNEE_MAX);
+    }
+
+    // --- 11. UI CONTROLS & EVENT HANDLERS ---
+    const topGenEl = document.getElementById("topGen");
+    const topWalkingEl = document.getElementById("topWalking");
+    const metricBestFitEl = document.getElementById("metricBestFit");
+    const metricAvgFitEl = document.getElementById("metricAvgFit");
+    const metricRecordFitEl = document.getElementById("metricRecordFit");
+    const metricDistanceEl = document.getElementById("metricDistance");
+    const distanceFillEl = document.getElementById("distanceFill");
+    const metricUprightEl = document.getElementById("metricUpright");
+
+    function updateMetricsUI(bestFit, avgFit, dist, upright) {
+      if (topGenEl) topGenEl.textContent = generation;
+      if (metricBestFitEl) metricBestFitEl.textContent = bestFit.toFixed(1);
+      if (metricAvgFitEl) metricAvgFitEl.textContent = avgFit.toFixed(1);
+      if (metricRecordFitEl) metricRecordFitEl.textContent = `Record: ${Math.max(bestFit, allTimeRecordFitness).toFixed(1)}`;
+      if (metricDistanceEl) metricDistanceEl.textContent = `${Math.max(0, dist).toFixed(1)} m of 25 m`;
+      if (distanceFillEl) distanceFillEl.style.width = Math.min(100, Math.max(0, (dist / 25) * 100)) + "%";
+      if (metricUprightEl) metricUprightEl.textContent = `Upright time: ${upright.toFixed(1)} s`;
+    }
+
+    // Sliders wiring
+    function setupSlider(id, valId, settingKey, formatFn, isPhysics = false) {
+      const el = document.getElementById(id);
+      const valEl = document.getElementById(valId);
+      if (!el || !valEl) return;
+
+      el.addEventListener("input", (e) => {
+        const num = parseFloat(e.target.value);
+        settings[settingKey] = num;
+        valEl.textContent = formatFn(num);
+        if (activePreset) {
+          document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+          activePreset = null;
+        }
+      });
+    }
+
+    setupSlider("slPopulation", "valPopulation", "population", v => v);
+    setupSlider("slElites", "valElites", "elites", v => v);
+    setupSlider("slParentPool", "valParentPool", "parentPool", v => v);
+    setupSlider("slMutationChance", "valMutationChance", "mutationChance", v => `${v}%`);
+    setupSlider("slMutationSize", "valMutationSize", "mutationSize", v => v.toFixed(2));
+    setupSlider("slBigJumpChance", "valBigJumpChance", "bigJumpChance", v => `${v}%`);
+    setupSlider("slMotorStrength", "valMotorStrength", "motorStrength", v => v.toFixed(2), true);
+    setupSlider("slFootGrip", "valFootGrip", "footGrip", v => v.toFixed(2), true);
+    setupSlider("slGravity", "valGravity", "gravity", v => v, true);
+    setupSlider("slRoughness", "valRoughness", "roughness", v => `${v} px`);
+    setupSlider("slEpisodeLength", "valEpisodeLength", "episodeLength", v => `${v} s`);
+
+    const chkShrink = document.getElementById("chkShrink");
+    if (chkShrink) {
+      chkShrink.addEventListener("change", (e) => {
+        settings.shrinkMutation = e.target.checked;
+      });
+    }
+
+    function syncSlidersUI() {
+      const setVal = (id, valId, val, fmt) => {
+        const el = document.getElementById(id);
+        const vel = document.getElementById(valId);
+        if (el) el.value = val;
+        if (vel) vel.textContent = fmt(val);
+      };
+
+      setVal("slPopulation", "valPopulation", settings.population, v => v);
+      setVal("slElites", "valElites", settings.elites, v => v);
+      setVal("slParentPool", "valParentPool", settings.parentPool, v => v);
+      setVal("slMutationChance", "valMutationChance", settings.mutationChance * 100, v => `${v}%`);
+      setVal("slMutationSize", "valMutationSize", settings.mutationSize, v => Number(v).toFixed(2));
+      setVal("slBigJumpChance", "valBigJumpChance", settings.bigJumpChance * 100, v => `${v}%`);
+      setVal("slMotorStrength", "valMotorStrength", settings.motorStrength, v => Number(v).toFixed(2));
+      setVal("slFootGrip", "valFootGrip", settings.footGrip, v => Number(v).toFixed(2));
+      setVal("slGravity", "valGravity", settings.gravity, v => v);
+      setVal("slRoughness", "valRoughness", settings.roughness, v => `${v} px`);
+      setVal("slEpisodeLength", "valEpisodeLength", settings.episodeLength, v => `${v} s`);
+
+      if (chkShrink) chkShrink.checked = settings.shrinkMutation;
+    }
+
+    // Presets
+    const presets = {
+      reckless: { mutationChance: 0.50, mutationSize: 1.0, bigJumpChance: 0.20, shrinkMutation: false },
+      noElites: { elites: 0 },
+      tinyPop: { population: 10, elites: 1, parentPool: 3 },
+      hardWorld: { footGrip: 0.50, gravity: 1400, roughness: 6.0, motorStrength: 0.25 }
+    };
+
+    function applyPreset(name, btnId) {
+      document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.add("active");
+      activePreset = name;
+
+      Object.assign(settings, presets[name]);
+      syncSlidersUI();
+    }
+
+    document.getElementById("presetReckless").addEventListener("click", () => applyPreset("reckless", "presetReckless"));
+    document.getElementById("presetNoElites").addEventListener("click", () => applyPreset("noElites", "presetNoElites"));
+    document.getElementById("presetTinyPop").addEventListener("click", () => applyPreset("tinyPop", "presetTinyPop"));
+    document.getElementById("presetHardWorld").addEventListener("click", () => applyPreset("hardWorld", "presetHardWorld"));
+
+    document.getElementById("btnReset").addEventListener("click", () => {
+      document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+      activePreset = null;
+      Object.assign(settings, DEFAULTS);
+      syncSlidersUI();
+    });
+
+    // Speed buttons
+    document.querySelectorAll(".speed-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".speed-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        speedMultiplier = parseInt(btn.getAttribute("data-speed"), 10) || 1;
+      });
+    });
+
+    // Pause / Resume
+    const btnPause = document.getElementById("btnPause");
+    btnPause.addEventListener("click", () => {
+      isPaused = !isPaused;
+      btnPause.textContent = isPaused ? "Resume" : "Pause";
+      btnPause.classList.toggle("primary", isPaused);
+    });
+
+    // Restart
+    document.getElementById("btnRestart").addEventListener("click", () => {
+      restartSimulation();
+    });
+
+    // How It Works Modal
+    const modal = document.getElementById("modalOverlay");
+    document.getElementById("btnHowItWorks").addEventListener("click", () => {
+      if (modal) modal.classList.add("open");
+    });
+    document.getElementById("modalClose").addEventListener("click", () => {
+      if (modal) modal.classList.remove("open");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
+    });
+
+    // --- 12. MAIN SIMULATION & ANIMATION LOOP ---
+    let lastLeaderNetData = null;
+
+    function mainLoop() {
+      requestAnimationFrame(mainLoop);
+
+      if (!isPaused) {
+        const stepsPerFrame = speedMultiplier;
+        const maxStepsPerGen = settings.episodeLength * 60;
+
+        for (let s = 0; s < stepsPerFrame; s++) {
+          const t = stepInGeneration * (1 / 60);
+          let aliveCount = 0;
+          let bestRunningFit = -9999;
+          let currentLeader = leaderIndex;
+
+          for (let i = 0; i < walkers.length; i++) {
+            const w = walkers[i];
+            if (!w.isDown && !w.isFinished) {
+              aliveCount++;
+              const inputs = getNetworkInputs(w, t, settings.roughness, currentTerrainSeed);
+              const forwardRes = population[i].net.forward(inputs);
+              w.step(forwardRes.outputs, settings, currentTerrainSeed);
+
+              // Check success moments during active walk
+              const curDist = w.scoreDistance();
+              if (!w.isDown && curDist >= 3.0 && !successMoments.firstSteps) {
+                triggerSuccessMoment("firstSteps", "First steps", "A walker covered 3m upright!");
+              }
+              if (w.isFinished && !successMoments.finishLine) {
+                triggerSuccessMoment("finishLine", "Finish line", "A walker reached the 25m mark!");
+              }
+
+              // Save net activations for leader modal
+              if (i === leaderIndex) {
+                lastLeaderNetData = { inputs, hidden: forwardRes.hidden, outputs: forwardRes.outputs };
+              }
+            }
+
+            // Running fitness for leadership
+            const fit = w.getFitness();
+            if (fit > bestRunningFit) {
+              bestRunningFit = fit;
+              currentLeader = i;
+            }
+          }
+
+          leaderIndex = currentLeader;
+          stepInGeneration++;
+
+          // Check generation termination: all down/finished OR episode length reached
+          if (aliveCount === 0 || stepInGeneration >= maxStepsPerGen) {
+            evolve();
+            break; // Stop physics loop for this animation frame
+          }
+        }
+      }
+
+      // Update Top Bar Walking Count
+      let stillWalking = 0;
+      for (let i = 0; i < walkers.length; i++) {
+        if (!walkers[i].isDown && !walkers[i].isFinished) stillWalking++;
+      }
+      if (topWalkingEl) topWalkingEl.textContent = `${stillWalking} / ${walkers.length}`;
+      // Why walkers went down this generation
+      const downWhyEl = document.getElementById("metricDownWhy");
+      if (downWhyEl) {
+        let nFell = 0, nHigh = 0, nAir = 0, nScoot = 0;
+        for (let i = 0; i < walkers.length; i++) {
+          const r = walkers[i].downReason;
+          if (r === 'fell') nFell++; else if (r === 'scooting') nScoot++; else if (r === 'too high') nHigh++; else if (r === 'airborne') nAir++;
+        }
+        downWhyEl.textContent = `Down: fell ${nFell} \u00b7 scooting ${nScoot} \u00b7 too high ${nHigh} \u00b7 airborne ${nAir}`;
+      }
+      if (topGenEl) topGenEl.textContent = generation;
+
+      // Draw Main Canvas (once per frame)
+      drawSimulation();
+
+      // Draw Fitness Graph
+      drawGraph();
+
+      // If How-It-Works modal is open, animate diagram and mini scene
+      if (modal && modal.classList.contains("open")) {
+        if (lastLeaderNetData) {
+          drawNetworkDiagram(lastLeaderNetData.inputs, lastLeaderNetData.hidden, lastLeaderNetData.outputs);
+        } else {
+          drawNetworkDiagram(null, null, null);
+        }
+        drawMiniScene();
+      }
+    }
+
+    // --- INITIALIZE & START ---
+    resizeCanvas();
+    initPopulation();
+    startGeneration();
+    updateMetricsUI(0, 0, 0, 0);
+    requestAnimationFrame(mainLoop);
+
+  </script>
+</body>
+</html>
