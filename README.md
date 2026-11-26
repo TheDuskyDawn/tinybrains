@@ -23,7 +23,8 @@ No server. No backend. No API key. No "please sign in to continue training." Jus
 | 09 | [**Climb**](experiments/climb/) | A population of tiny neural nets learns to rock an underpowered car up a hill | a few generations |
 | 10 | [**Swing**](experiments/swing/) | A population of tiny neural nets learns to swing up and balance a pendulum | a few generations |
 | 11 | [**Stride**](experiments/stride/) | Bipedal walkers evolve neural-net controllers to walk | a few generations |
-| 12 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
+| 12 | [**Forage**](experiments/forage/) | Creatures with tiny neural nets evolve to find food in an arena | a few generations |
+| 13 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
 
 ## 🔒 Privacy Policy
 
@@ -63,7 +64,8 @@ Don't double-click `index.html`. Some browsers get weird about `file://`. They h
     ├── leap/               # experiment 08
     ├── climb/              # experiment 09
     ├── swing/              # experiment 10
-    └── stride/             # experiment 11
+    ├── stride/             # experiment 11
+    └── forage/             # experiment 12
 ```
 
 Each experiment lives in its own folder and is **fully self-contained**. If one breaks, the others carry on, like siblings at a wedding.

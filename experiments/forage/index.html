@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forage — Neuroevolution Simulation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c0f;
+      --bg-surface: #111419;
+      --bg-raised: #171b22;
+      --bg-hover: #1e242e;
+      --border: #232934;
+      --border-strong: #343d4d;
+      --text: #ede8df;
+      --text-muted: #939cab;
+      --text-dim: #5c6675;
+      --amber: #f59e0b;
+      --amber-bright: #fbbf24;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --bluegrey: #7b8ea8;
+      --bluegrey-soft: rgba(123, 142, 168, 0.16);
+      --moss: #8fc79a;
+      --moss-soft: rgba(143, 199, 154, 0.16);
+      --font-ui: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Newsreader', Georgia, serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+      height: 100%;
+    }
+
+    @media (min-width: 1120px) and (min-height: 680px) {
+      body {
+        overflow: hidden;
+      }
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 290px minmax(420px, 1fr) 310px;
+      grid-template-rows: 100vh;
+      gap: 14px;
+      padding: 14px;
+      max-width: 1680px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1119px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        height: auto;
+        min-height: 100vh;
+      }
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: panel-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .panel-left { animation-delay: 0.04s; }
+    .panel-center { animation-delay: 0.11s; }
+    .panel-right { animation-delay: 0.18s; }
+
+    @keyframes panel-in {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .panel {
+        opacity: 1;
+        transform: none;
+        animation: none;
+      }
+    }
+
+    /* Left Panel: Controls */
+    .panel-left {
+      padding: 12px 14px;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand-sub {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn {
+      position: relative;
+      background: var(--bg-raised);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 9px;
+      font-family: var(--font-ui);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      overflow: hidden;
+      transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+    }
+
+    .btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--amber-soft);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 0;
+    }
+
+    .btn > span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn:hover {
+      border-color: var(--border-strong);
+    }
+
+    .btn:hover::before {
+      transform: scaleX(1);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--amber);
+      outline-offset: 1px;
+    }
+
+    .btn-preset.active {
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .btn-center {
+      text-align: center;
+    }
+
+    .btn-primary {
+      border-color: rgba(245, 158, 11, 0.45);
+      color: var(--amber-bright);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn::before {
+        transition: none;
+      }
+    }
+
+    .sliders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .slider-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.77rem;
+      line-height: 1.2;
+    }
+
+    .slider-name {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .next-gen-tag {
+      display: none;
+      font-size: 0.64rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--amber-bright);
+      background: var(--amber-soft);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    .next-gen-tag.visible {
+      display: inline-block;
+    }
+
+    .slider-val {
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      margin: 3px 0 1px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--bg-surface);
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--amber-bright);
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--bg-surface);
+      cursor: pointer;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 0 2px;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .checkbox-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    /* Center Panel: Arena */
+    .panel-center {
+      padding: 12px 14px;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .hud-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hud-stats {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .hud-stat {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .hud-stat-label {
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-dim);
+    }
+
+    .hud-stat-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+
+    .hud-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .speed-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--bg-raised);
+    }
+
+    .speed-btn {
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 5px 8px;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .speed-btn:last-child {
+      border-right: none;
+    }
+
+    .speed-btn:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+
+    .speed-btn.active {
+      background: var(--amber-soft);
+      color: var(--amber-bright);
+    }
+
+    .arena-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #07090c;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #arenaCanvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      aspect-ratio: 4 / 3;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .arena-caption {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      font-size: 0.72rem;
+      color: var(--moss);
+      opacity: 0.85;
+      pointer-events: none;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .arena-caption-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--moss);
+    }
+
+    .banner-chip {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(17, 20, 25, 0.92);
+      border: 1px solid var(--amber);
+      color: var(--amber-bright);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      white-space: nowrap;
+    }
+
+    .banner-chip.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .banner-chip {
+        transform: translateX(-50%);
+        transition: none;
+      }
+    }
+
+    .arena-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      gap: 10px;
+    }
+
+    .legend-inline {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Right Panel: Metrics & Graph */
+    .panel-right {
+      padding: 12px 14px;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .metric-box {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      transition: border-color 0.3s ease;
+    }
+
+    .metric-box.pulse {
+      border-color: var(--amber);
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+    }
+
+    .metric-main {
+      font-size: 1.15rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
+      color: var(--text);
+    }
+
+    .metric-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+      margin-top: 1px;
+    }
+
+    .metric-amber {
+      color: var(--amber-bright);
+    }
+
+    .metric-bluegrey {
+      color: var(--bluegrey);
+    }
+
+    .milestones-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .milestone-pill {
+      flex: 1;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: var(--bg-raised);
+      transition: border-color 0.25s ease, color 0.25s ease, background-color 0.25s ease;
+    }
+
+    .milestone-pill.earned {
+      border-color: rgba(245, 158, 11, 0.55);
+      color: var(--amber-bright);
+      background: var(--amber-soft);
+    }
+
+    .graph-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-height: 170px;
+    }
+
+    .graph-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .graph-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .graph-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 145px;
+      background: #080a0d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #graphCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .reading-note {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .reading-note p {
+      margin: 4px 0 0;
+      font-family: var(--font-serif);
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    /* How it works Popup */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 10, 0.84);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      max-width: 860px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 760px) {
+      .modal-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .modal-card {
+      background: #080a0d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .modal-card canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .modal-explain {
+      font-family: var(--font-serif);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT COLUMN: Presets & Sliders -->
+    <aside class="panel panel-left" aria-label="Simulation controls">
+      <div class="brand">
+        <h1>Forage</h1>
+        <span class="brand-sub">neuroevolution</span>
+      </div>
+
+      <div>
+        <div class="section-label">Experiment Presets</div>
+        <div class="presets-grid">
+          <button type="button" class="btn btn-preset" data-preset="reckless"><span>Reckless mutation</span></button>
+          <button type="button" class="btn btn-preset" data-preset="noElites"><span>No elites</span></button>
+          <button type="button" class="btn btn-preset" data-preset="tinyPop"><span>Tiny population</span></button>
+          <button type="button" class="btn btn-preset" data-preset="famine"><span>Famine</span></button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Parameters (queued for next gen)</div>
+        <div class="sliders-list" id="slidersList"></div>
+      </div>
+
+      <label class="checkbox-row" for="shrinkCheckbox">
+        <span class="checkbox-left">
+          <input type="checkbox" id="shrinkCheckbox" checked>
+          <span>Shrink mutation near perfect</span>
+        </span>
+        <span class="next-gen-tag" id="shrinkNextGenTag">next gen</span>
+      </label>
+
+      <button type="button" class="btn btn-center btn-primary" id="resetOptimalBtn">
+        <span>Reset to optimal values</span>
+      </button>
+    </aside>
+
+    <!-- CENTER COLUMN: Arena -->
+    <main class="panel panel-center" aria-label="Simulation arena">
+      <div class="hud-bar">
+        <div class="hud-stats">
+          <div class="hud-stat">
+            <span class="hud-stat-label">Generation</span>
+            <span class="hud-stat-value" id="hudGen">1</span>
+          </div>
+          <div class="hud-stat">
+            <span class="hud-stat-label">Still alive</span>
+            <span class="hud-stat-value" id="hudAlive">50 / 50</span>
+          </div>
+          <div class="hud-stat">
+            <span class="hud-stat-label">Step</span>
+            <span class="hud-stat-value" id="hudStep">0 / 1500</span>
+          </div>
+        </div>
+
+        <div class="hud-controls">
+          <div class="speed-group" role="group" aria-label="Simulation speed">
+            <button type="button" class="speed-btn active" data-speed="1">1x</button>
+            <button type="button" class="speed-btn" data-speed="5">5x</button>
+            <button type="button" class="speed-btn" data-speed="20">20x</button>
+            <button type="button" class="speed-btn" data-speed="80">80x</button>
+          </div>
+          <button type="button" class="btn" id="pauseBtn"><span>Pause</span></button>
+          <button type="button" class="btn" id="restartBtn"><span>Restart</span></button>
+          <button type="button" class="btn" id="howItWorksBtn"><span>How it works</span></button>
+        </div>
+      </div>
+
+      <div class="arena-stage">
+        <canvas id="arenaCanvas" width="800" height="600"></canvas>
+        <div class="arena-caption">
+          <span class="arena-caption-dot"></span>
+          <span>Showing the leader's food</span>
+        </div>
+        <div class="banner-chip" id="bannerChip" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="arena-footer">
+        <div class="legend-inline">
+          <span class="legend-item"><span class="swatch" style="background:#f59e0b;"></span>Leader (energy ring &amp; trail)</span>
+          <span class="legend-item"><span class="swatch" style="background:rgba(237,232,223,0.4);"></span>Population</span>
+          <span class="legend-item"><span class="swatch" style="background:#8fc79a;"></span>Food pellet</span>
+        </div>
+        <span id="hudLeaderMeals">Leader: 0 / 25 meals</span>
+      </div>
+    </main>
+
+    <!-- RIGHT COLUMN: Metrics & Graph -->
+    <aside class="panel panel-right" aria-label="Training metrics">
+      <div class="section-label">Last Generation</div>
+      <div class="metrics-grid">
+        <div class="metric-box" id="bestMetricBox">
+          <div class="metric-label">Best meals</div>
+          <div class="metric-main metric-amber" id="metricBestMeals">0 / 25</div>
+          <div class="metric-sub" id="metricBestFitness">fitness 0.0</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Average meals</div>
+          <div class="metric-main metric-bluegrey" id="metricAvgMeals">0.0</div>
+          <div class="metric-sub" id="metricAvgFitness">fitness 0.0</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Ate at least once</div>
+          <div class="metric-main" id="metricAteShare">0%</div>
+          <div class="metric-sub" id="metricAteCount">0 of 50</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Longest life</div>
+          <div class="metric-main" id="metricLongestLife">0</div>
+          <div class="metric-sub">steps</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Milestones (this run)</div>
+        <div class="milestones-row">
+          <div class="milestone-pill" id="msFirst">First meal (1)</div>
+          <div class="milestone-pill" id="msForager">Forager (10)</div>
+          <div class="milestone-pill" id="msGlutton">Glutton (25)</div>
+        </div>
+      </div>
+
+      <div class="graph-block">
+        <div class="graph-header">
+          <span class="section-label" style="margin-bottom:0;">Last 30 Generations</span>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="swatch" style="background:#f59e0b;"></span>Best</span>
+            <span class="legend-item"><span class="swatch" style="background:#7b8ea8;"></span>Avg</span>
+          </div>
+        </div>
+        <div class="graph-wrap">
+          <canvas id="graphCanvas" width="280" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="reading-note">
+        <div class="section-label">Reading the graph</div>
+        <p>
+          The amber line tracks the top forager's meals in each generation; the blue-grey line tracks the population average. Early generations wander until one creature discovers steering toward food. When the average climbs behind the best, the population is learning; if the average stalls far below, mutation may be too destructive.
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- HOW IT WORKS POPUP -->
+  <div class="modal-backdrop" id="howModal" role="dialog" aria-modal="true" aria-labelledby="howModalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="howModalTitle">How Forage Works</h2>
+        <button type="button" class="btn" id="closeModalBtn"><span>Close</span></button>
+      </div>
+      <p class="modal-explain">
+        Each creature is steered by a 74-weight neural network (6 inputs, 8 hidden <em>tanh</em> units, 2 <em>tanh</em> outputs). Every generation tests all creatures on the exact same 12 cell pellet lists and starting heading, with private food so nobody can steal. The top 4 survive unchanged; the rest are bred from the top 10 with single-point crossover and Gaussian weight mutations.
+      </p>
+      <div class="modal-body">
+        <div class="modal-card">
+          <div class="section-label">Network Architecture (6 &rarr; 8 &rarr; 2)</div>
+          <canvas id="netDiagramCanvas" width="440" height="250"></canvas>
+        </div>
+        <div class="modal-card">
+          <div class="section-label">Live Sensor &amp; Steering Preview</div>
+          <canvas id="miniSceneCanvas" width="320" height="250"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. RANDOM GENERATORS
+      // =========================================================================
+      function createSeededRng(seed) {
+        let s = (seed >>> 0) || 1;
+        return function () {
+          s = (s + 0x6D2B79F5) | 0;
+          let t = Math.imul(s ^ (s >>> 15), 1 | s);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function gaussianRandom(rng) {
+        let u1 = rng();
+        let u2 = rng();
+        if (u1 < 1e-12) u1 = 1e-12;
+        return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      }
+
+      function parseUrlSeed() {
+        if (typeof window === 'undefined' || !window.location) return null;
+        try {
+          const params = new URLSearchParams(window.location.search || '');
+          const raw = params.get('seed');
+          if (raw !== null && raw !== '') {
+            const parsed = Number(raw);
+            if (Number.isFinite(parsed)) {
+              return (parsed >>> 0) || 1;
+            }
+          }
+        } catch (e) {
+          // Ignore URL parsing errors in restricted environments
+        }
+        return null;
+      }
+
+      const urlSeed = parseUrlSeed();
+      let evoSeed = urlSeed !== null ? urlSeed : ((Date.now() ^ 0x9E3779B9) >>> 0);
+      let evoRng = createSeededRng(evoSeed);
+
+      // =========================================================================
+      // 2. SETTINGS AND DEFAULTS
+      // =========================================================================
+      const ARENA_W = 800;
+      const ARENA_H = 600;
+      const CREATURE_RADIUS = 8;
+      const PELLET_RADIUS = 6;
+      const EAT_DISTANCE = 14;
+      const START_ENERGY = 100;
+      const MAX_ENERGY = 150;
+      const TARGET_MEALS = 25;
+      const CELL_COLS = 4;
+      const CELL_ROWS = 3;
+      const CELL_SIZE = 200;
+      const CELL_COUNT = CELL_COLS * CELL_ROWS;
+      const PELLET_LIST_LEN = 300;
+      const CELL_MARGIN = 30;
+      const MIN_PELLET_SPACING = 80;
+      const NETWORK_WEIGHTS = 74; // 6*8 + 8 + 8*2 + 2
+
+      const DEFAULTS = Object.freeze({
+        population: 50,
+        elites: 4,
+        parentPool: 10,
+        mutationChance: 10,
+        mutationSize: 0.25,
+        topSpeed: 3.0,
+        turnRate: 0.12,
+        foodEnergy: 40,
+        energyCost: 0.25,
+        regrowDelay: 60,
+        generationLength: 1500,
+        shrinkMutation: true
+      });
+
+      const SLIDER_DEFS = [
+        { key: 'population', label: 'Population', min: 10, max: 100, step: 1, format: (v) => String(v) },
+        { key: 'elites', label: 'Elites', min: 0, max: 10, step: 1, format: (v) => String(v) },
+        { key: 'parentPool', label: 'Parent pool', min: 2, max: 30, step: 1, format: (v) => String(v) },
+        { key: 'mutationChance', label: 'Mutation chance', min: 1, max: 50, step: 1, format: (v) => v + '%' },
+        { key: 'mutationSize', label: 'Mutation size', min: 0.05, max: 0.80, step: 0.05, format: (v) => v.toFixed(2) },
+        { key: 'topSpeed', label: 'Top speed', min: 1.0, max: 5.0, step: 0.5, format: (v) => v.toFixed(1) },
+        { key: 'turnRate', label: 'Turn rate', min: 0.04, max: 0.25, step: 0.01, format: (v) => v.toFixed(2) },
+        { key: 'foodEnergy', label: 'Food energy', min: 10, max: 80, step: 5, format: (v) => String(v) },
+        { key: 'energyCost', label: 'Energy cost', min: 0.10, max: 0.60, step: 0.05, format: (v) => v.toFixed(2) },
+        { key: 'regrowDelay', label: 'Regrow delay', min: 0, max: 200, step: 10, format: (v) => String(v) },
+        { key: 'generationLength', label: 'Generation length', min: 600, max: 3000, step: 100, format: (v) => String(v) }
+      ];
+
+      const PRESETS = {
+        reckless: { mutationChance: 40, mutationSize: 0.70, shrinkMutation: false },
+        noElites: { elites: 0 },
+        tinyPop: { population: 10, elites: 1, parentPool: 3 },
+        famine: { foodEnergy: 25, energyCost: 0.40, regrowDelay: 150 }
+      };
+
+      // Initialize ALL state variables and arrays before any function runs
+      let settings = Object.assign({}, DEFAULTS);
+      let pendingSettings = Object.assign({}, DEFAULTS);
+      let generation = 1;
+      let stepCount = 0;
+      let simSpeed = 1;
+      let paused = false;
+      let creatures = [];
+      let pelletLists = [];
+      let startHeading = 0;
+      let particles = [];
+      let expandingRings = [];
+      let history = [];
+      let graphSlideOffset = 0;
+      let leaderIndex = 0;
+      let bestMealsAllTime = 0;
+      let milestones = { firstMeal: false, forager: false, glutton: false };
+      let bannerTimeout = null;
+      let activePresetKey = null;
+
+      // =========================================================================
+      // 3. PELLET LISTS
+      // =========================================================================
+      function generateGenerationFood(genNumber) {
+        const worldSeed = 1000 + genNumber * 7919;
+        const worldRng = createSeededRng(worldSeed);
+        const lists = [];
+
+        for (let row = 0; row < CELL_ROWS; row++) {
+          for (let col = 0; col < CELL_COLS; col++) {
+            const cellX0 = col * CELL_SIZE;
+            const cellY0 = row * CELL_SIZE;
+            const minX = cellX0 + CELL_MARGIN;
+            const maxX = cellX0 + CELL_SIZE - CELL_MARGIN;
+            const minY = cellY0 + CELL_MARGIN;
+            const maxY = cellY0 + CELL_SIZE - CELL_MARGIN;
+            const spanX = maxX - minX;
+            const spanY = maxY - minY;
+
+            const quadCenters = [
+              { x: cellX0 + 50, y: cellY0 + 50 },
+              { x: cellX0 + 150, y: cellY0 + 50 },
+              { x: cellX0 + 50, y: cellY0 + 150 },
+              { x: cellX0 + 150, y: cellY0 + 150 }
+            ];
+
+            const list = new Array(PELLET_LIST_LEN);
+            for (let i = 0; i < PELLET_LIST_LEN; i++) {
+              if (i === 0) {
+                list[i] = {
+                  x: minX + worldRng() * spanX,
+                  y: minY + worldRng() * spanY
+                };
+              } else {
+                const prev = list[i - 1];
+                let chosen = null;
+                for (let attempt = 0; attempt < 20; attempt++) {
+                  const cx = minX + worldRng() * spanX;
+                  const cy = minY + worldRng() * spanY;
+                  const dx = cx - prev.x;
+                  const dy = cy - prev.y;
+                  if (dx * dx + dy * dy >= MIN_PELLET_SPACING * MIN_PELLET_SPACING) {
+                    chosen = { x: cx, y: cy };
+                    break;
+                  }
+                }
+                if (!chosen) {
+                  let farthest = quadCenters[0];
+                  let maxDistSq = -1;
+                  for (let q = 0; q < 4; q++) {
+                    const qc = quadCenters[q];
+                    const dx = qc.x - prev.x;
+                    const dy = qc.y - prev.y;
+                    const dSq = dx * dx + dy * dy;
+                    if (dSq > maxDistSq) {
+                      maxDistSq = dSq;
+                      farthest = qc;
+                    }
+                  }
+                  chosen = { x: farthest.x, y: farthest.y };
+                }
+                list[i] = chosen;
+              }
+            }
+            lists.push(list);
+          }
+        }
+
+        const heading = worldRng() * Math.PI * 2;
+        return { lists: lists, startHeading: heading };
+      }
+
+      // =========================================================================
+      // 4. CREATURE AND NETWORK
+      // =========================================================================
+      function createRandomWeights() {
+        const w = new Float64Array(NETWORK_WEIGHTS);
+        for (let i = 0; i < NETWORK_WEIGHTS; i++) {
+          w[i] = evoRng() * 2 - 1;
+        }
+        return w;
+      }
+
+      function cloneWeights(src) {
+        const w = new Float64Array(NETWORK_WEIGHTS);
+        for (let i = 0; i < NETWORK_WEIGHTS; i++) {
+          w[i] = src[i];
+        }
+        return w;
+      }
+
+      function evaluateNetwork(weights, inputs) {
+        const hidden = new Float64Array(8);
+        for (let h = 0; h < 8; h++) {
+          let sum = weights[48 + h];
+          const base = h * 6;
+          sum += weights[base] * inputs[0];
+          sum += weights[base + 1] * inputs[1];
+          sum += weights[base + 2] * inputs[2];
+          sum += weights[base + 3] * inputs[3];
+          sum += weights[base + 4] * inputs[4];
+          sum += weights[base + 5] * inputs[5];
+          hidden[h] = Math.tanh(sum);
+        }
+
+        let out0 = weights[72];
+        let out1 = weights[73];
+        for (let h = 0; h < 8; h++) {
+          out0 += weights[56 + h] * hidden[h];
+          out1 += weights[64 + h] * hidden[h];
+        }
+        return [Math.tanh(out0), Math.tanh(out1)];
+      }
+
+      function rayDistanceToWall(x, y, heading) {
+        const cos = Math.cos(heading);
+        const sin = Math.sin(heading);
+        let minT = Infinity;
+
+        if (cos > 1e-7) {
+          minT = Math.min(minT, (ARENA_W - CREATURE_RADIUS - x) / cos);
+        } else if (cos < -1e-7) {
+          minT = Math.min(minT, (CREATURE_RADIUS - x) / cos);
+        }
+
+        if (sin > 1e-7) {
+          minT = Math.min(minT, (ARENA_H - CREATURE_RADIUS - y) / sin);
+        } else if (sin < -1e-7) {
+          minT = Math.min(minT, (CREATURE_RADIUS - y) / sin);
+        }
+
+        if (!Number.isFinite(minT) || minT < 0) return 0;
+        return minT;
+      }
+
+      function findNearestPresentPellet(creature) {
+        let bestDistSq = Infinity;
+        let bestCell = -1;
+        let bestPos = null;
+
+        for (let c = 0; c < CELL_COUNT; c++) {
+          if (creature.regrowTimers[c] > 0) continue;
+          const pos = pelletLists[c][creature.pelletIndices[c]];
+          const dx = pos.x - creature.x;
+          const dy = pos.y - creature.y;
+          const dSq = dx * dx + dy * dy;
+          if (dSq < bestDistSq) {
+            bestDistSq = dSq;
+            bestCell = c;
+            bestPos = pos;
+          }
+        }
+
+        return {
+          cell: bestCell,
+          pos: bestPos,
+          dist: bestCell >= 0 ? Math.sqrt(bestDistSq) : Infinity
+        };
+      }
+
+      function computeInputs(creature, nearest) {
+        let sinAngle = 0;
+        let cosAngle = 0;
+        let normDist = 1;
+
+        if (nearest.pos !== null) {
+          const dx = nearest.pos.x - creature.x;
+          const dy = nearest.pos.y - creature.y;
+          const angleToPellet = Math.atan2(dy, dx);
+          const relAngle = angleToPellet - creature.heading;
+          sinAngle = Math.sin(relAngle);
+          cosAngle = Math.cos(relAngle);
+          normDist = Math.min(1, Math.max(0, nearest.dist / 300));
+        }
+
+        const normEnergy = Math.min(1, Math.max(0, creature.energy / MAX_ENERGY));
+        const normSpeed = settings.topSpeed > 0 ? Math.min(1, Math.max(0, creature.speed / settings.topSpeed)) : 0;
+        const wallDist = rayDistanceToWall(creature.x, creature.y, creature.heading);
+        const normWall = Math.min(1, Math.max(0, wallDist / 300));
+
+        return [sinAngle, cosAngle, normDist, normEnergy, normSpeed, normWall];
+      }
+
+      function createCreature(weights, heading) {
+        const c = {
+          x: ARENA_W / 2,
+          y: ARENA_H / 2,
+          heading: heading,
+          speed: 0,
+          energy: START_ENERGY,
+          alive: true,
+          deathFade: 0,
+          meals: 0,
+          stepsSurvived: 0,
+          approachCredit: 0,
+          segmentCredit: 0,
+          bestDist: Infinity,
+          fitness: 0,
+          weights: weights,
+          pelletIndices: new Int32Array(CELL_COUNT),
+          regrowTimers: new Int32Array(CELL_COUNT),
+          trail: [],
+          wobblePhase: 0,
+          customController: null
+        };
+        const nearest = findNearestPresentPellet(c);
+        c.bestDist = nearest.dist;
+        return c;
+      }
+
+      // =========================================================================
+      // 5. FITNESS
+      // =========================================================================
+      function computeFitness(creature) {
+        return 100 * creature.meals + creature.approachCredit + 0.02 * creature.stepsSurvived;
+      }
+
+      function stepCreature(creature, recordEffects) {
+        if (!creature.alive) {
+          if (creature.deathFade > 0) creature.deathFade--;
+          return;
+        }
+
+        for (let c = 0; c < CELL_COUNT; c++) {
+          if (creature.regrowTimers[c] > 0) {
+            creature.regrowTimers[c]--;
+            if (creature.regrowTimers[c] === 0) {
+              creature.pelletIndices[c] = (creature.pelletIndices[c] + 1) % PELLET_LIST_LEN;
+            }
+          }
+        }
+
+        const nearestBefore = findNearestPresentPellet(creature);
+        let outputs;
+        if (creature.customController) {
+          outputs = creature.customController(creature, nearestBefore);
+        } else {
+          const inputs = computeInputs(creature, nearestBefore);
+          outputs = evaluateNetwork(creature.weights, inputs);
+        }
+
+        const turnOut = outputs[0];
+        const throttleOut = outputs[1];
+
+        creature.heading += turnOut * settings.turnRate;
+        const speed = ((throttleOut + 1) * 0.5) * settings.topSpeed;
+        creature.speed = speed;
+        creature.wobblePhase += 0.18 + 0.22 * (settings.topSpeed > 0 ? speed / settings.topSpeed : 0);
+
+        creature.x += Math.cos(creature.heading) * speed;
+        creature.y += Math.sin(creature.heading) * speed;
+
+        if (creature.x < CREATURE_RADIUS) creature.x = CREATURE_RADIUS;
+        else if (creature.x > ARENA_W - CREATURE_RADIUS) creature.x = ARENA_W - CREATURE_RADIUS;
+
+        if (creature.y < CREATURE_RADIUS) creature.y = CREATURE_RADIUS;
+        else if (creature.y > ARENA_H - CREATURE_RADIUS) creature.y = ARENA_H - CREATURE_RADIUS;
+
+        if (recordEffects) {
+          creature.trail.push({ x: creature.x, y: creature.y });
+          if (creature.trail.length > 60) {
+            creature.trail.shift();
+          }
+        }
+
+        const speedRatio = settings.topSpeed > 0 ? speed / settings.topSpeed : 0;
+        creature.energy -= settings.energyCost + 0.15 * speedRatio;
+        creature.stepsSurvived++;
+
+        let ateThisStep = false;
+        const eatDistSq = EAT_DISTANCE * EAT_DISTANCE;
+        for (let c = 0; c < CELL_COUNT; c++) {
+          if (creature.regrowTimers[c] > 0) continue;
+          const pos = pelletLists[c][creature.pelletIndices[c]];
+          const dx = pos.x - creature.x;
+          const dy = pos.y - creature.y;
+          if (dx * dx + dy * dy <= eatDistSq) {
+            creature.meals++;
+            creature.energy = Math.min(MAX_ENERGY, creature.energy + settings.foodEnergy);
+            ateThisStep = true;
+            if (settings.regrowDelay <= 0) {
+              creature.pelletIndices[c] = (creature.pelletIndices[c] + 1) % PELLET_LIST_LEN;
+            } else {
+              creature.regrowTimers[c] = settings.regrowDelay;
+            }
+            if (recordEffects) {
+              spawnEatParticles(pos.x, pos.y);
+            }
+          }
+        }
+
+        const nearestAfter = findNearestPresentPellet(creature);
+        if (ateThisStep) {
+          creature.bestDist = nearestAfter.dist;
+          creature.segmentCredit = 0;
+        } else if (nearestAfter.pos !== null) {
+          if (!Number.isFinite(creature.bestDist)) {
+            creature.bestDist = nearestAfter.dist;
+          } else if (nearestAfter.dist < creature.bestDist) {
+            const drop = creature.bestDist - nearestAfter.dist;
+            const room = 60 - creature.segmentCredit;
+            if (room > 0) {
+              const gain = Math.min(room, 0.5 * drop);
+              creature.approachCredit += gain;
+              creature.segmentCredit += gain;
+            }
+            creature.bestDist = nearestAfter.dist;
+          }
+        }
+
+        if (creature.energy <= 0) {
+          creature.energy = 0;
+          creature.alive = false;
+          creature.deathFade = 30;
+        }
+
+        creature.fitness = computeFitness(creature);
+      }
+
+      // =========================================================================
+      // 6. EVOLUTION
+      // =========================================================================
+      function evolvePopulation(evaluatedCreatures, bestMealsOfGen) {
+        const sorted = evaluatedCreatures.slice().sort(function (a, b) {
+          return b.fitness - a.fitness;
+        });
+
+        const popSize = settings.population;
+        const eliteCount = Math.min(settings.elites, popSize);
+        const poolSize = Math.max(1, Math.min(settings.parentPool, sorted.length));
+        const mutProb = settings.mutationChance / 100;
+
+        let baseSigma = settings.mutationSize;
+        if (settings.shrinkMutation) {
+          const progress = Math.min(1, bestMealsOfGen / TARGET_MEALS);
+          baseSigma = Math.max(0.03, settings.mutationSize * (1 - progress));
+        }
+
+        const nextWeights = new Array(popSize);
+        for (let i = 0; i < eliteCount; i++) {
+          nextWeights[i] = cloneWeights(sorted[i].weights);
+        }
+
+        for (let i = eliteCount; i < popSize; i++) {
+          const pA = sorted[Math.floor(evoRng() * poolSize)].weights;
+          const pB = sorted[Math.floor(evoRng() * poolSize)].weights;
+          const cut = Math.floor(evoRng() * NETWORK_WEIGHTS);
+          const child = new Float64Array(NETWORK_WEIGHTS);
+
+          const isBigJump = evoRng() < 0.05;
+          const sigma = isBigJump ? 0.6 : baseSigma;
+
+          for (let w = 0; w < NETWORK_WEIGHTS; w++) {
+            let val = w < cut ? pA[w] : pB[w];
+            if (evoRng() < mutProb) {
+              val += gaussianRandom(evoRng) * sigma;
+            }
+            child[w] = val;
+          }
+          nextWeights[i] = child;
+        }
+
+        return nextWeights;
+      }
+
+      // =========================================================================
+      // 7. GENERATION LOOP
+      // =========================================================================
+      function applyPendingSettings() {
+        settings = Object.assign({}, pendingSettings);
+      }
+
+      function spawnEatParticles(x, y) {
+        for (let i = 0; i < 8; i++) {
+          if (particles.length >= 200) {
+            particles.shift();
+          }
+          const angle = Math.random() * Math.PI * 2;
+          const spd = 0.8 + Math.random() * 2.2;
+          particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: 24,
+            maxLife: 24
+          });
+        }
+      }
+
+      function triggerCelebration(x, y, text) {
+        const reducedMotion = typeof window !== 'undefined' &&
+          window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (!reducedMotion) {
+          expandingRings.push({ x: x, y: y, r: 8, maxR: 70, life: 36, maxLife: 36 });
+        }
+
+        const chip = typeof document !== 'undefined' ? document.getElementById('bannerChip') : null;
+        if (chip && text) {
+          chip.textContent = text;
+          chip.classList.add('visible');
+          if (bannerTimeout) clearTimeout(bannerTimeout);
+          bannerTimeout = setTimeout(function () {
+            chip.classList.remove('visible');
+          }, 2200);
+        }
+      }
+
+      function startGeneration(weightList) {
+        applyPendingSettings();
+        updateNextGenTags();
+
+        const food = generateGenerationFood(generation);
+        pelletLists = food.lists;
+        startHeading = food.startHeading;
+        stepCount = 0;
+        particles = [];
+        expandingRings = [];
+        leaderIndex = 0;
+
+        creatures = new Array(settings.population);
+        for (let i = 0; i < settings.population; i++) {
+          const w = weightList && weightList[i] ? weightList[i] : createRandomWeights();
+          creatures[i] = createCreature(w, startHeading);
+        }
+      }
+
+      function finishGeneration() {
+        let bestCreature = creatures[0];
+        let totalMeals = 0;
+        let totalFitness = 0;
+        let ateCount = 0;
+        let longestLife = 0;
+
+        for (let i = 0; i < creatures.length; i++) {
+          const c = creatures[i];
+          totalMeals += c.meals;
+          totalFitness += c.fitness;
+          if (c.meals >= 1) ateCount++;
+          if (c.stepsSurvived > longestLife) longestLife = c.stepsSurvived;
+          if (c.fitness > bestCreature.fitness) bestCreature = c;
+        }
+
+        const avgMeals = totalMeals / creatures.length;
+        const avgFitness = totalFitness / creatures.length;
+
+        history.push({
+          gen: generation,
+          bestMeals: bestCreature.meals,
+          avgMeals: avgMeals,
+          bestFitness: bestCreature.fitness,
+          avgFitness: avgFitness,
+          ateShare: ateCount / creatures.length,
+          ateCount: ateCount,
+          popSize: creatures.length,
+          longestLife: longestLife
+        });
+
+        if (history.length > 30) {
+          graphSlideOffset = 1;
+        }
+
+        updateMetricsUI(history[history.length - 1]);
+
+        const nextWeights = evolvePopulation(creatures, bestCreature.meals);
+        generation++;
+        startGeneration(nextWeights);
+      }
+
+      function stepSimulation(recordEffects) {
+        stepCount++;
+        let anyAlive = false;
+
+        for (let i = 0; i < creatures.length; i++) {
+          const c = creatures[i];
+          const wasAlive = c.alive;
+          stepCreature(c, recordEffects);
+          if (c.alive) anyAlive = true;
+
+          if (recordEffects && wasAlive) {
+            if (!milestones.firstMeal && c.meals >= 1) {
+              milestones.firstMeal = true;
+              updateMilestonesUI();
+              triggerCelebration(c.x, c.y, 'First meal unlocked');
+            }
+            if (!milestones.forager && c.meals >= 10) {
+              milestones.forager = true;
+              updateMilestonesUI();
+              triggerCelebration(c.x, c.y, 'Forager: 10 meals in one gen');
+            }
+            if (!milestones.glutton && c.meals >= 25) {
+              milestones.glutton = true;
+              updateMilestonesUI();
+              triggerCelebration(c.x, c.y, 'Glutton: 25 meals reached');
+            }
+            if (c.meals > bestMealsAllTime) {
+              bestMealsAllTime = c.meals;
+              if (c.meals > 1) {
+                triggerCelebration(c.x, c.y, 'New best: ' + c.meals + ' meals');
+              }
+            }
+          }
+        }
+
+        if (recordEffects) {
+          let topIdx = -1;
+          let topFit = -Infinity;
+          for (let i = 0; i < creatures.length; i++) {
+            if (creatures[i].alive && creatures[i].fitness > topFit) {
+              topFit = creatures[i].fitness;
+              topIdx = i;
+            }
+          }
+          if (topIdx >= 0) {
+            const curLeader = creatures[leaderIndex];
+            if (!curLeader || !curLeader.alive || topFit > curLeader.fitness * 1.05) {
+              leaderIndex = topIdx;
+            }
+          }
+
+          for (let p = particles.length - 1; p >= 0; p--) {
+            const pt = particles[p];
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            pt.vx *= 0.94;
+            pt.vy *= 0.94;
+            pt.life--;
+            if (pt.life <= 0) particles.splice(p, 1);
+          }
+
+          for (let r = expandingRings.length - 1; r >= 0; r--) {
+            const ring = expandingRings[r];
+            ring.life--;
+            const prog = 1 - ring.life / ring.maxLife;
+            ring.r = 8 + prog * (ring.maxR - 8);
+            if (ring.life <= 0) expandingRings.splice(r, 1);
+          }
+        }
+
+        if (!anyAlive || stepCount >= settings.generationLength) {
+          finishGeneration();
+        }
+      }
+
+      function restartSimulation(newSeed) {
+        if (typeof newSeed === 'number') {
+          evoSeed = newSeed >>> 0 || 1;
+          evoRng = createSeededRng(evoSeed);
+        }
+        generation = 1;
+        history = [];
+        graphSlideOffset = 0;
+        bestMealsAllTime = 0;
+        milestones = { firstMeal: false, forager: false, glutton: false };
+        updateMilestonesUI();
+        resetMetricsUI();
+        startGeneration(null);
+      }
+
+      // =========================================================================
+      // 8. DRAWING
+      // =========================================================================
+      const arenaCanvas = typeof document !== 'undefined' ? document.getElementById('arenaCanvas') : null;
+      const arenaCtx = arenaCanvas ? arenaCanvas.getContext('2d') : null;
+      const graphCanvas = typeof document !== 'undefined' ? document.getElementById('graphCanvas') : null;
+      const graphCtx = graphCanvas ? graphCanvas.getContext('2d') : null;
+
+      function drawTeardropCreature(ctx, x, y, heading, radius, fill, wobblePhase, isLeader, energyRatio) {
+        const wobble = Math.sin(wobblePhase) * 0.08;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(heading + wobble);
+
+        if (isLeader) {
+          ctx.scale(1.22, 1.22);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(radius * 1.15, 0);
+        ctx.quadraticCurveTo(radius * 0.2, -radius * 0.85, -radius * 0.95, -radius * 0.45);
+        ctx.quadraticCurveTo(-radius * 1.25, 0, -radius * 0.95, radius * 0.45);
+        ctx.quadraticCurveTo(radius * 0.2, radius * 0.85, radius * 1.15, 0);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(radius * 0.52, -radius * 0.16, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = isLeader ? '#0a0c0f' : 'rgba(237, 232, 223, 0.9)';
+        ctx.fill();
+
+        ctx.restore();
+
+        if (isLeader && energyRatio > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, radius * 1.75, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, energyRatio));
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.78)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      function drawArena(timeMs) {
+        if (!arenaCtx) return;
+        const ctx = arenaCtx;
+
+        ctx.fillStyle = '#07090c';
+        ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+        ctx.lineWidth = 1;
+        for (let col = 1; col < CELL_COLS; col++) {
+          const x = col * CELL_SIZE;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, ARENA_H);
+          ctx.stroke();
+        }
+        for (let row = 1; row < CELL_ROWS; row++) {
+          const y = row * CELL_SIZE;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(ARENA_W, y);
+          ctx.stroke();
+        }
+
+        const leader = creatures[leaderIndex] || creatures[0];
+
+        if (leader && pelletLists.length === CELL_COUNT) {
+          const pulse = 0.5 + 0.5 * Math.sin((timeMs || 0) * 0.004);
+          for (let c = 0; c < CELL_COUNT; c++) {
+            const pos = pelletLists[c][leader.pelletIndices[c]];
+            const timer = leader.regrowTimers[c];
+            if (timer > 0) {
+              const frac = settings.regrowDelay > 0 ? 1 - timer / settings.regrowDelay : 1;
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, PELLET_RADIUS + 1.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+              ctx.strokeStyle = 'rgba(143, 199, 154, 0.45)';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, PELLET_RADIUS + 4 + pulse * 3.5, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(143, 199, 154, ' + (0.09 + pulse * 0.07).toFixed(3) + ')';
+              ctx.fill();
+
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, PELLET_RADIUS, 0, Math.PI * 2);
+              ctx.fillStyle = '#8fc79a';
+              ctx.fill();
+            }
+          }
+        }
+
+        if (leader && leader.alive) {
+          if (leader.trail.length > 1) {
+            for (let t = 1; t < leader.trail.length; t++) {
+              const alpha = (t / leader.trail.length) * 0.42;
+              ctx.beginPath();
+              ctx.moveTo(leader.trail[t - 1].x, leader.trail[t - 1].y);
+              ctx.lineTo(leader.trail[t].x, leader.trail[t].y);
+              ctx.strokeStyle = 'rgba(245, 158, 11, ' + alpha.toFixed(3) + ')';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
+
+          const nearest = findNearestPresentPellet(leader);
+          if (nearest.pos) {
+            ctx.save();
+            ctx.setLineDash([4, 5]);
+            ctx.beginPath();
+            ctx.moveTo(leader.x, leader.y);
+            ctx.lineTo(nearest.pos.x, nearest.pos.y);
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.32)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        for (let i = 0; i < creatures.length; i++) {
+          if (i === leaderIndex) continue;
+          const c = creatures[i];
+          if (!c.alive) {
+            if (c.deathFade > 0) {
+              const alpha = (c.deathFade / 30) * 0.28;
+              drawTeardropCreature(ctx, c.x, c.y, c.heading, CREATURE_RADIUS, 'rgba(130, 138, 150, ' + alpha.toFixed(3) + ')', c.wobblePhase, false, 0);
+            }
+          } else {
+            drawTeardropCreature(ctx, c.x, c.y, c.heading, CREATURE_RADIUS, 'rgba(237, 232, 223, 0.30)', c.wobblePhase, false, 0);
+          }
+        }
+
+        if (leader) {
+          if (leader.alive) {
+            drawTeardropCreature(ctx, leader.x, leader.y, leader.heading, CREATURE_RADIUS, '#f59e0b', leader.wobblePhase, true, leader.energy / MAX_ENERGY);
+          } else if (leader.deathFade > 0) {
+            const alpha = (leader.deathFade / 30) * 0.45;
+            drawTeardropCreature(ctx, leader.x, leader.y, leader.heading, CREATURE_RADIUS, 'rgba(140, 145, 155, ' + alpha.toFixed(3) + ')', leader.wobblePhase, true, 0);
+          }
+        }
+
+        for (let p = 0; p < particles.length; p++) {
+          const pt = particles[p];
+          const alpha = pt.life / pt.maxLife;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(143, 199, 154, ' + alpha.toFixed(3) + ')';
+          ctx.fill();
+        }
+
+        for (let r = 0; r < expandingRings.length; r++) {
+          const ring = expandingRings[r];
+          const alpha = (ring.life / ring.maxLife) * 0.7;
+          ctx.beginPath();
+          ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(251, 191, 36, ' + alpha.toFixed(3) + ')';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      function drawGraph() {
+        if (!graphCtx || !graphCanvas) return;
+        const ctx = graphCtx;
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+
+        ctx.fillStyle = '#080a0d';
+        ctx.fillRect(0, 0, w, h);
+
+        const padL = 28;
+        const padR = 10;
+        const padT = 12;
+        const padB = 20;
+        const plotW = w - padL - padR;
+        const plotH = h - padT - padB;
+
+        const windowSize = 30;
+        const visible = history.slice(-windowSize);
+        let maxMeals = TARGET_MEALS;
+        for (let i = 0; i < visible.length; i++) {
+          if (visible[i].bestMeals > maxMeals) maxMeals = visible[i].bestMeals;
+        }
+        const yMax = Math.ceil(maxMeals / 5) * 5;
+
+        ctx.font = '10px system-ui, sans-serif';
+        ctx.fillStyle = '#5c6675';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const ticks = [0, Math.round(yMax / 2), yMax];
+        for (let t = 0; t < ticks.length; t++) {
+          const val = ticks[t];
+          const y = padT + plotH - (val / yMax) * plotH;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(w - padR, y);
+          ctx.stroke();
+          ctx.fillText(String(val), padL - 5, y);
+        }
+
+        if (TARGET_MEALS <= yMax) {
+          const ty = padT + plotH - (TARGET_MEALS / yMax) * plotH;
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+          ctx.beginPath();
+          ctx.moveTo(padL, ty);
+          ctx.lineTo(w - padR, ty);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (visible.length === 0) {
+          ctx.fillStyle = '#5c6675';
+          ctx.textAlign = 'center';
+          ctx.fillText('Waiting for generation 1...', padL + plotW / 2, padT + plotH / 2);
+          return;
+        }
+
+        const reducedMotion = typeof window !== 'undefined' &&
+          window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reducedMotion) {
+          graphSlideOffset = 0;
+        } else {
+          graphSlideOffset *= 0.82;
+          if (graphSlideOffset < 0.005) graphSlideOffset = 0;
+        }
+
+        const slotCount = Math.max(1, windowSize - 1);
+        const stepX = plotW / slotCount;
+        const slidePx = graphSlideOffset * stepX;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padL, 0, plotW, h);
+        ctx.clip();
+
+        ctx.beginPath();
+        for (let i = 0; i < visible.length; i++) {
+          const x = padL + i * stepX + slidePx;
+          const y = padT + plotH - (visible[i].avgMeals / yMax) * plotH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = '#7b8ea8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let i = 0; i < visible.length; i++) {
+          const x = padL + i * stepX + slidePx;
+          const y = padT + plotH - (visible[i].bestMeals / yMax) * plotH;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#5c6675';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const firstGen = visible[0].gen;
+        const lastGen = visible[visible.length - 1].gen;
+        ctx.fillText('G' + firstGen, padL + 10, padT + plotH + 5);
+        if (visible.length > 1) {
+          ctx.fillText('G' + lastGen, padL + Math.min(plotW - 10, (visible.length - 1) * stepX), padT + plotH + 5);
+        }
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 9. INTERFACE
+      // =========================================================================
+      const sliderInputs = {};
+      const sliderValueEls = {};
+      const sliderNextGenEls = {};
+
+      function updateNextGenTags() {
+        for (let i = 0; i < SLIDER_DEFS.length; i++) {
+          const def = SLIDER_DEFS[i];
+          const tag = sliderNextGenEls[def.key];
+          if (tag) {
+            if (pendingSettings[def.key] !== settings[def.key]) {
+              tag.classList.add('visible');
+            } else {
+              tag.classList.remove('visible');
+            }
+          }
+        }
+        const shrinkTag = typeof document !== 'undefined' ? document.getElementById('shrinkNextGenTag') : null;
+        if (shrinkTag) {
+          if (pendingSettings.shrinkMutation !== settings.shrinkMutation) {
+            shrinkTag.classList.add('visible');
+          } else {
+            shrinkTag.classList.remove('visible');
+          }
+        }
+      }
+
+      function syncControlsFromPending() {
+        for (let i = 0; i < SLIDER_DEFS.length; i++) {
+          const def = SLIDER_DEFS[i];
+          const val = pendingSettings[def.key];
+          if (sliderInputs[def.key]) sliderInputs[def.key].value = String(val);
+          if (sliderValueEls[def.key]) sliderValueEls[def.key].textContent = def.format(val);
+        }
+        const shrinkCb = typeof document !== 'undefined' ? document.getElementById('shrinkCheckbox') : null;
+        if (shrinkCb) shrinkCb.checked = Boolean(pendingSettings.shrinkMutation);
+        updateNextGenTags();
+      }
+
+      function setPendingSetting(key, value) {
+        pendingSettings[key] = value;
+        activePresetKey = null;
+        updatePresetButtonsUI();
+        if (sliderValueEls[key]) {
+          const def = SLIDER_DEFS.find(function (d) { return d.key === key; });
+          if (def) sliderValueEls[key].textContent = def.format(value);
+        }
+        updateNextGenTags();
+      }
+
+      function applyPreset(presetKey) {
+        const preset = PRESETS[presetKey];
+        if (!preset) return;
+        pendingSettings = Object.assign({}, DEFAULTS, preset);
+        activePresetKey = presetKey;
+        updatePresetButtonsUI();
+        syncControlsFromPending();
+        restartSimulation();
+      }
+
+      function resetToOptimal() {
+        pendingSettings = Object.assign({}, DEFAULTS);
+        activePresetKey = null;
+        updatePresetButtonsUI();
+        syncControlsFromPending();
+        restartSimulation();
+      }
+
+      function updatePresetButtonsUI() {
+        if (typeof document === 'undefined') return;
+        const btns = document.querySelectorAll('.btn-preset');
+        for (let i = 0; i < btns.length; i++) {
+          const btn = btns[i];
+          if (btn.getAttribute('data-preset') === activePresetKey) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        }
+      }
+
+      function updateHudUI() {
+        if (typeof document === 'undefined') return;
+        let aliveCount = 0;
+        for (let i = 0; i < creatures.length; i++) {
+          if (creatures[i].alive) aliveCount++;
+        }
+        const genEl = document.getElementById('hudGen');
+        const aliveEl = document.getElementById('hudAlive');
+        const stepEl = document.getElementById('hudStep');
+        const leaderMealsEl = document.getElementById('hudLeaderMeals');
+
+        if (genEl) genEl.textContent = String(generation);
+        if (aliveEl) aliveEl.textContent = aliveCount + ' / ' + creatures.length;
+        if (stepEl) stepEl.textContent = stepCount + ' / ' + settings.generationLength;
+
+        const leader = creatures[leaderIndex] || creatures[0];
+        if (leaderMealsEl && leader) {
+          leaderMealsEl.textContent = 'Leader: ' + leader.meals + ' / ' + TARGET_MEALS + ' meals';
+        }
+      }
+
+      function updateMetricsUI(entry) {
+        if (typeof document === 'undefined' || !entry) return;
+        const bestEl = document.getElementById('metricBestMeals');
+        const bestFitEl = document.getElementById('metricBestFitness');
+        const avgEl = document.getElementById('metricAvgMeals');
+        const avgFitEl = document.getElementById('metricAvgFitness');
+        const shareEl = document.getElementById('metricAteShare');
+        const countEl = document.getElementById('metricAteCount');
+        const lifeEl = document.getElementById('metricLongestLife');
+
+        if (bestEl) bestEl.textContent = entry.bestMeals + ' / ' + TARGET_MEALS;
+        if (bestFitEl) bestFitEl.textContent = 'fitness ' + entry.bestFitness.toFixed(1);
+        if (avgEl) avgEl.textContent = entry.avgMeals.toFixed(1);
+        if (avgFitEl) avgFitEl.textContent = 'fitness ' + entry.avgFitness.toFixed(1);
+        if (shareEl) shareEl.textContent = Math.round(entry.ateShare * 100) + '%';
+        if (countEl) countEl.textContent = entry.ateCount + ' of ' + entry.popSize;
+        if (lifeEl) lifeEl.textContent = String(entry.longestLife);
+      }
+
+      function resetMetricsUI() {
+        if (typeof document === 'undefined') return;
+        const bestEl = document.getElementById('metricBestMeals');
+        const bestFitEl = document.getElementById('metricBestFitness');
+        const avgEl = document.getElementById('metricAvgMeals');
+        const avgFitEl = document.getElementById('metricAvgFitness');
+        const shareEl = document.getElementById('metricAteShare');
+        const countEl = document.getElementById('metricAteCount');
+        const lifeEl = document.getElementById('metricLongestLife');
+
+        if (bestEl) bestEl.textContent = '0 / ' + TARGET_MEALS;
+        if (bestFitEl) bestFitEl.textContent = 'fitness 0.0';
+        if (avgEl) avgEl.textContent = '0.0';
+        if (avgFitEl) avgFitEl.textContent = 'fitness 0.0';
+        if (shareEl) shareEl.textContent = '0%';
+        if (countEl) countEl.textContent = '0 of ' + pendingSettings.population;
+        if (lifeEl) lifeEl.textContent = '0';
+      }
+
+      function updateMilestonesUI() {
+        if (typeof document === 'undefined') return;
+        const f = document.getElementById('msFirst');
+        const fo = document.getElementById('msForager');
+        const g = document.getElementById('msGlutton');
+        if (f) f.classList.toggle('earned', milestones.firstMeal);
+        if (fo) fo.classList.toggle('earned', milestones.forager);
+        if (g) g.classList.toggle('earned', milestones.glutton);
+      }
+
+      function buildInterface() {
+        if (typeof document === 'undefined') return;
+        const listEl = document.getElementById('slidersList');
+        if (listEl) {
+          for (let i = 0; i < SLIDER_DEFS.length; i++) {
+            const def = SLIDER_DEFS[i];
+            const row = document.createElement('div');
+            row.className = 'slider-row';
+
+            const head = document.createElement('div');
+            head.className = 'slider-head';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'slider-name';
+            nameSpan.textContent = def.label;
+
+            const tag = document.createElement('span');
+            tag.className = 'next-gen-tag';
+            tag.textContent = 'next gen';
+            nameSpan.appendChild(tag);
+
+            const valSpan = document.createElement('span');
+            valSpan.className = 'slider-val';
+            valSpan.textContent = def.format(pendingSettings[def.key]);
+
+            head.appendChild(nameSpan);
+            head.appendChild(valSpan);
+
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.min = String(def.min);
+            input.max = String(def.max);
+            input.step = String(def.step);
+            input.value = String(pendingSettings[def.key]);
+            input.setAttribute('aria-label', def.label);
+            input.addEventListener('input', (function (k) {
+              return function (e) {
+                setPendingSetting(k, Number(e.target.value));
+              };
+            })(def.key));
+
+            row.appendChild(head);
+            row.appendChild(input);
+            listEl.appendChild(row);
+
+            sliderInputs[def.key] = input;
+            sliderValueEls[def.key] = valSpan;
+            sliderNextGenEls[def.key] = tag;
+          }
+        }
+
+        const shrinkCb = document.getElementById('shrinkCheckbox');
+        if (shrinkCb) {
+          shrinkCb.addEventListener('change', function (e) {
+            setPendingSetting('shrinkMutation', Boolean(e.target.checked));
+          });
+        }
+
+        const presetBtns = document.querySelectorAll('.btn-preset');
+        for (let i = 0; i < presetBtns.length; i++) {
+          presetBtns[i].addEventListener('click', function () {
+            applyPreset(this.getAttribute('data-preset'));
+          });
+        }
+
+        const resetOptBtn = document.getElementById('resetOptimalBtn');
+        if (resetOptBtn) {
+          resetOptBtn.addEventListener('click', resetToOptimal);
+        }
+
+        const speedBtns = document.querySelectorAll('.speed-btn');
+        for (let i = 0; i < speedBtns.length; i++) {
+          speedBtns[i].addEventListener('click', function () {
+            simSpeed = Number(this.getAttribute('data-speed')) || 1;
+            for (let j = 0; j < speedBtns.length; j++) {
+              speedBtns[j].classList.toggle('active', speedBtns[j] === this);
+            }
+          });
+        }
+
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+          pauseBtn.addEventListener('click', function () {
+            paused = !paused;
+            const span = this.querySelector('span');
+            if (span) span.textContent = paused ? 'Resume' : 'Pause';
+          });
+        }
+
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+          restartBtn.addEventListener('click', function () {
+            restartSimulation();
+          });
+        }
+      }
+
+      // =========================================================================
+      // 10. POPUP ("How it works" animated diagram + live mini scene)
+      // =========================================================================
+      let modalOpen = false;
+      let miniCreature = { x: 85, y: 185, heading: -0.9, wobble: 0 };
+      let miniPellet = { x: 235, y: 80 };
+
+      function drawPopupVisuals(timeMs) {
+        if (!modalOpen || typeof document === 'undefined') return;
+        const netCanvas = document.getElementById('netDiagramCanvas');
+        const miniCanvas = document.getElementById('miniSceneCanvas');
+        const t = (timeMs || 0) * 0.002;
+
+        if (netCanvas) {
+          const ctx = netCanvas.getContext('2d');
+          const w = netCanvas.width;
+          const h = netCanvas.height;
+          ctx.fillStyle = '#080a0d';
+          ctx.fillRect(0, 0, w, h);
+
+          const inputLabels = [
+            'sin(angle)',
+            'cos(angle)',
+            'pellet dist',
+            'energy',
+            'speed',
+            'wall ahead'
+          ];
+          const outputLabels = ['turn', 'throttle'];
+
+          const xIn = 98;
+          const xHid = 232;
+          const xOut = 356;
+
+          const inNodes = [];
+          for (let i = 0; i < 6; i++) {
+            inNodes.push({ x: xIn, y: 28 + i * 38 });
+          }
+          const hidNodes = [];
+          for (let i = 0; i < 8; i++) {
+            hidNodes.push({ x: xHid, y: 22 + i * 29 });
+          }
+          const outNodes = [
+            { x: xOut, y: 88 },
+            { x: xOut, y: 162 }
+          ];
+
+          for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 8; j++) {
+              const pulse = 0.5 + 0.5 * Math.sin(t * 1.8 + i * 0.7 + j * 1.1);
+              ctx.beginPath();
+              ctx.moveTo(inNodes[i].x, inNodes[i].y);
+              ctx.lineTo(hidNodes[j].x, hidNodes[j].y);
+              ctx.strokeStyle = 'rgba(123, 142, 168, ' + (0.10 + pulse * 0.22).toFixed(3) + ')';
+              ctx.lineWidth = 0.8 + pulse * 0.8;
+              ctx.stroke();
+            }
+          }
+
+          for (let j = 0; j < 8; j++) {
+            for (let o = 0; o < 2; o++) {
+              const pulse = 0.5 + 0.5 * Math.sin(t * 2.2 + j * 0.9 + o * 2.0);
+              ctx.beginPath();
+              ctx.moveTo(hidNodes[j].x, hidNodes[j].y);
+              ctx.lineTo(outNodes[o].x, outNodes[o].y);
+              ctx.strokeStyle = 'rgba(245, 158, 11, ' + (0.15 + pulse * 0.35).toFixed(3) + ')';
+              ctx.lineWidth = 1.0 + pulse * 1.0;
+              ctx.stroke();
+            }
+          }
+
+          ctx.font = '11px system-ui, sans-serif';
+          ctx.textBaseline = 'middle';
+
+          for (let i = 0; i < 6; i++) {
+            ctx.beginPath();
+            ctx.arc(inNodes[i].x, inNodes[i].y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#171b22';
+            ctx.fill();
+            ctx.strokeStyle = '#7b8ea8';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#939cab';
+            ctx.textAlign = 'right';
+            ctx.fillText(inputLabels[i], inNodes[i].x - 12, inNodes[i].y);
+          }
+
+          for (let j = 0; j < 8; j++) {
+            const act = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 2 + j));
+            ctx.beginPath();
+            ctx.arc(hidNodes[j].x, hidNodes[j].y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(237, 232, 223, ' + act.toFixed(2) + ')';
+            ctx.fill();
+          }
+
+          for (let o = 0; o < 2; o++) {
+            ctx.beginPath();
+            ctx.arc(outNodes[o].x, outNodes[o].y, 7, 0, Math.PI * 2);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fill();
+
+            ctx.fillStyle = '#ede8df';
+            ctx.textAlign = 'left';
+            ctx.fillText(outputLabels[o], outNodes[o].x + 13, outNodes[o].y);
+          }
+        }
+
+        if (miniCanvas) {
+          const ctx = miniCanvas.getContext('2d');
+          const w = miniCanvas.width;
+          const h = miniCanvas.height;
+
+          const dx = miniPellet.x - miniCreature.x;
+          const dy = miniPellet.y - miniCreature.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const targetAngle = Math.atan2(dy, dx);
+          let diff = targetAngle - miniCreature.heading;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+
+          miniCreature.heading += Math.max(-0.08, Math.min(0.08, diff));
+          miniCreature.x += Math.cos(miniCreature.heading) * 1.9;
+          miniCreature.y += Math.sin(miniCreature.heading) * 1.9;
+          miniCreature.wobble += 0.25;
+
+          if (dist < 14) {
+            miniPellet.x = 55 + ((miniPellet.x * 73 + 119) % (w - 110));
+            miniPellet.y = 45 + ((miniPellet.y * 59 + 83) % (h - 90));
+          }
+
+          ctx.fillStyle = '#080a0d';
+          ctx.fillRect(0, 0, w, h);
+
+          ctx.save();
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(miniCreature.x, miniCreature.y);
+          ctx.lineTo(miniPellet.x, miniPellet.y);
+          ctx.strokeStyle = 'rgba(143, 199, 154, 0.55)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.beginPath();
+          ctx.moveTo(miniCreature.x, miniCreature.y);
+          ctx.lineTo(miniCreature.x + Math.cos(miniCreature.heading) * 48, miniCreature.y + Math.sin(miniCreature.heading) * 48);
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(miniCreature.x, miniCreature.y, 22, miniCreature.heading, targetAngle, diff < 0);
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.75)';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(miniPellet.x, miniPellet.y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#8fc79a';
+          ctx.fill();
+
+          drawTeardropCreature(ctx, miniCreature.x, miniCreature.y, miniCreature.heading, 8, '#f59e0b', miniCreature.wobble, true, 0.85);
+
+          ctx.font = '11px system-ui, sans-serif';
+          ctx.fillStyle = '#939cab';
+          ctx.fillText('dist: ' + Math.round(dist) + 'px   angle: ' + (diff * 180 / Math.PI).toFixed(0) + ' deg', 10, h - 12);
+        }
+      }
+
+      function setupPopup() {
+        if (typeof document === 'undefined') return;
+        const modal = document.getElementById('howModal');
+        const openBtn = document.getElementById('howItWorksBtn');
+        const closeBtn = document.getElementById('closeModalBtn');
+
+        if (openBtn && modal) {
+          openBtn.addEventListener('click', function () {
+            modalOpen = true;
+            modal.classList.add('open');
+          });
+        }
+        if (closeBtn && modal) {
+          closeBtn.addEventListener('click', function () {
+            modalOpen = false;
+            modal.classList.remove('open');
+          });
+        }
+        if (modal) {
+          modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+              modalOpen = false;
+              modal.classList.remove('open');
+            }
+          });
+        }
+      }
+
+      // =========================================================================
+      // BOOTSTRAP & TEST HOOKS
+      // =========================================================================
+      function frameLoop(timeMs) {
+        if (!paused) {
+          const steps = simSpeed;
+          const recordEffects = steps <= 20;
+          for (let s = 0; s < steps; s++) {
+            stepSimulation(recordEffects || s === steps - 1);
+          }
+        }
+        drawArena(timeMs);
+        drawGraph();
+        updateHudUI();
+        drawPopupVisuals(timeMs);
+
+        if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+          window.requestAnimationFrame(frameLoop);
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        window.__FORAGE__ = {
+          getState: function () {
+            return {
+              generation: generation,
+              stepCount: stepCount,
+              settings: settings,
+              pendingSettings: pendingSettings,
+              creatures: creatures,
+              pelletLists: pelletLists,
+              startHeading: startHeading,
+              history: history,
+              milestones: milestones
+            };
+          },
+          stepSimulation: stepSimulation,
+          startGeneration: startGeneration,
+          restartSimulation: restartSimulation,
+          applyPreset: applyPreset,
+          resetToOptimal: resetToOptimal,
+          setPendingSetting: setPendingSetting,
+          createCreature: createCreature,
+          stepCreature: stepCreature,
+          generateGenerationFood: generateGenerationFood,
+          findNearestPresentPellet: findNearestPresentPellet,
+          drawArena: drawArena,
+          drawGraph: drawGraph
+        };
+      }
+
+      buildInterface();
+      setupPopup();
+      startGeneration(null);
+      drawArena(0);
+      drawGraph();
+      updateHudUI();
+
+      if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+        window.requestAnimationFrame(frameLoop);
+      }
+    })();
+  </script>
+</body>
+</html>
