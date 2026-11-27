@@ -2,6 +2,14 @@
 // Newest first. `slug` must match the folder name inside /experiments.
 window.EXPERIMENTS = [
   {
+    slug: "park",
+    title: "Park",
+    blurb: "A population of 50 tiny neural-net drivers learns to parallel park between two cars by reversing in, using only steering and throttle.",
+    tags: ["neuroevolution", "genetic algorithm", "driving"],
+    meta: "watch generations evolve live",
+    date: "2026-11"
+  },
+  {
     slug: "sidestep",
     title: "Sidestep",
     blurb: "A squadron of 50 tiny spaceships learns to dodge bombs dropped by a marching alien formation. Nobody shoots; the only skill is staying alive.",

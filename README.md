@@ -26,7 +26,8 @@ No server. No backend. No API key. No "please sign in to continue training." Jus
 | 12 | [**Forage**](experiments/forage/) | Creatures with tiny neural nets evolve to find food in an arena | a few generations |
 | 13 | [**Hunt**](experiments/hunt/) | Predators and prey co-evolve to chase and evade each other | a few generations |
 | 14 | [**Sidestep**](experiments/sidestep/) | A squadron of tiny ships evolves to dodge alien bombs | a few generations |
-| 15 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
+| 15 | [**Park**](experiments/park/) | 50 tiny neural-net drivers learn to parallel park by reversing into a gap | a few generations |
+| 16 | ??? | Currently in training. Loss is going down. Slowly. With complaints. | TBD |
 
 ## 🔒 Privacy Policy
 
@@ -69,7 +70,8 @@ Don't double-click `index.html`. Some browsers get weird about `file://`. They h
     ├── stride/             # experiment 11
     ├── forage/             # experiment 12
     ├── hunt/               # experiment 13
-    └── sidestep/           # experiment 14
+    ├── sidestep/           # experiment 14
+    └── park/               # experiment 15
 ```
 
 Each experiment lives in its own folder and is **fully self-contained**. If one breaks, the others carry on, like siblings at a wedding.
