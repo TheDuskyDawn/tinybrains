@@ -1,0 +1,2777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidestep — Neuroevolution Dodger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090b0e;
+      --surface: #0f1319;
+      --surface-elev: #151b24;
+      --surface-hover: #1c2430;
+      --border: #202734;
+      --border-strong: #323d50;
+      --text: #ede9df;
+      --text-dim: #9aa5b4;
+      --text-muted: #5d6776;
+      --amber: #f5a623;
+      --amber-bright: #ffc259;
+      --amber-soft: rgba(245, 166, 35, 0.14);
+      --avg: #708ca8;
+      --avg-soft: rgba(112, 140, 168, 0.22);
+      --danger: #e45c4b;
+      --good: #5bb98c;
+      --font-ui: 'Bricolage Grotesque', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-prose: 'Newsreader', Georgia, 'Times New Roman', serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01" on;
+    }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(112, 140, 168, 0.06) 0%, transparent 55%),
+        radial-gradient(circle at 50% 100%, rgba(245, 166, 35, 0.03) 0%, transparent 45%);
+    }
+
+    /* Main 3-column workstation grid */
+    .app-shell {
+      display: grid;
+      grid-template-columns: minmax(292px, 326px) minmax(360px, 1fr) minmax(290px, 344px);
+      gap: 16px;
+      height: 100vh;
+      padding: 12px 18px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: panelEnter 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    @keyframes panelEnter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Left Panel: Controls & Presets */
+    .left-panel {
+      padding: 12px 14px;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      color: var(--text);
+    }
+
+    .brand-sub {
+      margin: 2px 0 0;
+      font-family: var(--font-prose);
+      font-size: 0.84rem;
+      color: var(--text-dim);
+      line-height: 1.25;
+    }
+
+    /* Buttons with tactile hover fill */
+    .btn {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface-elev);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+      z-index: 0;
+      white-space: nowrap;
+    }
+
+    .btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--amber);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: -1;
+      opacity: 0.14;
+    }
+
+    .btn:hover::before,
+    .btn:focus-visible::before {
+      transform: scaleX(1);
+    }
+
+    .btn:hover,
+    .btn:focus-visible {
+      border-color: var(--amber);
+      outline: none;
+    }
+
+    .btn-accent {
+      border-color: rgba(245, 166, 35, 0.55);
+      color: var(--amber-bright);
+    }
+
+    .btn-active {
+      background: var(--amber-soft);
+      border-color: var(--amber);
+      color: var(--amber-bright);
+    }
+
+    .section-kicker {
+      font-size: 0.67rem;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 0 0 5px;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .preset-btn {
+      text-align: left;
+      padding: 5px 8px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .sliders-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-height: 0;
+      justify-content: space-between;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .slider-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.73rem;
+      line-height: 1.15;
+    }
+
+    .slider-label {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .slider-val {
+      color: var(--text);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.72rem;
+    }
+
+    .slider-note {
+      color: var(--text-muted);
+      font-size: 0.64rem;
+      margin-left: 4px;
+      font-weight: 400;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 12px;
+      background: transparent;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 3px;
+      background: var(--border-strong);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      margin-top: -4px;
+      border-radius: 2px;
+      background: var(--amber);
+      border: 1px solid #10141a;
+      transition: transform 120ms ease, background-color 120ms ease;
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb {
+      transform: scale(1.16);
+      background: var(--amber-bright);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 3px;
+      background: var(--border-strong);
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+      background: var(--amber);
+      border: 1px solid #10141a;
+    }
+
+    .left-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.74rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      accent-color: var(--amber);
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    /* Middle Panel: Playfield */
+    .stage-panel {
+      background: transparent;
+      border: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .stage-toolbar {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 12px;
+    }
+
+    .telemetry-counters {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .counter-chip {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .counter-key {
+      font-size: 0.61rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .counter-num {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .counter-num.amber {
+      color: var(--amber-bright);
+    }
+
+    .stage-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .speed-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    .speed-label {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .speed-val {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--amber-bright);
+      min-width: 28px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .speed-slider {
+      width: 66px !important;
+    }
+
+    .canvas-frame {
+      position: relative;
+      height: calc(100vh - 88px);
+      max-height: 640px;
+      aspect-ratio: 3 / 4;
+      width: auto;
+      max-width: 100%;
+      background: #06080b;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+      transition: border-color 240ms ease, box-shadow 240ms ease;
+    }
+
+    .canvas-frame.pulse-best {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.25), 0 18px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    .canvas-frame.pulse-milestone {
+      animation: milestonePulse 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes milestonePulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.65), 0 18px 48px rgba(0, 0, 0, 0.6);
+      }
+      100% {
+        box-shadow: 0 0 0 14px rgba(245, 166, 35, 0), 0 18px 48px rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    #simCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .banner-overlay {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translate(-50%, -18px);
+      background: rgba(12, 16, 22, 0.94);
+      border: 1px solid var(--amber);
+      border-radius: 4px;
+      padding: 6px 14px;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 220ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+      min-width: 210px;
+    }
+
+    .banner-overlay.visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .banner-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--amber-bright);
+    }
+
+    .banner-desc {
+      font-family: var(--font-prose);
+      font-size: 0.8rem;
+      color: var(--text);
+      margin-top: 1px;
+    }
+
+    /* Right Panel: Stats & Graph */
+    .right-panel {
+      padding: 12px 14px;
+      gap: 12px;
+      justify-content: space-between;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-box.wide {
+      grid-column: span 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .stat-label {
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .stat-value.amber {
+      color: var(--amber-bright);
+    }
+
+    .stat-value.blue {
+      color: #9cb7d1;
+    }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .chart-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-height: 180px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 10px;
+      font-size: 0.69rem;
+      color: var(--text-dim);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 2.5px;
+      border-radius: 1px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 150px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    #chartCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .prose-box {
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+
+    .prose-box p {
+      margin: 0;
+      font-family: var(--font-prose);
+      font-size: 0.85rem;
+      line-height: 1.42;
+      color: var(--text-dim);
+    }
+
+    .milestones-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+
+    .milestone-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 7px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      transition: border-color 220ms ease, color 220ms ease, background-color 220ms ease;
+    }
+
+    .milestone-pill.unlocked {
+      border-color: rgba(245, 166, 35, 0.55);
+      background: rgba(245, 166, 35, 0.08);
+      color: var(--amber-bright);
+    }
+
+    .milestone-tag {
+      font-size: 0.62rem;
+      opacity: 0.8;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* How It Works Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 10, 0.84);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 920px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      padding: 18px 20px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .modal-body-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .diagram-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .diagram-caption {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #netCanvas {
+      width: 100%;
+      height: 310px;
+      display: block;
+    }
+
+    #miniCanvas {
+      width: 100%;
+      height: 310px;
+      display: block;
+    }
+
+    .modal-notes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .modal-notes p {
+      margin: 0;
+      font-family: var(--font-prose);
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: var(--text-dim);
+    }
+
+    .modal-notes strong {
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    /* Responsive fallback for smaller screens / short viewports */
+    @media (max-width: 1119px), (max-height: 679px) {
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+
+      .app-shell {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 12px;
+      }
+
+      .canvas-frame {
+        height: auto;
+        width: min(100%, 480px);
+        max-height: none;
+      }
+
+      .modal-body-grid,
+      .modal-notes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .panel {
+        opacity: 1;
+        transform: none;
+        animation: none;
+      }
+      .btn::before {
+        transition: none;
+      }
+      .canvas-frame.pulse-milestone {
+        animation: none;
+      }
+      .banner-overlay {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <!-- LEFT COLUMN: Presets & 11 Live Sliders -->
+    <section class="panel left-panel" style="--delay: 0ms" aria-label="Evolution and Simulation Controls">
+      <div class="brand-row">
+        <div>
+          <h1 class="brand-title">SIDESTEP</h1>
+          <p class="brand-sub">Fifty ships learn to stay alive.</p>
+        </div>
+        <button id="howItWorksBtn" class="btn btn-accent" type="button">How it works</button>
+      </div>
+
+      <div>
+        <div class="section-kicker">Experiment Presets</div>
+        <div class="presets-grid" id="presetsGrid">
+          <button class="btn preset-btn" data-preset="reckless" type="button">Reckless mutation</button>
+          <button class="btn preset-btn" data-preset="noElites" type="button">No elites</button>
+          <button class="btn preset-btn" data-preset="tinyPop" type="button">Tiny population</button>
+          <button class="btn preset-btn" data-preset="bulletHell" type="button">Bullet hell</button>
+        </div>
+      </div>
+
+      <div class="sliders-wrap" id="slidersContainer">
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slPopulation">Population size<span class="slider-note">(next gen)</span></label>
+            <span class="slider-val" id="valPopulation">50</span>
+          </div>
+          <input id="slPopulation" type="range" min="10" max="100" step="1" value="50">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slElites">Elites</label>
+            <span class="slider-val" id="valElites">4</span>
+          </div>
+          <input id="slElites" type="range" min="0" max="10" step="1" value="4">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slMutChance">Mutation chance</label>
+            <span class="slider-val" id="valMutChance">10%</span>
+          </div>
+          <input id="slMutChance" type="range" min="1" max="50" step="1" value="10">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slMutSize">Mutation size</label>
+            <span class="slider-val" id="valMutSize">0.25</span>
+          </div>
+          <input id="slMutSize" type="range" min="0.05" max="1.0" step="0.01" value="0.25">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slBigJump">Big-jump chance</label>
+            <span class="slider-val" id="valBigJump">5%</span>
+          </div>
+          <input id="slBigJump" type="range" min="0" max="30" step="1" value="5">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slParentPool">Parent pool</label>
+            <span class="slider-val" id="valParentPool">20%</span>
+          </div>
+          <input id="slParentPool" type="range" min="5" max="50" step="1" value="20">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slBombRate">Bomb rate</label>
+            <span class="slider-val" id="valBombRate">1.00x</span>
+          </div>
+          <input id="slBombRate" type="range" min="0.5" max="2.0" step="0.05" value="1.0">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slBombSpeed">Bomb speed</label>
+            <span class="slider-val" id="valBombSpeed">1.00x</span>
+          </div>
+          <input id="slBombSpeed" type="range" min="0.5" max="1.5" step="0.05" value="1.0">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slVolley">Volley chance</label>
+            <span class="slider-val" id="valVolley">15%</span>
+          </div>
+          <input id="slVolley" type="range" min="0" max="40" step="1" value="15">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slShipSpeed">Ship speed</label>
+            <span class="slider-val" id="valShipSpeed">5.0 px/f</span>
+          </div>
+          <input id="slShipSpeed" type="range" min="3" max="8" step="0.25" value="5">
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-meta">
+            <label class="slider-label" for="slGenLen">Generation length</label>
+            <span class="slider-val" id="valGenLen">3600f (60s)</span>
+          </div>
+          <input id="slGenLen" type="range" min="600" max="3600" step="100" value="3600">
+        </div>
+      </div>
+
+      <div class="left-footer">
+        <label class="checkbox-row">
+          <input id="chkShrinkMut" type="checkbox" checked>
+          <span>Shrink mutation near perfect</span>
+        </label>
+        <button id="resetDefaultsBtn" class="btn" type="button">Reset to optimal values</button>
+      </div>
+    </section>
+
+    <!-- MIDDLE COLUMN: Playfield & Telemetry Toolbar -->
+    <section class="panel stage-panel" style="--delay: 70ms" aria-label="Simulation Playfield">
+      <div class="stage-toolbar">
+        <div class="telemetry-counters">
+          <div class="counter-chip">
+            <span class="counter-key">Generation</span>
+            <span class="counter-num amber" id="uiGen">1</span>
+          </div>
+          <div class="counter-chip">
+            <span class="counter-key">Still flying</span>
+            <span class="counter-num" id="uiAlive">50 / 50</span>
+          </div>
+          <div class="counter-chip">
+            <span class="counter-key">Clock</span>
+            <span class="counter-num" id="uiClock">0.0s / 60.0s</span>
+          </div>
+        </div>
+
+        <div class="stage-controls">
+          <div class="speed-group" title="Fast-forward multiplier (1x to 80x)">
+            <span class="speed-label">SPEED</span>
+            <input id="slSpeed" class="speed-slider" type="range" min="1" max="80" step="1" value="1">
+            <span class="speed-val" id="valSpeed">1x</span>
+          </div>
+          <button id="pauseBtn" class="btn" type="button">Pause</button>
+          <button id="restartBtn" class="btn" type="button">Restart</button>
+        </div>
+      </div>
+
+      <div class="canvas-frame" id="canvasFrame">
+        <canvas id="simCanvas" width="480" height="640"></canvas>
+        <div class="banner-overlay" id="milestoneBanner" aria-live="polite">
+          <div class="banner-title" id="bannerTitle">Milestone</div>
+          <div class="banner-desc" id="bannerDesc">Achievement unlocked</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Performance Readouts & Sliding History Graph -->
+    <section class="panel right-panel" style="--delay: 140ms" aria-label="Training Metrics and Graph">
+      <div>
+        <div class="section-kicker">Last Generation</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Best survived</div>
+            <div class="stat-value amber" id="statBestSec">—</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Average survived</div>
+            <div class="stat-value blue" id="statAvgSec">—</div>
+          </div>
+          <div class="stat-box wide">
+            <div>
+              <div class="stat-label">Bombs dodged by best</div>
+              <div class="stat-value" id="statBestDodged">—</div>
+            </div>
+            <div class="stat-sub" id="statAllTimeBest">Peak: —</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="section-kicker" style="margin: 0;">Last 30 Generations</div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-swatch" style="background: var(--amber);"></span>Best</span>
+            <span class="legend-item"><span class="legend-swatch" style="background: var(--avg);"></span>Average</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="prose-box">
+        <div class="section-kicker">Reading the graph</div>
+        <p>
+          The amber curve tracks the sharpest pilot in each generation; the blue-grey curve tracks the whole squadron's average. When the amber line climbs away while the average lags behind, mutation may be too wild or elites too scarce. When both rise together toward the top ceiling, the squadron is converging on reactive dodging.
+        </p>
+      </div>
+
+      <div>
+        <div class="section-kicker">Success Moments</div>
+        <div class="milestones-strip">
+          <div class="milestone-pill" id="msSteady"><span>Steady hands</span><span class="milestone-tag">20s</span></div>
+          <div class="milestone-pill" id="msVeteran"><span>Veteran</span><span class="milestone-tag">40s</span></div>
+          <div class="milestone-pill" id="msUntouchable"><span>Untouchable</span><span class="milestone-tag">100%</span></div>
+          <div class="milestone-pill" id="msSquadron"><span>Squadron</span><span class="milestone-tag">80% alive</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- HOW IT WORKS POPUP -->
+  <div class="modal-backdrop" id="howModal" role="dialog" aria-modal="true" aria-labelledby="howModalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="howModalTitle">How Sidestep Works — Live Leader Brain</h2>
+        <button id="closeModalBtn" class="btn" type="button">Close</button>
+      </div>
+
+      <div class="modal-body-grid">
+        <div class="diagram-box">
+          <div class="diagram-caption">
+            <span>8 Inputs -> 10 Hidden (tanh) -> 1 Steer Output (101 weights)</span>
+            <span id="diagramLeaderMeta">Leader: —</span>
+          </div>
+          <canvas id="netCanvas"></canvas>
+        </div>
+
+        <div class="diagram-box">
+          <div class="diagram-caption">
+            <span>Leader Radar (3 nearest threats)</span>
+            <span>Live view</span>
+          </div>
+          <canvas id="miniCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="modal-notes">
+        <p>
+          <strong>Sensor &amp; network</strong><br>
+          Every ship reads its own horizontal position and velocity plus the horizontal offset and urgency of the 3 most urgent bombs within 90 frames of arrival. Ten hidden tanh units combine those 8 signals into a single steering command between full left (-1) and full right (+1).
+        </p>
+        <p>
+          <strong>Fairness &amp; evolution</strong><br>
+          Each generation uses a seeded bomb stream and an invisible winding safe corridor that bombs are forbidden to cross. A pilot with perfect sight could always survive, though ships with only a 3-bomb radar still face tough late-wave volleys. Top ships pass weights into the next generation via single-point crossover and shrinking Gaussian mutation.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. CONFIG & INITIAL STATE
+      // =========================================================================
+      const WORLD_W = 480;
+      const WORLD_H = 640;
+      const SHIP_Y = 560;
+      const SHIP_MIN_X = 14;
+      const SHIP_MAX_X = 466;
+      const CORRIDOR_FRAMES = 3900;
+      const CORRIDOR_MIN_X = 40;
+      const CORRIDOR_MAX_X = 440;
+      const CORRIDOR_SPEED = 2.4;
+      const CORRIDOR_CLEARANCE = 30;
+      const HIT_DX = 18;
+      const HIT_DY = 16;
+      const RADAR_MAX_TTL = 90;
+      const RADAR_DX_SCALE = 32;
+      const DODGE_RADIUS = 55;
+      const EDGE_PENALTY_PER_FRAME = 1.5;
+      const WEIGHT_COUNT = 101; // 8*10 + 10 + 10*1 + 1
+      const MAX_PARTICLES = 300;
+      const CHART_WINDOW = 30;
+      const STEP_DT = 1000 / 60;
+
+      const DEFAULTS = Object.freeze({
+        populationSize: 50,
+        elites: 4,
+        mutationChance: 10,   // percent 1..50
+        mutationSize: 0.25,   // 0.05..1.0
+        bigJumpChance: 5,     // percent 0..30
+        parentPool: 20,       // percent 5..50
+        bombRate: 1.0,        // 0.5..2.0
+        bombSpeed: 1.0,       // 0.5..1.5
+        volleyChance: 15,     // percent 0..40
+        shipSpeed: 5.0,       // 3..8
+        generationLength: 3600, // 600..3600
+        shrinkMutation: true
+      });
+
+      const PRESETS = {
+        reckless: { mutationChance: 50, mutationSize: 1.0, bigJumpChance: 30 },
+        noElites: { elites: 0 },
+        tinyPop: { populationSize: 10, elites: 1, parentPool: 30 },
+        bulletHell: { bombRate: 2.0, bombSpeed: 1.4, volleyChance: 40 }
+      };
+
+      // Initialize every variable and array up front before any function uses them
+      const settings = Object.assign({}, DEFAULTS);
+      let fastForward = 1;
+      let paused = false;
+      let generation = 1;
+      let frame = 0;
+      let allTimeBestFrames = 0;
+      let allTimeBestSec = 0;
+      let activePresetKey = null;
+
+      let history = [];          // { generation, bestSec, avgSec, bestDodged, genLenSec }
+      let population = [];       // array of ship objects
+      let bombs = [];            // array of active bomb objects
+      let corridor = new Float32Array(CORRIDOR_FRAMES);
+      let particles = [];        // decoration particles
+      let flashes = [];          // decoration hit flashes
+      let stars = [];            // parallax starfield
+
+      const successFlags = {
+        steady: false,
+        veteran: false,
+        untouchable: false,
+        squadron: false
+      };
+
+      let worldRng = null;
+      let decoRng = null;
+      let evoRng = null;
+
+      let decoClock = 0;
+      let simAccumulator = 0;
+      let lastRafTime = 0;
+      let chartSlideProgress = 0; // 1 -> 0 smooth glide when new history arrives
+      let chartAnimStart = 0;
+      let bannerTimeoutId = null;
+      let pulseTimeoutId = null;
+      let modalOpen = false;
+      let reducedMotion = false;
+
+      const ui = {};
+
+      // =========================================================================
+      // 2. SEEDED RANDOM
+      // =========================================================================
+      function mulberry32(seed) {
+        let state = seed >>> 0;
+        return function () {
+          state = (state + 0x6D2B79F5) >>> 0;
+          let t = Math.imul(state ^ (state >>> 15), 1 | state);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function gaussianRandom(rng) {
+        let u1 = rng();
+        let u2 = rng();
+        if (u1 < 1e-7) u1 = 1e-7;
+        return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      }
+
+      // =========================================================================
+      // 3. WORLD AND CORRIDOR
+      // =========================================================================
+      function getFormationState(f) {
+        // 5 rows x 8 cols, col spacing 48, row spacing 36, alien width ~32
+        // Total formation span = 7*48 + 32 = 368 px; 480 - 368 = 112 px sway range.
+        // Half-period = 112 / 0.7 = 160 frames. Start centered (t = f + 80).
+        const t = f + 80;
+        const halfPeriod = 160;
+        const cycle = Math.floor(t / halfPeriod);
+        const rem = t % halfPeriod;
+        const sway = (cycle % 2 === 0) ? (rem * 0.7) : (112 - rem * 0.7);
+        const drops = Math.min(6, cycle);
+        const baseX = 16 + sway;
+        const topY = 50 + drops * 10;
+        return { baseX, topY };
+      }
+
+      function generateCorridor(rng) {
+        const arr = new Float32Array(CORRIDOR_FRAMES);
+        let cx = 240;
+        let target = CORRIDOR_MIN_X + rng() * (CORRIDOR_MAX_X - CORRIDOR_MIN_X);
+        let timer = 45 + Math.floor(rng() * 46); // 45..90 frames
+
+        for (let f = 0; f < CORRIDOR_FRAMES; f++) {
+          arr[f] = cx;
+          const diff = target - cx;
+          if (Math.abs(diff) <= CORRIDOR_SPEED) {
+            cx = target;
+          } else {
+            cx += Math.sign(diff) * CORRIDOR_SPEED;
+          }
+          timer--;
+          if (timer <= 0) {
+            target = CORRIDOR_MIN_X + rng() * (CORRIDOR_MAX_X - CORRIDOR_MIN_X);
+            timer = 45 + Math.floor(rng() * 46);
+          }
+        }
+        return arr;
+      }
+
+      function isBombSafeForCorridor(corridorArr, spawnFrame, bombX, y0, vy) {
+        const tStart = spawnFrame + Math.floor((SHIP_Y - 16 - y0) / vy) - 4;
+        const tEnd = spawnFrame + Math.ceil((SHIP_Y + 16 - y0) / vy) + 4;
+        const maxIdx = corridorArr.length - 1;
+        for (let t = tStart; t <= tEnd; t++) {
+          const idx = t < 0 ? 0 : (t > maxIdx ? maxIdx : t);
+          if (Math.abs(corridorArr[idx] - bombX) < CORRIDOR_CLEARANCE) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function trySpawnBombsForFrame(f) {
+        const d = Math.min(1, f / 2400);
+        const spawnProb = (0.02 + 0.10 * d) * settings.bombRate;
+        if (worldRng() >= spawnProb) return;
+
+        const pickedCol = Math.floor(worldRng() * 8);
+        const isVolley = worldRng() < (settings.volleyChance / 100);
+        const cols = isVolley
+          ? [pickedCol - 1, pickedCol, pickedCol + 1].filter(function (c) { return c >= 0 && c <= 7; })
+          : [pickedCol];
+
+        const form = getFormationState(f);
+        const bottomRowY = form.topY + 4 * 36;
+        const y0 = bottomRowY + 14;
+
+        for (let i = 0; i < cols.length; i++) {
+          const col = cols[i];
+          const bx = form.baseX + col * 48;
+          let vy = (2.6 + 3.4 * d) * settings.bombSpeed * (0.85 + worldRng() * 0.30);
+          const fast = worldRng() < 0.20;
+          if (fast) vy *= 1.5;
+          if (vy > 9) vy = 9;
+
+          if (isBombSafeForCorridor(corridor, f, bx, y0, vy)) {
+            bombs.push({
+              x: bx,
+              y: y0,
+              vy: vy,
+              fast: fast,
+              scored: false
+            });
+          }
+        }
+      }
+
+      // =========================================================================
+      // 4. NETWORK (8 inputs -> 10 tanh hidden -> 1 tanh output = 101 weights)
+      // =========================================================================
+      function createRandomWeights(rng) {
+        const w = new Float32Array(WEIGHT_COUNT);
+        for (let i = 0; i < WEIGHT_COUNT; i++) {
+          w[i] = rng() * 2 - 1;
+        }
+        return w;
+      }
+
+      function forwardNetwork(weights, inputs, hiddenOut) {
+        // 0..79: wIH (10 hidden x 8 inputs), 80..89: bH, 90..99: wHO, 100: bO
+        for (let h = 0; h < 10; h++) {
+          let sum = weights[80 + h];
+          const base = h * 8;
+          for (let i = 0; i < 8; i++) {
+            sum += weights[base + i] * inputs[i];
+          }
+          hiddenOut[h] = Math.tanh(sum);
+        }
+        let outSum = weights[100];
+        for (let h = 0; h < 10; h++) {
+          outSum += weights[90 + h] * hiddenOut[h];
+        }
+        return Math.tanh(outSum);
+      }
+
+      // =========================================================================
+      // 5. SHIPS
+      // =========================================================================
+      function createShip(weights) {
+        return {
+          x: 240,
+          lastVel: 0,
+          alive: true,
+          framesSurvived: 0,
+          edgeFrames: 0,
+          bombsDodged: 0,
+          pixelsTravelled: 0,
+          fitness: 0,
+          weights: weights,
+          lastInputs: new Float32Array(8),
+          lastHidden: new Float32Array(10),
+          lastOutput: 0,
+          radarBombs: [] // top 3 radar entries for leader visualization
+        };
+      }
+
+      function gatherRadarBombs(shipX, bombList) {
+        const candidates = [];
+        for (let i = 0; i < bombList.length; i++) {
+          const b = bombList[i];
+          if (b.y > SHIP_Y) continue;
+          const ttl = Math.max(0, (SHIP_Y - b.y) / b.vy);
+          if (ttl > RADAR_MAX_TTL) continue;
+          const dx = b.x - shipX;
+          const rank = ttl + Math.abs(dx) * 0.5;
+          candidates.push({ bomb: b, ttl: ttl, dx: dx, rank: rank });
+        }
+        if (candidates.length > 1) {
+          candidates.sort(function (a, b) { return a.rank - b.rank; });
+        }
+        return candidates.slice(0, 3);
+      }
+
+      function computeShipInputs(ship, bombList, shipSpeed, keepRadar) {
+        const inp = ship.lastInputs;
+        const rawX = (ship.x - 240) / 240;
+        inp[0] = rawX < -1 ? -1 : (rawX > 1 ? 1 : rawX);
+        const rawVel = shipSpeed > 0 ? (ship.lastVel / shipSpeed) : 0;
+        inp[1] = rawVel < -1 ? -1 : (rawVel > 1 ? 1 : rawVel);
+
+        const top3 = gatherRadarBombs(ship.x, bombList);
+        if (keepRadar) {
+          ship.radarBombs = top3;
+        }
+        for (let k = 0; k < 3; k++) {
+          if (k < top3.length) {
+            inp[2 + k * 2] = Math.tanh(top3[k].dx / RADAR_DX_SCALE);
+            const urg = 1 - top3[k].ttl / RADAR_MAX_TTL;
+            inp[3 + k * 2] = urg < 0 ? 0 : (urg > 1 ? 1 : urg);
+          } else {
+            inp[2 + k * 2] = 0;
+            inp[3 + k * 2] = 0;
+          }
+        }
+        return inp;
+      }
+
+      function getCurrentLeader() {
+        let bestAlive = null;
+        let bestAny = null;
+        for (let i = 0; i < population.length; i++) {
+          const s = population[i];
+          if (!bestAny || s.fitness > bestAny.fitness) {
+            bestAny = s;
+          }
+          if (s.alive && (!bestAlive || s.fitness > bestAlive.fitness)) {
+            bestAlive = s;
+          }
+        }
+        return bestAlive || bestAny;
+      }
+
+      // =========================================================================
+      // 6. EVOLUTION
+      // =========================================================================
+      function crossoverWeights(wA, wB, rng) {
+        const child = new Float32Array(WEIGHT_COUNT);
+        const cut = Math.floor(rng() * WEIGHT_COUNT);
+        for (let i = 0; i < WEIGHT_COUNT; i++) {
+          child[i] = i < cut ? wA[i] : wB[i];
+        }
+        return child;
+      }
+
+      function mutateWeights(weights, progress, rng) {
+        const mutProb = settings.mutationChance / 100;
+        const isBigJump = rng() < (settings.bigJumpChance / 100);
+        let step;
+        if (isBigJump) {
+          step = 0.6;
+        } else {
+          const scale = settings.shrinkMutation ? (1 - progress) : 1;
+          step = Math.max(0.03, settings.mutationSize * scale);
+        }
+        for (let i = 0; i < WEIGHT_COUNT; i++) {
+          if (rng() < mutProb) {
+            weights[i] += gaussianRandom(rng) * step;
+          }
+        }
+        return weights;
+      }
+
+      function evolveNextPopulation() {
+        const sorted = population.slice().sort(function (a, b) {
+          if (b.fitness !== a.fitness) return b.fitness - a.fitness;
+          return b.framesSurvived - a.framesSurvived;
+        });
+
+        const bestShip = sorted[0];
+        const nextSize = settings.populationSize;
+        const elitesCount = Math.min(settings.elites, nextSize, sorted.length);
+        const poolCount = Math.max(1, Math.min(sorted.length, Math.round(sorted.length * (settings.parentPool / 100))));
+        const progress = Math.min(1, bestShip.framesSurvived / settings.generationLength);
+
+        const nextPop = [];
+        for (let i = 0; i < elitesCount; i++) {
+          const copyW = new Float32Array(sorted[i].weights);
+          nextPop.push(createShip(copyW));
+        }
+
+        for (let i = elitesCount; i < nextSize; i++) {
+          const p1 = sorted[Math.floor(Math.pow(evoRng(), 1.8) * poolCount)];
+          const p2 = sorted[Math.floor(Math.pow(evoRng(), 1.8) * poolCount)];
+          const childW = crossoverWeights(p1.weights, p2.weights, evoRng);
+          mutateWeights(childW, progress, evoRng);
+          nextPop.push(createShip(childW));
+        }
+
+        return { sorted: sorted, nextPop: nextPop };
+      }
+
+      function setupGeneration(genNum, popShips) {
+        generation = genNum;
+        frame = 0;
+        bombs = [];
+        particles = [];
+        flashes = [];
+        population = popShips;
+
+        const seed = 1000 + generation * 7919;
+        worldRng = mulberry32(seed);
+        corridor = generateCorridor(worldRng);
+      }
+
+      // =========================================================================
+      // 7. SIMULATION LOOP
+      // =========================================================================
+      function spawnDeathEffects(x, isLeaderShip) {
+        if (fastForward > 20 && !isLeaderShip) return;
+        flashes.push({ x: x, y: SHIP_Y, life: 1.0 });
+
+        const count = isLeaderShip ? 16 : 9;
+        for (let i = 0; i < count; i++) {
+          if (particles.length >= MAX_PARTICLES) {
+            particles.shift();
+          }
+          const angle = decoRng() * Math.PI * 2;
+          const speed = 0.8 + decoRng() * 2.8;
+          particles.push({
+            x: x,
+            y: SHIP_Y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.5,
+            life: 1.0,
+            decay: 0.03 + decoRng() * 0.03,
+            size: isLeaderShip ? 2.4 : 1.7,
+            amber: isLeaderShip
+          });
+        }
+      }
+
+      function checkLiveMilestones(ship) {
+        if (!successFlags.steady && ship.framesSurvived >= 1200) {
+          successFlags.steady = true;
+          triggerMilestone('Steady hands', 'A pilot survived 20 seconds under fire.', 'msSteady');
+        }
+        if (!successFlags.veteran && ship.framesSurvived >= 2400) {
+          successFlags.veteran = true;
+          triggerMilestone('Veteran', '40 seconds survived in a single run.', 'msVeteran');
+        }
+      }
+
+      function finishGeneration() {
+        let totalFrames = 0;
+        let aliveAtEnd = 0;
+        let bestShip = population[0];
+
+        for (let i = 0; i < population.length; i++) {
+          const s = population[i];
+          totalFrames += s.framesSurvived;
+          if (s.alive) aliveAtEnd++;
+          if (s.fitness > bestShip.fitness) bestShip = s;
+        }
+
+        // Also track longest framesSurvived for readable best seconds
+        let maxFrames = 0;
+        for (let i = 0; i < population.length; i++) {
+          if (population[i].framesSurvived > maxFrames) {
+            maxFrames = population[i].framesSurvived;
+          }
+        }
+
+        const bestSec = bestShip.framesSurvived / 60;
+        const avgSec = (totalFrames / population.length) / 60;
+        const genLenSec = settings.generationLength / 60;
+
+        if (bestShip.framesSurvived > allTimeBestFrames) {
+          allTimeBestFrames = bestShip.framesSurvived;
+          allTimeBestSec = bestSec;
+          if (generation > 1) {
+            triggerBestPulse();
+          }
+        }
+
+        if (!successFlags.untouchable && maxFrames >= settings.generationLength) {
+          successFlags.untouchable = true;
+          triggerMilestone('Untouchable', 'A pilot survived the entire wave.', 'msUntouchable');
+        }
+        if (!successFlags.squadron && aliveAtEnd >= Math.ceil(population.length * 0.8)) {
+          successFlags.squadron = true;
+          triggerMilestone('Squadron', 'At least 80% of the squadron survived to the end.', 'msSquadron');
+        }
+
+        history.push({
+          generation: generation,
+          bestSec: bestSec,
+          avgSec: avgSec,
+          bestDodged: bestShip.bombsDodged,
+          genLenSec: genLenSec
+        });
+
+        chartSlideProgress = reducedMotion ? 0 : 1;
+        chartAnimStart = performance.now();
+
+        updateRightStatsUI(bestSec, avgSec, bestShip.bombsDodged, genLenSec);
+
+        const evo = evolveNextPopulation();
+        setupGeneration(generation + 1, evo.nextPop);
+      }
+
+      function stepSimulation() {
+        const leaderBefore = getCurrentLeader();
+        const shipSpeed = settings.shipSpeed;
+
+        // 1. Move living ships according to their neural network
+        for (let i = 0; i < population.length; i++) {
+          const s = population[i];
+          if (!s.alive) continue;
+          const keepRadar = (s === leaderBefore);
+          const inputs = computeShipInputs(s, bombs, shipSpeed, keepRadar);
+          const output = (typeof s.manualSteer === 'function')
+            ? s.manualSteer(s, inputs, frame, corridor, shipSpeed)
+            : forwardNetwork(s.weights, inputs, s.lastHidden);
+          s.lastOutput = output;
+
+          const vx = output * shipSpeed;
+          const prevX = s.x;
+          let nextX = prevX + vx;
+          if (nextX < SHIP_MIN_X) nextX = SHIP_MIN_X;
+          if (nextX > SHIP_MAX_X) nextX = SHIP_MAX_X;
+
+          const appliedVel = nextX - prevX;
+          s.x = nextX;
+          s.lastVel = appliedVel;
+          s.pixelsTravelled += Math.abs(appliedVel);
+          if (nextX < CORRIDOR_MIN_X || nextX > CORRIDOR_MAX_X) {
+            s.edgeFrames++;
+          }
+        }
+
+        // 2. Advance existing bombs, then spawn new bombs for this frame
+        for (let i = 0; i < bombs.length; i++) {
+          bombs[i].y += bombs[i].vy;
+        }
+        trySpawnBombsForFrame(frame);
+
+        // 3. Score dodges, check hits, and cull offscreen bombs
+        const remainingBombs = [];
+        for (let bIdx = 0; bIdx < bombs.length; bIdx++) {
+          const b = bombs[bIdx];
+          if (!b.scored && b.y > SHIP_Y + HIT_DY) {
+            b.scored = true;
+            for (let i = 0; i < population.length; i++) {
+              const s = population[i];
+              if (s.alive && Math.abs(s.x - b.x) < DODGE_RADIUS) {
+                s.bombsDodged++;
+              }
+            }
+          }
+
+          if (Math.abs(SHIP_Y - b.y) < HIT_DY) {
+            for (let i = 0; i < population.length; i++) {
+              const s = population[i];
+              if (!s.alive) continue;
+              if (Math.abs(s.x - b.x) < HIT_DX) {
+                s.alive = false;
+                spawnDeathEffects(s.x, s === leaderBefore);
+              }
+            }
+          }
+
+          if (b.y <= WORLD_H + 30) {
+            remainingBombs.push(b);
+          }
+        }
+        bombs = remainingBombs;
+
+        // 4. Update survival frames and fitness
+        let aliveCount = 0;
+        for (let i = 0; i < population.length; i++) {
+          const s = population[i];
+          if (s.alive) {
+            s.framesSurvived++;
+            aliveCount++;
+            checkLiveMilestones(s);
+          }
+          const rawFit = s.framesSurvived
+            + 25 * s.bombsDodged
+            - 0.02 * s.pixelsTravelled
+            - EDGE_PENALTY_PER_FRAME * s.edgeFrames;
+          s.fitness = rawFit > 0 ? rawFit : 0;
+        }
+
+        // Keep leader's radar fresh for rendering
+        const leaderAfter = getCurrentLeader();
+        if (leaderAfter && leaderAfter.alive) {
+          leaderAfter.radarBombs = gatherRadarBombs(leaderAfter.x, bombs);
+        }
+
+        frame++;
+
+        if (aliveCount === 0 || frame >= settings.generationLength) {
+          finishGeneration();
+        }
+      }
+
+      // =========================================================================
+      // 8. RENDERING (Original procedural canvas art & decoration)
+      // =========================================================================
+      function initStars() {
+        stars = [];
+        for (let i = 0; i < 64; i++) {
+          const layer = i % 3;
+          stars.push({
+            x: decoRng() * WORLD_W,
+            y: decoRng() * WORLD_H,
+            speed: layer === 0 ? 0.15 : (layer === 1 ? 0.34 : 0.62),
+            size: layer === 0 ? 1.0 : (layer === 1 ? 1.4 : 1.9),
+            alpha: layer === 0 ? 0.22 : (layer === 1 ? 0.42 : 0.65)
+          });
+        }
+      }
+
+      function updateDecorations(dtMs) {
+        const dtFrames = dtMs / STEP_DT;
+        decoClock += dtFrames * 0.08;
+
+        for (let i = 0; i < stars.length; i++) {
+          const st = stars[i];
+          st.y += st.speed * dtFrames;
+          if (st.y > WORLD_H) {
+            st.y -= WORLD_H;
+            st.x = decoRng() * WORLD_W;
+          }
+        }
+
+        const nextParticles = [];
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx * dtFrames;
+          p.y += p.vy * dtFrames;
+          p.life -= p.decay * dtFrames;
+          if (p.life > 0) nextParticles.push(p);
+        }
+        particles = nextParticles;
+
+        const nextFlashes = [];
+        for (let i = 0; i < flashes.length; i++) {
+          const fl = flashes[i];
+          fl.life -= 0.1 * dtFrames;
+          if (fl.life > 0) nextFlashes.push(fl);
+        }
+        flashes = nextFlashes;
+      }
+
+      function drawAlienLantern(ctx, x, y, phase) {
+        // Row 0: rounded lantern body with dual curved antennae & pulsing core
+        const bob = Math.sin(phase) * 1.4;
+        ctx.save();
+        ctx.translate(x, y + bob);
+
+        // Antennae
+        ctx.strokeStyle = 'rgba(155, 198, 219, 0.72)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-5, -8);
+        ctx.quadraticCurveTo(-10, -16, -13, -13);
+        ctx.moveTo(5, -8);
+        ctx.quadraticCurveTo(10, -16, 13, -13);
+        ctx.stroke();
+
+        // Outer dome
+        ctx.fillStyle = '#1b2b3a';
+        ctx.strokeStyle = '#7db7d4';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 13, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner lantern glow
+        const pulse = 0.55 + 0.35 * Math.sin(phase * 1.6);
+        ctx.fillStyle = 'rgba(245, 184, 77, ' + pulse.toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(0, 1, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bottom fins
+        ctx.strokeStyle = '#7db7d4';
+        ctx.beginPath();
+        ctx.moveTo(-8, 7);
+        ctx.lineTo(-10, 12);
+        ctx.moveTo(0, 9);
+        ctx.lineTo(0, 13);
+        ctx.moveTo(8, 7);
+        ctx.lineTo(10, 12);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawAlienBeetle(ctx, x, y, phase) {
+        // Rows 1-2: wide beetle carapace with flapping side fins
+        const wing = Math.sin(phase * 1.4) * 4.2;
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Side fins
+        ctx.fillStyle = 'rgba(104, 146, 178, 0.35)';
+        ctx.strokeStyle = '#6f9bbc';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(-9, -2);
+        ctx.quadraticCurveTo(-17, -7 + wing, -16, 4 + wing * 0.6);
+        ctx.lineTo(-8, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(9, -2);
+        ctx.quadraticCurveTo(17, -7 + wing, 16, 4 + wing * 0.6);
+        ctx.lineTo(8, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Carapace diamond-oval
+        ctx.fillStyle = '#182433';
+        ctx.strokeStyle = '#92bad8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.bezierCurveTo(11, -9, 11, 8, 0, 10);
+        ctx.bezierCurveTo(-11, 8, -11, -9, 0, -10);
+        ctx.fill();
+        ctx.stroke();
+
+        // Center seam & twin eyes
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(0, 8);
+        ctx.strokeStyle = 'rgba(146, 186, 216, 0.45)';
+        ctx.stroke();
+
+        ctx.fillStyle = '#e7b154';
+        ctx.beginPath();
+        ctx.arc(-3.5, 4, 1.7, 0, Math.PI * 2);
+        ctx.arc(3.5, 4, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawAlienCrawler(ctx, x, y, phase) {
+        // Rows 3-4: squat plated crawler with scuttling side legs
+        const legSwing = Math.sin(phase * 1.8) * 3.0;
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Articulated legs
+        ctx.strokeStyle = '#738ca3';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-11, -3);
+        ctx.lineTo(-16, -6 + legSwing);
+        ctx.moveTo(-12, 2);
+        ctx.lineTo(-17, 5 - legSwing);
+        ctx.moveTo(11, -3);
+        ctx.lineTo(16, -6 - legSwing);
+        ctx.moveTo(12, 2);
+        ctx.lineTo(17, 5 + legSwing);
+        ctx.stroke();
+
+        // Squat armored plate
+        ctx.fillStyle = '#1b222c';
+        ctx.strokeStyle = '#8aa1b8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-12, -4);
+        ctx.lineTo(-7, -9);
+        ctx.lineTo(7, -9);
+        ctx.lineTo(12, -4);
+        ctx.lineTo(10, 7);
+        ctx.lineTo(-10, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Slit visor
+        ctx.fillStyle = '#d98a4a';
+        ctx.fillRect(-6, 0, 12, 2.5);
+
+        ctx.restore();
+      }
+
+      function drawBomb(ctx, b, isRadarTarget) {
+        const tailLen = b.fast ? 24 : 14;
+        const grad = ctx.createLinearGradient(b.x, b.y - tailLen, b.x, b.y + 7);
+        if (b.fast) {
+          grad.addColorStop(0, 'rgba(228, 92, 75, 0)');
+          grad.addColorStop(0.6, 'rgba(245, 130, 72, 0.7)');
+          grad.addColorStop(1, '#fff1cf');
+        } else {
+          grad.addColorStop(0, 'rgba(245, 166, 35, 0)');
+          grad.addColorStop(0.65, 'rgba(245, 166, 35, 0.65)');
+          grad.addColorStop(1, '#ffd98e');
+        }
+
+        // Trail
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = b.fast ? 3.2 : 2.4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - tailLen);
+        ctx.lineTo(b.x, b.y + 1);
+        ctx.stroke();
+
+        // Teardrop body (8 x 14 envelope)
+        ctx.fillStyle = b.fast ? '#ff6f59' : '#f5a623';
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - 7);
+        ctx.bezierCurveTo(b.x + 4.5, b.y - 1, b.x + 4, b.y + 6, b.x, b.y + 7);
+        ctx.bezierCurveTo(b.x - 4, b.y + 6, b.x - 4.5, b.y - 1, b.x, b.y - 7);
+        ctx.fill();
+
+        // Hot core
+        ctx.fillStyle = b.fast ? '#fff5dc' : '#ffe8b8';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y + 2, b.fast ? 1.8 : 1.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isRadarTarget) {
+          ctx.strokeStyle = 'rgba(245, 166, 35, 0.72)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 9, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      function drawShipDart(ctx, ship, isLeader, flickerSeed) {
+        ctx.save();
+        ctx.translate(ship.x, SHIP_Y);
+
+        // Slight banking tilt based on velocity
+        const tilt = (ship.lastVel / Math.max(1, settings.shipSpeed)) * 0.14;
+        ctx.rotate(tilt);
+
+        // Thruster flame
+        if (isLeader || fastForward <= 20) {
+          const flick = 4 + Math.sin(decoClock * 4.5 + flickerSeed) * 2.5;
+          ctx.fillStyle = isLeader ? 'rgba(255, 194, 89, 0.88)' : 'rgba(122, 164, 200, 0.35)';
+          ctx.beginPath();
+          ctx.moveTo(-3.2, 8);
+          ctx.lineTo(0, 8 + flick + (isLeader ? 3 : 0));
+          ctx.lineTo(3.2, 8);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Dart hull (within 28 x 18 envelope)
+        ctx.beginPath();
+        ctx.moveTo(0, -9);
+        ctx.lineTo(13, 7);
+        ctx.lineTo(4, 5);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-4, 5);
+        ctx.lineTo(-13, 7);
+        ctx.closePath();
+
+        if (isLeader) {
+          ctx.fillStyle = 'rgba(245, 166, 35, 0.28)';
+          ctx.strokeStyle = '#ffc259';
+          ctx.lineWidth = 1.8;
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#fff0cc';
+          ctx.beginPath();
+          ctx.arc(0, -1, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = 'rgba(112, 140, 168, 0.16)';
+          ctx.strokeStyle = 'rgba(128, 158, 186, 0.36)';
+          ctx.lineWidth = 1.1;
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      function renderPlayfield() {
+        const ctx = ui.simCtx;
+        if (!ctx) return;
+
+        // Clear
+        ctx.fillStyle = '#06080b';
+        ctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+        // Subtle horizon grid line at ship altitude
+        ctx.strokeStyle = 'rgba(112, 140, 168, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, SHIP_Y);
+        ctx.lineTo(WORLD_W, SHIP_Y);
+        ctx.stroke();
+
+        // Parallax starfield
+        for (let i = 0; i < stars.length; i++) {
+          const st = stars[i];
+          ctx.fillStyle = 'rgba(216, 224, 236, ' + st.alpha + ')';
+          ctx.fillRect(st.x, st.y, st.size, st.size);
+        }
+
+        // Alien formation (5 rows x 8 columns)
+        const form = getFormationState(frame);
+        for (let r = 0; r < 5; r++) {
+          const ay = form.topY + r * 36;
+          for (let c = 0; c < 8; c++) {
+            const ax = form.baseX + c * 48;
+            const phase = decoClock + c * 0.55 + r * 0.8;
+            if (r === 0) {
+              drawAlienLantern(ctx, ax, ay, phase);
+            } else if (r <= 2) {
+              drawAlienBeetle(ctx, ax, ay, phase);
+            } else {
+              drawAlienCrawler(ctx, ax, ay, phase);
+            }
+          }
+        }
+
+        // Leader radar lines
+        const leader = getCurrentLeader();
+        const radarBombSet = new Set();
+        if (leader && leader.alive && leader.radarBombs) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(245, 166, 35, 0.34)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          for (let i = 0; i < leader.radarBombs.length; i++) {
+            const rb = leader.radarBombs[i].bomb;
+            radarBombSet.add(rb);
+            ctx.beginPath();
+            ctx.moveTo(leader.x, SHIP_Y - 6);
+            ctx.lineTo(rb.x, rb.y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // Bombs
+        for (let i = 0; i < bombs.length; i++) {
+          const b = bombs[i];
+          drawBomb(ctx, b, radarBombSet.has(b));
+        }
+
+        // Death flashes
+        for (let i = 0; i < flashes.length; i++) {
+          const fl = flashes[i];
+          ctx.strokeStyle = 'rgba(228, 92, 75, ' + (fl.life * 0.55).toFixed(2) + ')';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(fl.x, fl.y, (1 - fl.life) * 20 + 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Non-leader living ships first, then leader on top
+        for (let i = 0; i < population.length; i++) {
+          const s = population[i];
+          if (!s.alive || s === leader) continue;
+          drawShipDart(ctx, s, false, i * 0.7);
+        }
+        if (leader && leader.alive) {
+          drawShipDart(ctx, leader, true, 0);
+        }
+
+        // Particles
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.fillStyle = p.amber
+            ? 'rgba(245, 166, 35, ' + p.life.toFixed(2) + ')'
+            : 'rgba(130, 160, 190, ' + (p.life * 0.75).toFixed(2) + ')';
+          ctx.fillRect(p.x - p.size * 0.5, p.y - p.size * 0.5, p.size, p.size);
+        }
+      }
+
+      // =========================================================================
+      // 9. CHART (30-generation sliding window with smooth left glide)
+      // =========================================================================
+      function renderChart(nowMs) {
+        const canvas = ui.chartCanvas;
+        const ctx = ui.chartCtx;
+        if (!canvas || !ctx) return;
+
+        const w = canvas.clientWidth || 280;
+        const h = canvas.clientHeight || 170;
+        const dpr = window.devicePixelRatio || 1;
+        const targetW = Math.round(w * dpr);
+        const targetH = Math.round(h * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        if (chartSlideProgress > 0 && !reducedMotion) {
+          const elapsed = nowMs - chartAnimStart;
+          const t = Math.min(1, elapsed / 320);
+          chartSlideProgress = 1 - (1 - Math.pow(1 - t, 3));
+          if (t >= 1) chartSlideProgress = 0;
+        }
+
+        ctx.fillStyle = '#090b0e';
+        ctx.fillRect(0, 0, w, h);
+
+        const padL = 34;
+        const padR = 10;
+        const padT = 12;
+        const padB = 22;
+        const plotW = Math.max(20, w - padL - padR);
+        const plotH = Math.max(20, h - padT - padB);
+
+        const maxSec = Math.max(10, settings.generationLength / 60);
+
+        // Horizontal Y-axis gridlines
+        ctx.font = '500 10px "Bricolage Grotesque", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const ticks = 4;
+        for (let i = 0; i <= ticks; i++) {
+          const frac = i / ticks;
+          const y = padT + plotH * (1 - frac);
+          const secVal = Math.round(maxSec * frac);
+
+          ctx.strokeStyle = i === 0 ? '#2b3545' : 'rgba(50, 61, 80, 0.45)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(w - padR, y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#687385';
+          ctx.fillText(secVal + 's', padL - 6, y);
+        }
+
+        if (history.length === 0) {
+          ctx.fillStyle = '#5d6776';
+          ctx.textAlign = 'center';
+          ctx.fillText('Waiting for Generation 1...', padL + plotW * 0.5, padT + plotH * 0.5);
+          return;
+        }
+
+        // Take up to CHART_WINDOW + 1 entries so sliding left reveals the incoming point smoothly
+        const sliceCount = Math.min(history.length, CHART_WINDOW + 1);
+        const windowData = history.slice(history.length - sliceCount);
+        const stepX = plotW / Math.max(1, CHART_WINDOW - 1);
+        const slideShiftPx = (history.length > CHART_WINDOW ? chartSlideProgress : 0) * stepX;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padL, 0, plotW + 2, h);
+        ctx.clip();
+
+        const startIdx = windowData.length > CHART_WINDOW ? 1 : 0;
+        const drawCount = windowData.length - startIdx;
+
+        function pointX(idxInWindow) {
+          // Right-align when < CHART_WINDOW, or fill 0..CHART_WINDOW-1 with slide offset
+          if (history.length <= CHART_WINDOW) {
+            return padL + idxInWindow * stepX;
+          }
+          return padL + (idxInWindow - 1) * stepX + slideShiftPx;
+        }
+
+        function pointY(sec) {
+          const clamped = Math.max(0, Math.min(maxSec, sec));
+          return padT + plotH * (1 - clamped / maxSec);
+        }
+
+        // Average line (blue-grey)
+        ctx.strokeStyle = '#708ca8';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let i = 0; i < windowData.length; i++) {
+          const x = pointX(i);
+          const y = pointY(windowData[i].avgSec);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Best line (amber)
+        ctx.strokeStyle = '#f5a623';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        for (let i = 0; i < windowData.length; i++) {
+          const x = pointX(i);
+          const y = pointY(windowData[i].bestSec);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Terminal dots on most recent entry
+        const lastIdx = windowData.length - 1;
+        const lastX = pointX(lastIdx);
+        ctx.fillStyle = '#708ca8';
+        ctx.beginPath();
+        ctx.arc(lastX, pointY(windowData[lastIdx].avgSec), 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffc259';
+        ctx.beginPath();
+        ctx.arc(lastX, pointY(windowData[lastIdx].bestSec), 3.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // X-axis generation bounds
+        ctx.fillStyle = '#687385';
+        ctx.font = '500 10px "Bricolage Grotesque", sans-serif';
+        const firstGen = windowData[startIdx].generation;
+        const lastGen = windowData[lastIdx].generation;
+        ctx.textAlign = 'left';
+        ctx.fillText('Gen ' + firstGen, padL, h - 8);
+        if (drawCount > 1) {
+          ctx.textAlign = 'right';
+          ctx.fillText('Gen ' + lastGen, w - padR, h - 8);
+        }
+      }
+
+      // =========================================================================
+      // 10. UI & CONTROLS
+      // =========================================================================
+      function triggerMilestone(title, desc, pillId) {
+        const pill = document.getElementById(pillId);
+        if (pill) pill.classList.add('unlocked');
+
+        if (ui.bannerTitle && ui.bannerDesc && ui.milestoneBanner) {
+          ui.bannerTitle.textContent = title;
+          ui.bannerDesc.textContent = desc;
+          ui.milestoneBanner.classList.add('visible');
+          if (bannerTimeoutId) clearTimeout(bannerTimeoutId);
+          bannerTimeoutId = setTimeout(function () {
+            ui.milestoneBanner.classList.remove('visible');
+          }, 3600);
+        }
+
+        if (ui.canvasFrame && !reducedMotion) {
+          ui.canvasFrame.classList.remove('pulse-milestone');
+          void ui.canvasFrame.offsetWidth;
+          ui.canvasFrame.classList.add('pulse-milestone');
+        }
+      }
+
+      function triggerBestPulse() {
+        if (!ui.canvasFrame || reducedMotion) return;
+        ui.canvasFrame.classList.add('pulse-best');
+        if (pulseTimeoutId) clearTimeout(pulseTimeoutId);
+        pulseTimeoutId = setTimeout(function () {
+          ui.canvasFrame.classList.remove('pulse-best');
+        }, 700);
+      }
+
+      function updateRightStatsUI(bestSec, avgSec, bestDodged, genLenSec) {
+        if (ui.statBestSec) {
+          ui.statBestSec.textContent = bestSec.toFixed(1) + 's / ' + genLenSec.toFixed(0) + 's';
+        }
+        if (ui.statAvgSec) {
+          ui.statAvgSec.textContent = avgSec.toFixed(1) + 's';
+        }
+        if (ui.statBestDodged) {
+          ui.statBestDodged.textContent = String(bestDodged);
+        }
+        if (ui.statAllTimeBest) {
+          ui.statAllTimeBest.textContent = 'Peak: ' + allTimeBestSec.toFixed(1) + 's';
+        }
+      }
+
+      function updateLiveTelemetryUI() {
+        let aliveCount = 0;
+        for (let i = 0; i < population.length; i++) {
+          if (population[i].alive) aliveCount++;
+        }
+        if (ui.uiGen) ui.uiGen.textContent = String(generation);
+        if (ui.uiAlive) ui.uiAlive.textContent = aliveCount + ' / ' + population.length;
+        if (ui.uiClock) {
+          const curS = (frame / 60).toFixed(1);
+          const maxS = (settings.generationLength / 60).toFixed(1);
+          ui.uiClock.textContent = curS + 's / ' + maxS + 's';
+        }
+      }
+
+      function syncControlsFromSettings() {
+        ui.slPopulation.value = String(settings.populationSize);
+        ui.valPopulation.textContent = String(settings.populationSize);
+
+        ui.slElites.value = String(settings.elites);
+        ui.valElites.textContent = String(settings.elites);
+
+        ui.slMutChance.value = String(settings.mutationChance);
+        ui.valMutChance.textContent = settings.mutationChance + '%';
+
+        ui.slMutSize.value = String(settings.mutationSize);
+        ui.valMutSize.textContent = settings.mutationSize.toFixed(2);
+
+        ui.slBigJump.value = String(settings.bigJumpChance);
+        ui.valBigJump.textContent = settings.bigJumpChance + '%';
+
+        ui.slParentPool.value = String(settings.parentPool);
+        ui.valParentPool.textContent = settings.parentPool + '%';
+
+        ui.slBombRate.value = String(settings.bombRate);
+        ui.valBombRate.textContent = settings.bombRate.toFixed(2) + 'x';
+
+        ui.slBombSpeed.value = String(settings.bombSpeed);
+        ui.valBombSpeed.textContent = settings.bombSpeed.toFixed(2) + 'x';
+
+        ui.slVolley.value = String(settings.volleyChance);
+        ui.valVolley.textContent = settings.volleyChance + '%';
+
+        ui.slShipSpeed.value = String(settings.shipSpeed);
+        ui.valShipSpeed.textContent = settings.shipSpeed.toFixed(2).replace(/\.00$/, '.0') + ' px/f';
+
+        ui.slGenLen.value = String(settings.generationLength);
+        ui.valGenLen.textContent = settings.generationLength + 'f (' + (settings.generationLength / 60).toFixed(0) + 's)';
+
+        ui.chkShrinkMut.checked = Boolean(settings.shrinkMutation);
+
+        const presetBtns = document.querySelectorAll('[data-preset]');
+        for (let i = 0; i < presetBtns.length; i++) {
+          const btn = presetBtns[i];
+          btn.classList.toggle('btn-active', btn.dataset.preset === activePresetKey);
+        }
+      }
+
+      function applyPreset(presetKey) {
+        const overrides = PRESETS[presetKey];
+        if (!overrides) return;
+        Object.assign(settings, DEFAULTS, overrides);
+        activePresetKey = presetKey;
+        syncControlsFromSettings();
+      }
+
+      function resetToDefaults() {
+        Object.assign(settings, DEFAULTS);
+        activePresetKey = null;
+        syncControlsFromSettings();
+      }
+
+      function restartSimulation() {
+        evoRng = mulberry32(0x41a7e915 ^ (Date.now() & 0xfffffff));
+        history = [];
+        allTimeBestFrames = 0;
+        allTimeBestSec = 0;
+        successFlags.steady = false;
+        successFlags.veteran = false;
+        successFlags.untouchable = false;
+        successFlags.squadron = false;
+
+        const pills = document.querySelectorAll('.milestone-pill');
+        for (let i = 0; i < pills.length; i++) pills[i].classList.remove('unlocked');
+
+        if (ui.statBestSec) ui.statBestSec.textContent = '—';
+        if (ui.statAvgSec) ui.statAvgSec.textContent = '—';
+        if (ui.statBestDodged) ui.statBestDodged.textContent = '—';
+        if (ui.statAllTimeBest) ui.statAllTimeBest.textContent = 'Peak: —';
+
+        const initialPop = [];
+        for (let i = 0; i < settings.populationSize; i++) {
+          initialPop.push(createShip(createRandomWeights(evoRng)));
+        }
+        setupGeneration(1, initialPop);
+        updateLiveTelemetryUI();
+      }
+
+      function bindSlider(inputEl, settingKey) {
+        inputEl.addEventListener('input', function () {
+          settings[settingKey] = parseFloat(inputEl.value);
+          activePresetKey = null;
+          syncControlsFromSettings();
+        });
+      }
+
+      function initUI() {
+        ui.simCanvas = document.getElementById('simCanvas');
+        ui.simCtx = ui.simCanvas.getContext('2d');
+        ui.chartCanvas = document.getElementById('chartCanvas');
+        ui.chartCtx = ui.chartCanvas.getContext('2d');
+        ui.netCanvas = document.getElementById('netCanvas');
+        ui.netCtx = ui.netCanvas.getContext('2d');
+        ui.miniCanvas = document.getElementById('miniCanvas');
+        ui.miniCtx = ui.miniCanvas.getContext('2d');
+
+        ui.canvasFrame = document.getElementById('canvasFrame');
+        ui.milestoneBanner = document.getElementById('milestoneBanner');
+        ui.bannerTitle = document.getElementById('bannerTitle');
+        ui.bannerDesc = document.getElementById('bannerDesc');
+
+        ui.uiGen = document.getElementById('uiGen');
+        ui.uiAlive = document.getElementById('uiAlive');
+        ui.uiClock = document.getElementById('uiClock');
+
+        ui.statBestSec = document.getElementById('statBestSec');
+        ui.statAvgSec = document.getElementById('statAvgSec');
+        ui.statBestDodged = document.getElementById('statBestDodged');
+        ui.statAllTimeBest = document.getElementById('statAllTimeBest');
+        ui.diagramLeaderMeta = document.getElementById('diagramLeaderMeta');
+
+        ui.slPopulation = document.getElementById('slPopulation');
+        ui.valPopulation = document.getElementById('valPopulation');
+        ui.slElites = document.getElementById('slElites');
+        ui.valElites = document.getElementById('valElites');
+        ui.slMutChance = document.getElementById('slMutChance');
+        ui.valMutChance = document.getElementById('valMutChance');
+        ui.slMutSize = document.getElementById('slMutSize');
+        ui.valMutSize = document.getElementById('valMutSize');
+        ui.slBigJump = document.getElementById('slBigJump');
+        ui.valBigJump = document.getElementById('valBigJump');
+        ui.slParentPool = document.getElementById('slParentPool');
+        ui.valParentPool = document.getElementById('valParentPool');
+        ui.slBombRate = document.getElementById('slBombRate');
+        ui.valBombRate = document.getElementById('valBombRate');
+        ui.slBombSpeed = document.getElementById('slBombSpeed');
+        ui.valBombSpeed = document.getElementById('valBombSpeed');
+        ui.slVolley = document.getElementById('slVolley');
+        ui.valVolley = document.getElementById('valVolley');
+        ui.slShipSpeed = document.getElementById('slShipSpeed');
+        ui.valShipSpeed = document.getElementById('valShipSpeed');
+        ui.slGenLen = document.getElementById('slGenLen');
+        ui.valGenLen = document.getElementById('valGenLen');
+        ui.chkShrinkMut = document.getElementById('chkShrinkMut');
+
+        ui.slSpeed = document.getElementById('slSpeed');
+        ui.valSpeed = document.getElementById('valSpeed');
+        ui.pauseBtn = document.getElementById('pauseBtn');
+        ui.restartBtn = document.getElementById('restartBtn');
+        ui.resetDefaultsBtn = document.getElementById('resetDefaultsBtn');
+        ui.howItWorksBtn = document.getElementById('howItWorksBtn');
+        ui.howModal = document.getElementById('howModal');
+        ui.closeModalBtn = document.getElementById('closeModalBtn');
+
+        bindSlider(ui.slPopulation, 'populationSize');
+        bindSlider(ui.slElites, 'elites');
+        bindSlider(ui.slMutChance, 'mutationChance');
+        bindSlider(ui.slMutSize, 'mutationSize');
+        bindSlider(ui.slBigJump, 'bigJumpChance');
+        bindSlider(ui.slParentPool, 'parentPool');
+        bindSlider(ui.slBombRate, 'bombRate');
+        bindSlider(ui.slBombSpeed, 'bombSpeed');
+        bindSlider(ui.slVolley, 'volleyChance');
+        bindSlider(ui.slShipSpeed, 'shipSpeed');
+        bindSlider(ui.slGenLen, 'generationLength');
+
+        ui.chkShrinkMut.addEventListener('change', function () {
+          settings.shrinkMutation = ui.chkShrinkMut.checked;
+          activePresetKey = null;
+          syncControlsFromSettings();
+        });
+
+        ui.presetsGrid = document.getElementById('presetsGrid');
+        ui.presetsGrid.addEventListener('click', function (e) {
+          const btn = e.target.closest('[data-preset]');
+          if (btn) applyPreset(btn.dataset.preset);
+        });
+
+        ui.resetDefaultsBtn.addEventListener('click', resetToDefaults);
+
+        ui.slSpeed.addEventListener('input', function () {
+          fastForward = parseInt(ui.slSpeed.value, 10) || 1;
+          ui.valSpeed.textContent = fastForward + 'x';
+        });
+
+        ui.pauseBtn.addEventListener('click', function () {
+          paused = !paused;
+          ui.pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+          ui.pauseBtn.classList.toggle('btn-active', paused);
+        });
+
+        ui.restartBtn.addEventListener('click', restartSimulation);
+
+        ui.howItWorksBtn.addEventListener('click', function () {
+          modalOpen = true;
+          ui.howModal.classList.add('open');
+        });
+        ui.closeModalBtn.addEventListener('click', function () {
+          modalOpen = false;
+          ui.howModal.classList.remove('open');
+        });
+        ui.howModal.addEventListener('click', function (e) {
+          if (e.target === ui.howModal) {
+            modalOpen = false;
+            ui.howModal.classList.remove('open');
+          }
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && modalOpen) {
+            modalOpen = false;
+            ui.howModal.classList.remove('open');
+          }
+        });
+
+        syncControlsFromSettings();
+      }
+
+      function configurePlayfieldHiDPI() {
+        const dpr = window.devicePixelRatio || 1;
+        const targetW = Math.round(WORLD_W * dpr);
+        const targetH = Math.round(WORLD_H * dpr);
+        if (ui.simCanvas.width !== targetW || ui.simCanvas.height !== targetH) {
+          ui.simCanvas.width = targetW;
+          ui.simCanvas.height = targetH;
+        }
+        if (ui.simCtx) {
+          ui.simCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      // =========================================================================
+      // 11. DIAGRAM ("How it works" animated network & live mini radar scene)
+      // =========================================================================
+      const INPUT_LABELS = [
+        'ship x',
+        'ship speed',
+        'bomb 1 offset',
+        'bomb 1 urgency',
+        'bomb 2 offset',
+        'bomb 2 urgency',
+        'bomb 3 offset',
+        'bomb 3 urgency'
+      ];
+
+      function renderHowItWorksDiagrams(nowMs) {
+        if (!modalOpen) return;
+        const leader = getCurrentLeader();
+        if (!leader) return;
+
+        if (ui.diagramLeaderMeta) {
+          ui.diagramLeaderMeta.textContent =
+            'Leader: ' + (leader.framesSurvived / 60).toFixed(1) + 's | steer ' + leader.lastOutput.toFixed(2);
+        }
+
+        // --- Network Diagram ---
+        const netCanvas = ui.netCanvas;
+        const nCtx = ui.netCtx;
+        if (netCanvas && nCtx) {
+          const w = netCanvas.clientWidth || 480;
+          const h = netCanvas.clientHeight || 310;
+          const dpr = window.devicePixelRatio || 1;
+          if (netCanvas.width !== Math.round(w * dpr) || netCanvas.height !== Math.round(h * dpr)) {
+            netCanvas.width = Math.round(w * dpr);
+            netCanvas.height = Math.round(h * dpr);
+          }
+          nCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          nCtx.fillStyle = '#090b0e';
+          nCtx.fillRect(0, 0, w, h);
+
+          const xIn = 112;
+          const xHid = w * 0.56;
+          const xOut = w - 68;
+
+          const inPos = [];
+          for (let i = 0; i < 8; i++) {
+            inPos.push({ x: xIn, y: 24 + i * ((h - 48) / 7) });
+          }
+          const hidPos = [];
+          for (let j = 0; j < 10; j++) {
+            hidPos.push({ x: xHid, y: 20 + j * ((h - 40) / 9) });
+          }
+          const outPos = { x: xOut, y: h * 0.5 };
+
+          const pulseT = (nowMs * 0.0014) % 1;
+
+          // Connections: Input -> Hidden
+          for (let j = 0; j < 10; j++) {
+            for (let i = 0; i < 8; i++) {
+              const weight = leader.weights[j * 8 + i];
+              const signal = leader.lastInputs[i] * weight;
+              const strength = Math.min(1, Math.abs(weight) * 0.65);
+              const active = Math.min(1, Math.abs(signal));
+
+              nCtx.strokeStyle = weight >= 0
+                ? 'rgba(245, 166, 35, ' + (0.08 + strength * 0.42).toFixed(2) + ')'
+                : 'rgba(112, 140, 168, ' + (0.08 + strength * 0.40).toFixed(2) + ')';
+              nCtx.lineWidth = 0.6 + Math.min(2.2, Math.abs(weight) * 1.1);
+              nCtx.beginPath();
+              nCtx.moveTo(inPos[i].x, inPos[i].y);
+              nCtx.lineTo(hidPos[j].x, hidPos[j].y);
+              nCtx.stroke();
+
+              // Animated pulse along strong active links
+              if (!reducedMotion && active > 0.22) {
+                const px = inPos[i].x + (hidPos[j].x - inPos[i].x) * pulseT;
+                const py = inPos[i].y + (hidPos[j].y - inPos[i].y) * pulseT;
+                nCtx.fillStyle = signal >= 0 ? 'rgba(255, 194, 89, 0.85)' : 'rgba(156, 183, 209, 0.85)';
+                nCtx.beginPath();
+                nCtx.arc(px, py, 1.7, 0, Math.PI * 2);
+                nCtx.fill();
+              }
+            }
+          }
+
+          // Connections: Hidden -> Output
+          for (let j = 0; j < 10; j++) {
+            const weight = leader.weights[90 + j];
+            const signal = leader.lastHidden[j] * weight;
+            const strength = Math.min(1, Math.abs(weight) * 0.7);
+            nCtx.strokeStyle = weight >= 0
+              ? 'rgba(245, 166, 35, ' + (0.14 + strength * 0.65).toFixed(2) + ')'
+              : 'rgba(112, 140, 168, ' + (0.14 + strength * 0.65).toFixed(2) + ')';
+            nCtx.lineWidth = 0.8 + Math.min(3.0, Math.abs(weight) * 1.35);
+            nCtx.beginPath();
+            nCtx.moveTo(hidPos[j].x, hidPos[j].y);
+            nCtx.lineTo(outPos.x, outPos.y);
+            nCtx.stroke();
+
+            if (!reducedMotion && Math.abs(signal) > 0.15) {
+              const p2 = (pulseT + 0.5) % 1;
+              const px = hidPos[j].x + (outPos.x - hidPos[j].x) * p2;
+              const py = hidPos[j].y + (outPos.y - hidPos[j].y) * p2;
+              nCtx.fillStyle = signal >= 0 ? '#ffc259' : '#9cb7d1';
+              nCtx.beginPath();
+              nCtx.arc(px, py, 2.0, 0, Math.PI * 2);
+              nCtx.fill();
+            }
+          }
+
+          // Nodes & Labels
+          nCtx.font = '500 10.5px "Bricolage Grotesque", sans-serif';
+          nCtx.textBaseline = 'middle';
+          for (let i = 0; i < 8; i++) {
+            const val = leader.lastInputs[i];
+            const p = inPos[i];
+            nCtx.fillStyle = '#151b24';
+            nCtx.strokeStyle = val >= 0 ? '#f5a623' : '#708ca8';
+            nCtx.lineWidth = 1.6;
+            nCtx.beginPath();
+            nCtx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+            nCtx.fill();
+            nCtx.stroke();
+
+            nCtx.fillStyle = val >= 0
+              ? 'rgba(245, 166, 35, ' + Math.abs(val).toFixed(2) + ')'
+              : 'rgba(112, 140, 168, ' + Math.abs(val).toFixed(2) + ')';
+            nCtx.beginPath();
+            nCtx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+            nCtx.fill();
+
+            nCtx.fillStyle = '#9aa5b4';
+            nCtx.textAlign = 'right';
+            nCtx.fillText(INPUT_LABELS[i], p.x - 12, p.y);
+          }
+
+          for (let j = 0; j < 10; j++) {
+            const val = leader.lastHidden[j];
+            const p = hidPos[j];
+            nCtx.fillStyle = '#151b24';
+            nCtx.strokeStyle = val >= 0 ? '#f5a623' : '#708ca8';
+            nCtx.lineWidth = 1.5;
+            nCtx.beginPath();
+            nCtx.arc(p.x, p.y, 6.5, 0, Math.PI * 2);
+            nCtx.fill();
+            nCtx.stroke();
+
+            nCtx.fillStyle = val >= 0
+              ? 'rgba(245, 166, 35, ' + Math.abs(val).toFixed(2) + ')'
+              : 'rgba(112, 140, 168, ' + Math.abs(val).toFixed(2) + ')';
+            nCtx.beginPath();
+            nCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            nCtx.fill();
+          }
+
+          // Output node
+          const outVal = leader.lastOutput;
+          nCtx.fillStyle = '#151b24';
+          nCtx.strokeStyle = '#ffc259';
+          nCtx.lineWidth = 2;
+          nCtx.beginPath();
+          nCtx.arc(outPos.x, outPos.y, 10, 0, Math.PI * 2);
+          nCtx.fill();
+          nCtx.stroke();
+
+          nCtx.fillStyle = outVal >= 0
+            ? 'rgba(245, 166, 35, ' + Math.abs(outVal).toFixed(2) + ')'
+            : 'rgba(112, 140, 168, ' + Math.abs(outVal).toFixed(2) + ')';
+          nCtx.beginPath();
+          nCtx.arc(outPos.x, outPos.y, 6.5, 0, Math.PI * 2);
+          nCtx.fill();
+
+          nCtx.fillStyle = '#ede9df';
+          nCtx.textAlign = 'left';
+          nCtx.fillText('steer', outPos.x + 15, outPos.y - 7);
+          nCtx.fillStyle = '#ffc259';
+          nCtx.fillText(outVal.toFixed(2), outPos.x + 15, outPos.y + 8);
+        }
+
+        // --- Live Mini Radar Scene ---
+        const miniCanvas = ui.miniCanvas;
+        const mCtx = ui.miniCtx;
+        if (miniCanvas && mCtx) {
+          const w = miniCanvas.clientWidth || 300;
+          const h = miniCanvas.clientHeight || 310;
+          const dpr = window.devicePixelRatio || 1;
+          if (miniCanvas.width !== Math.round(w * dpr) || miniCanvas.height !== Math.round(h * dpr)) {
+            miniCanvas.width = Math.round(w * dpr);
+            miniCanvas.height = Math.round(h * dpr);
+          }
+          mCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          mCtx.fillStyle = '#090b0e';
+          mCtx.fillRect(0, 0, w, h);
+
+          // Scale 480x640 world into mini canvas preserving 3:4
+          const scale = Math.min((w - 16) / WORLD_W, (h - 16) / WORLD_H);
+          const offX = (w - WORLD_W * scale) * 0.5;
+          const offY = (h - WORLD_H * scale) * 0.5;
+
+          mCtx.save();
+          mCtx.translate(offX, offY);
+          mCtx.scale(scale, scale);
+
+          mCtx.strokeStyle = '#263040';
+          mCtx.lineWidth = 2;
+          mCtx.strokeRect(0, 0, WORLD_W, WORLD_H);
+
+          // Ship horizon
+          mCtx.strokeStyle = 'rgba(112, 140, 168, 0.2)';
+          mCtx.beginPath();
+          mCtx.moveTo(0, SHIP_Y);
+          mCtx.lineTo(WORLD_W, SHIP_Y);
+          mCtx.stroke();
+
+          // Non-radar bombs dimmed
+          const radarList = leader.radarBombs || [];
+          const radarSet = new Set(radarList.map(function (r) { return r.bomb; }));
+
+          for (let i = 0; i < bombs.length; i++) {
+            const b = bombs[i];
+            if (radarSet.has(b)) continue;
+            mCtx.fillStyle = 'rgba(112, 140, 168, 0.35)';
+            mCtx.beginPath();
+            mCtx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+            mCtx.fill();
+          }
+
+          // Radar bombs highlighted and numbered 1, 2, 3
+          for (let i = 0; i < radarList.length; i++) {
+            const entry = radarList[i];
+            const b = entry.bomb;
+
+            mCtx.strokeStyle = 'rgba(245, 166, 35, 0.6)';
+            mCtx.lineWidth = 2;
+            mCtx.setLineDash([6, 6]);
+            mCtx.beginPath();
+            mCtx.moveTo(leader.x, SHIP_Y);
+            mCtx.lineTo(b.x, b.y);
+            mCtx.stroke();
+            mCtx.setLineDash([]);
+
+            mCtx.fillStyle = '#f5a623';
+            mCtx.beginPath();
+            mCtx.arc(b.x, b.y, 10, 0, Math.PI * 2);
+            mCtx.fill();
+
+            mCtx.fillStyle = '#090b0e';
+            mCtx.font = '700 13px "Bricolage Grotesque", sans-serif';
+            mCtx.textAlign = 'center';
+            mCtx.textBaseline = 'middle';
+            mCtx.fillText(String(i + 1), b.x, b.y + 0.5);
+          }
+
+          // Leader ship
+          drawShipDart(mCtx, leader, true, 0);
+
+          // Steering vector arrow
+          const arrowLen = leader.lastOutput * 46;
+          if (Math.abs(arrowLen) > 3) {
+            mCtx.strokeStyle = '#ffc259';
+            mCtx.lineWidth = 3;
+            mCtx.beginPath();
+            mCtx.moveTo(leader.x, SHIP_Y + 26);
+            mCtx.lineTo(leader.x + arrowLen, SHIP_Y + 26);
+            mCtx.stroke();
+          }
+
+          mCtx.restore();
+        }
+      }
+
+      // =========================================================================
+      // 12. BOOT
+      // =========================================================================
+      function mainLoop(nowMs) {
+        if (!lastRafTime) lastRafTime = nowMs;
+        let dt = nowMs - lastRafTime;
+        lastRafTime = nowMs;
+        if (dt > 100) dt = 100; // prevent spiral after tab switch
+
+        if (!paused) {
+          simAccumulator += dt * fastForward;
+          let stepsThisFrame = 0;
+          const maxSteps = Math.max(85, fastForward * 3);
+          while (simAccumulator >= STEP_DT && stepsThisFrame < maxSteps) {
+            stepSimulation();
+            simAccumulator -= STEP_DT;
+            stepsThisFrame++;
+          }
+          if (stepsThisFrame >= maxSteps) {
+            simAccumulator = 0;
+          }
+          updateDecorations(dt);
+        }
+
+        configurePlayfieldHiDPI();
+        renderPlayfield();
+        renderChart(nowMs);
+        updateLiveTelemetryUI();
+        renderHowItWorksDiagrams(nowMs);
+
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(mainLoop);
+        }
+      }
+
+      function boot() {
+        reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        decoRng = mulberry32(0x51de57e9);
+        evoRng = mulberry32(0x41a7e915);
+
+        initStars();
+        initUI();
+
+        const initialPop = [];
+        for (let i = 0; i < settings.populationSize; i++) {
+          initialPop.push(createShip(createRandomWeights(evoRng)));
+        }
+        setupGeneration(1, initialPop);
+        updateLiveTelemetryUI();
+        configurePlayfieldHiDPI();
+        renderPlayfield();
+        renderChart(performance.now());
+
+        // Expose testable/diagnostic hooks for automated verification
+        window.Sidestep = {
+          constants: { WORLD_W, WORLD_H, SHIP_Y, WEIGHT_COUNT, CORRIDOR_FRAMES },
+          settings: settings,
+          getState: function () {
+            return {
+              generation: generation,
+              frame: frame,
+              population: population,
+              bombs: bombs,
+              corridor: corridor,
+              history: history,
+              successFlags: successFlags
+            };
+          },
+          mulberry32: mulberry32,
+          getFormationState: getFormationState,
+          generateCorridor: generateCorridor,
+          isBombSafeForCorridor: isBombSafeForCorridor,
+          forwardNetwork: forwardNetwork,
+          computeShipInputs: computeShipInputs,
+          crossoverWeights: crossoverWeights,
+          stepSimulation: stepSimulation,
+          setupGeneration: setupGeneration,
+          createShip: createShip,
+          createRandomWeights: createRandomWeights,
+          applyPreset: applyPreset,
+          resetToDefaults: resetToDefaults,
+          restartSimulation: restartSimulation
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(mainLoop);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+</body>
+</html>

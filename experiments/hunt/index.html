@@ -1,0 +1,2408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hunt — Co-Evolution Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0c0e;
+    --surface: #121418;
+    --surface-2: #181b21;
+    --border: #252932;
+    --border-bright: #343a46;
+    --text: #ece9e2;
+    --text-dim: #9a978f;
+    --text-muted: #66645e;
+    --amber: #e8a838;
+    --amber-dim: rgba(232, 168, 56, 0.16);
+    --blue-grey: #7b92a8;
+    --rust: #c84b31;
+    --mint: #4ecdc4;
+    --font-ui: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (min-width: 1200px) and (min-height: 700px) {
+    body { overflow: hidden; }
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 272px 1fr 310px;
+    height: 100vh;
+    min-height: 680px;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  @media (max-width: 1120px) {
+    body { overflow: auto; }
+    .app {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: panelIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .panel-left { animation-delay: 0.04s; }
+  .panel-center { background: var(--bg); animation-delay: 0.10s; padding: 12px 16px; }
+  .panel-right { animation-delay: 0.16s; }
+
+  @keyframes panelIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .brand-sub {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  .section-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    margin: 10px 0 6px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* Left column: presets + sliders */
+  .left-scroll {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 4px;
+  }
+  .left-scroll::-webkit-scrollbar { width: 4px; }
+  .left-scroll::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  .presets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+
+  button {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+  }
+
+  button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--amber);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 0;
+    opacity: 0.14;
+  }
+  button:hover::before { transform: scaleX(1); }
+  button:hover { border-color: var(--border-bright); }
+  button > span { position: relative; z-index: 1; }
+
+  button.active {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: var(--amber-dim);
+  }
+
+  .preset-btn {
+    text-align: left;
+    font-size: 11.5px;
+    padding: 5px 7px;
+    line-height: 1.25;
+  }
+
+  .sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .slider-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 8px;
+    align-items: center;
+  }
+  .slider-row label {
+    font-size: 11.5px;
+    color: var(--text-dim);
+  }
+  .slider-val {
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .slider-row input[type="range"] {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border-bright);
+    outline: none;
+    margin: 2px 0 3px;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px;
+    height: 11px;
+    background: var(--text);
+    border: 1px solid var(--bg);
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--amber);
+    transform: scale(1.15);
+  }
+  .slider-row input[type="range"]::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    background: var(--text);
+    border: 1px solid var(--bg);
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .check-row input {
+    accent-color: var(--amber);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 7px 10px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+  .reset-btn:hover { color: var(--text); }
+
+  /* Center column: HUD, Arena, Controls */
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hud-stats {
+    display: flex;
+    gap: 20px;
+    align-items: baseline;
+  }
+  .hud-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .hud-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  .hud-value {
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    transition: color 0.2s ease;
+  }
+  .hud-value.pulse {
+    animation: genPulse 0.45s ease;
+  }
+  @keyframes genPulse {
+    0% { color: var(--amber); transform: scale(1.12); }
+    100% { color: var(--text); transform: scale(1); }
+  }
+
+  .hud-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .how-btn {
+    font-size: 12px;
+    padding: 6px 11px;
+    border-color: var(--border-bright);
+  }
+
+  .arena-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 10px 0;
+  }
+
+  #arenaCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 800 / 500;
+    background: #08090b;
+    border: 1px solid var(--border-bright);
+    display: block;
+  }
+
+  .seed-tag {
+    position: absolute;
+    bottom: 16px;
+    right: 8px;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .toast-stack {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .toast {
+    background: var(--surface-2);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    animation: toastIn 0.25s ease, toastOut 0.35s ease 2.8s forwards;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toastOut {
+    to { opacity: 0; transform: translateY(-4px); }
+  }
+
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .speed-group, .transport-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .speed-btn {
+    padding: 5px 8px;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Right column: Stats + Graphs */
+  .right-scroll {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 10px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-block {
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    padding: 8px 10px;
+  }
+  .stat-title {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .stat-main {
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .stat-sub {
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .h2h-line {
+    font-size: 12px;
+    color: var(--text);
+    padding: 6px 10px;
+    border-left: 2px solid var(--amber);
+    background: var(--surface-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .hof-tag {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .graph-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .graph-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11.5px;
+  }
+  .graph-title { font-weight: 600; color: var(--text); }
+  .graph-legend {
+    display: flex;
+    gap: 10px;
+    font-size: 10.5px;
+    color: var(--text-dim);
+  }
+  .leg-dot {
+    display: inline-block;
+    width: 8px;
+    height: 2px;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  .graph-canvas {
+    width: 100%;
+    height: 112px;
+    background: #0d0f12;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  .reading-note {
+    font-family: var(--font-serif);
+    font-size: 12.5px;
+    line-height: 1.48;
+    color: var(--text-dim);
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .reading-note strong {
+    font-family: var(--font-ui);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  /* How it works modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 7, 9, 0.84);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    max-width: 860px;
+    width: 100%;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 780px) {
+    .modal-grid { grid-template-columns: 1fr; }
+  }
+  .modal-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .modal-pane-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  #netCanvas, #miniArenaCanvas {
+    width: 100%;
+    background: #08090b;
+    border: 1px solid var(--border);
+    display: block;
+  }
+  .modal-lines {
+    font-family: var(--font-serif);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel { opacity: 1; transform: none; animation: none; }
+    .hud-value.pulse { animation: none; }
+    .toast { animation: none; }
+    button::before { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT COLUMN -->
+  <aside class="panel panel-left">
+    <div class="panel-head">
+      <div class="brand">Hunt</div>
+      <div class="brand-sub">Co-evolution</div>
+    </div>
+    <div class="left-scroll">
+      <div class="section-label">Experiment Presets</div>
+      <div class="presets">
+        <button class="preset-btn" data-preset="reckless"><span>Reckless mutation</span></button>
+        <button class="preset-btn" data-preset="noElites"><span>No elites</span></button>
+        <button class="preset-btn" data-preset="tinyPop"><span>Tiny population</span></button>
+        <button class="preset-btn" data-preset="handicapped"><span>Handicapped hunter</span></button>
+      </div>
+
+      <div class="section-label">Evolution &amp; Physics</div>
+      <div class="sliders">
+        <div class="slider-row">
+          <label for="s_pop">Population per side</label>
+          <span class="slider-val" id="v_pop">16</span>
+          <input id="s_pop" type="range" min="8" max="30" step="1" value="16">
+        </div>
+        <div class="slider-row">
+          <label for="s_elites">Elites</label>
+          <span class="slider-val" id="v_elites">2</span>
+          <input id="s_elites" type="range" min="0" max="6" step="1" value="2">
+        </div>
+        <div class="slider-row">
+          <label for="s_pool">Parent pool</label>
+          <span class="slider-val" id="v_pool">5</span>
+          <input id="s_pool" type="range" min="2" max="12" step="1" value="5">
+        </div>
+        <div class="slider-row">
+          <label for="s_mutChance">Mutation chance</label>
+          <span class="slider-val" id="v_mutChance">10%</span>
+          <input id="s_mutChance" type="range" min="2" max="40" step="1" value="10">
+        </div>
+        <div class="slider-row">
+          <label for="s_mutSize">Mutation size</label>
+          <span class="slider-val" id="v_mutSize">0.25</span>
+          <input id="s_mutSize" type="range" min="0.05" max="0.80" step="0.01" value="0.25">
+        </div>
+        <div class="slider-row">
+          <label for="s_predSpeed">Predator speed</label>
+          <span class="slider-val" id="v_predSpeed">3.0</span>
+          <input id="s_predSpeed" type="range" min="2.0" max="4.0" step="0.1" value="3.0">
+        </div>
+        <div class="slider-row">
+          <label for="s_preySpeed">Prey speed</label>
+          <span class="slider-val" id="v_preySpeed">3.0</span>
+          <input id="s_preySpeed" type="range" min="2.0" max="4.0" step="0.1" value="3.0">
+        </div>
+        <div class="slider-row">
+          <label for="s_predTurn">Predator turn rate</label>
+          <span class="slider-val" id="v_predTurn">0.060</span>
+          <input id="s_predTurn" type="range" min="0.030" max="0.120" step="0.005" value="0.060">
+        </div>
+        <div class="slider-row">
+          <label for="s_preyTurn">Prey turn rate</label>
+          <span class="slider-val" id="v_preyTurn">0.100</span>
+          <input id="s_preyTurn" type="range" min="0.050" max="0.160" step="0.005" value="0.100">
+        </div>
+        <div class="slider-row">
+          <label for="s_matchLen">Match length (frames)</label>
+          <span class="slider-val" id="v_matchLen">600</span>
+          <input id="s_matchLen" type="range" min="300" max="900" step="20" value="600">
+        </div>
+        <div class="slider-row">
+          <label for="s_rounds">Rounds per generation</label>
+          <span class="slider-val" id="v_rounds">3</span>
+          <input id="s_rounds" type="range" min="1" max="6" step="1" value="3">
+        </div>
+      </div>
+
+      <label class="check-row">
+        <input id="c_shrinkMut" type="checkbox" checked>
+        <span>Shrink mutation near perfect</span>
+      </label>
+
+      <button class="reset-btn" id="resetBtn"><span>Reset to optimal values</span></button>
+    </div>
+  </aside>
+
+  <!-- CENTER COLUMN -->
+  <main class="panel panel-center">
+    <div class="hud">
+      <div class="hud-stats">
+        <div class="hud-item">
+          <span class="hud-label">Generation</span>
+          <span class="hud-value" id="hudGen">1</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Round</span>
+          <span class="hud-value" id="hudRound">1 / 3</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Prey still free</span>
+          <span class="hud-value" id="hudFree">16</span>
+        </div>
+      </div>
+      <div class="hud-actions">
+        <button class="how-btn" id="howBtn"><span>How it works</span></button>
+      </div>
+    </div>
+
+    <div class="arena-wrap">
+      <canvas id="arenaCanvas" width="800" height="500"></canvas>
+      <div class="toast-stack" id="toastStack"></div>
+      <div class="seed-tag" id="seedTag">seed —</div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="speed-group">
+        <button class="speed-btn active" data-speed="1"><span>1x</span></button>
+        <button class="speed-btn" data-speed="2"><span>2x</span></button>
+        <button class="speed-btn" data-speed="5"><span>5x</span></button>
+        <button class="speed-btn" data-speed="10"><span>10x</span></button>
+        <button class="speed-btn" data-speed="20"><span>20x</span></button>
+        <button class="speed-btn" data-speed="40"><span>40x</span></button>
+        <button class="speed-btn" data-speed="80"><span>80x</span></button>
+      </div>
+      <div class="transport-group">
+        <button id="pauseBtn"><span>Pause</span></button>
+        <button id="restartBtn"><span>Restart</span></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT COLUMN -->
+  <aside class="panel panel-right">
+    <div class="panel-head">
+      <span class="section-label" style="margin:0;">Scoreboard &amp; Progress</span>
+      <span class="hof-tag" id="hofSize">HoF: 0 / 10</span>
+    </div>
+    <div class="right-scroll">
+      <div class="stats-grid">
+        <div class="stat-block">
+          <div class="stat-title">Predators (last gen)</div>
+          <div class="stat-main" id="predScore">—</div>
+          <div class="stat-sub" id="predFit">best — · avg —</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-title">Prey (last gen)</div>
+          <div class="stat-main" id="preyScore">—</div>
+          <div class="stat-sub" id="preyFit">best — · avg —</div>
+        </div>
+      </div>
+
+      <div class="h2h-line">
+        <span id="h2hText">Waiting for generation 1…</span>
+      </div>
+
+      <div class="graph-box">
+        <div class="graph-head">
+          <span class="graph-title">Predators vs baseline prey</span>
+          <div class="graph-legend">
+            <span><i class="leg-dot" style="background:#e8a838"></i>Best</span>
+            <span><i class="leg-dot" style="background:#7b92a8"></i>Avg</span>
+          </div>
+        </div>
+        <canvas class="graph-canvas" id="predGraph" width="278" height="112"></canvas>
+      </div>
+
+      <div class="graph-box">
+        <div class="graph-head">
+          <span class="graph-title">Prey vs baseline hunters</span>
+          <div class="graph-legend">
+            <span><i class="leg-dot" style="background:#e8a838"></i>Best</span>
+            <span><i class="leg-dot" style="background:#7b92a8"></i>Avg</span>
+          </div>
+        </div>
+        <canvas class="graph-canvas" id="preyGraph" width="278" height="112"></canvas>
+      </div>
+
+      <div class="reading-note">
+        <strong>Reading the graph</strong>
+        Both populations are pure neural networks with no scripted bots. Head-to-head scores stay near even as both sides evolve, so the graphs test each generation against the frozen Generation 1 models. When both climb, both sides are growing stronger.
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- HOW IT WORKS MODAL -->
+<div class="modal-backdrop" id="howModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">How Hunt Works</div>
+      <button id="closeHowBtn"><span>Close</span></button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-pane">
+        <div class="modal-pane-label">Shared Neural Network (13 → 10 → 2, 162 weights)</div>
+        <canvas id="netCanvas" width="430" height="270"></canvas>
+      </div>
+      <div class="modal-pane">
+        <div class="modal-pane-label" id="miniArenaLabel">Live Champion Duel</div>
+        <canvas id="miniArenaCanvas" width="360" height="225"></canvas>
+      </div>
+    </div>
+    <div class="modal-lines">
+      <div>1. Predators and prey share the same 9-input network architecture, seeing only relative bearing, distance, opponent velocity, own speed, and three wall rays.</div>
+      <div>2. Every generation, agents duel across shuffled pairings plus a round against past champions in the Hall of Fame, then evolve separately from their top performers.</div>
+      <div>3. As prey learn to jink and hug walls to force sharp turns, predators are forced to stop chasing tails and start cutting corners.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // =========================================================================
+  // 1. CONFIGURATION
+  // =========================================================================
+  const ARENA_W = 800;
+  const ARENA_H = 500;
+  const PRED_RADIUS = 9;
+  const PREY_RADIUS = 7;
+  const FOOD_RADIUS = 5;
+  const CATCH_DIST = PRED_RADIUS + PREY_RADIUS; // 16
+  const FOOD_EAT_DIST = PREY_RADIUS + FOOD_RADIUS; // 12
+  const SPEED_BOOST_PRED = 0.40;
+  const SPEED_BOOST_PREY = 0.35;
+  const MAX_SPEED_MULT = 1.6;
+  const WALL_SPAWN_MARGIN = 40;
+  const MIN_SPAWN_DIST = 250;
+  const HOF_MAX = 10;
+  const BENCH_COUNT = 8;
+  const BENCH_SEED_BASE = 1000;
+  const INPUT_COUNT = 13;
+  const WEIGHT_COUNT = 162; // 13*10 + 10 + 10*2 + 2
+  const TRAIL_MAX_NORMAL = 10;
+  const TRAIL_MAX_HERO = 24;
+  const GRAPH_WINDOW = 30;
+
+  const DEFAULTS = {
+    popSize: 16,
+    elites: 2,
+    parentPool: 5,
+    mutChance: 0.10,
+    mutSize: 0.25,
+    predSpeed: 3.0,
+    preySpeed: 3.0,
+    predTurn: 0.060,
+    preyTurn: 0.100,
+    matchLen: 600,
+    roundsPerGen: 3,
+    shrinkMut: true
+  };
+
+  const PRESETS = {
+    reckless: { mutChance: 0.40, mutSize: 0.80, shrinkMut: false },
+    noElites: { elites: 0 },
+    tinyPop: { popSize: 8, elites: 1, parentPool: 3 },
+    handicapped: { predSpeed: 2.6, predTurn: 0.045, preySpeed: 3.2 }
+  };
+
+  // Active settings (applied at round/gen boundaries as appropriate)
+  const settings = Object.assign({}, DEFAULTS);
+  const pendingSettings = Object.assign({}, DEFAULTS);
+
+  // =========================================================================
+  // INITIALIZE ALL STATE BEFORE ANY FUNCTION RUNS
+  // =========================================================================
+  let runSeed = 1;
+  let evoRng = null;
+  let generation = 1;
+  let roundIndex = 0;
+  let frameInRound = 0;
+  let speedMult = 1;
+  let paused = false;
+  let activePreset = null;
+
+  let predators = [];
+  let prey = [];
+  let predatorHoF = [];
+  let preyHoF = [];
+  let baselinePredWeights = null;
+  let baselinePreyWeights = null;
+
+  let currentMatches = [];
+  let genStats = null;
+
+  let predHistory = []; // { gen, best, avg }
+  let preyHistory = []; // { gen, best, avg }
+  let predGraphShift = 0;
+  let preyGraphShift = 0;
+
+  let latestPredBenchBest = 0;
+  let latestPreyBenchBest = 0;
+  let lastFinishedSummary = null;
+
+  let benchQueue = [];
+  let effects = []; // catch rings & flashes
+
+  const moments = {
+    firstBlood: false,
+    hunterBeatsScript: false,
+    preyOutrunsScript: false,
+    armsRace: false
+  };
+
+  // =========================================================================
+  // 2. RANDOM NUMBERS
+  // =========================================================================
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function hashIntegers() {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < arguments.length; i++) {
+      h ^= (arguments[i] | 0);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function gaussianRandom(rng) {
+    let u = 0;
+    let v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  }
+
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+
+  function normalizeAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  // =========================================================================
+  // 3. NETWORK
+  // =========================================================================
+  function createRandomWeights(rng) {
+    const w = new Float64Array(WEIGHT_COUNT);
+    for (let i = 0; i < WEIGHT_COUNT; i++) {
+      w[i] = rng() * 2 - 1;
+    }
+    return w;
+  }
+
+  function cloneWeights(w) {
+    return new Float64Array(w);
+  }
+
+  function rayWallDistance(x, y, angle) {
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    let t = 1e9;
+    if (dx > 1e-9) {
+      const tx = (ARENA_W - x) / dx;
+      if (tx < t) t = tx;
+    } else if (dx < -1e-9) {
+      const tx = -x / dx;
+      if (tx < t) t = tx;
+    }
+    if (dy > 1e-9) {
+      const ty = (ARENA_H - y) / dy;
+      if (ty < t) t = ty;
+    } else if (dy < -1e-9) {
+      const ty = -y / dy;
+      if (ty < t) t = ty;
+    }
+    return t;
+  }
+
+  // Shared 13-input builder for both predator and prey
+  function buildInputs(self, opp, outArr, food) {
+    const dx = opp.x - self.x;
+    const dy = opp.y - self.y;
+    const dist = Math.hypot(dx, dy);
+    const bearing = normalizeAngle(Math.atan2(dy, dx) - self.heading);
+
+    const cosH = Math.cos(self.heading);
+    const sinH = Math.sin(self.heading);
+    // Opponent velocity in self frame (forward, and sideways positive to agent's left)
+    const vFwd = opp.vx * cosH + opp.vy * sinH;
+    const vSide = opp.vx * sinH - opp.vy * cosH;
+
+    outArr[0] = Math.sin(bearing);
+    outArr[1] = Math.cos(bearing);
+    outArr[2] = clamp(dist / 600, 0, 1);
+    outArr[3] = clamp(vFwd / 4.0, -1, 1);
+    outArr[4] = clamp(vSide / 4.0, -1, 1);
+    outArr[5] = self.maxSpeed > 0 ? clamp(self.speed / self.maxSpeed, 0, 1) : 0;
+    outArr[6] = clamp(rayWallDistance(self.x, self.y, self.heading - Math.PI / 4) / 150, 0, 1);
+    outArr[7] = clamp(rayWallDistance(self.x, self.y, self.heading) / 150, 0, 1);
+    outArr[8] = clamp(rayWallDistance(self.x, self.y, self.heading + Math.PI / 4) / 150, 0, 1);
+    if (food) {
+      const fBearing = normalizeAngle(Math.atan2(food.y - self.y, food.x - self.x) - self.heading);
+      outArr[9] = Math.sin(fBearing);
+      outArr[10] = Math.cos(fBearing);
+    } else {
+      outArr[9] = 0;
+      outArr[10] = 0;
+    }
+    outArr[11] = clamp((self.power - 1) / 4, 0, 1);
+    outArr[12] = clamp((opp.power - 1) / 4, 0, 1);
+    return outArr;
+  }
+
+  function forwardNetwork(weights, inputs, hiddenOut, outOut) {
+    // Input -> Hidden (13x10 + 10 biases at 130..139)
+    for (let h = 0; h < 10; h++) {
+      let sum = weights[130 + h];
+      const base = h * INPUT_COUNT;
+      for (let i = 0; i < INPUT_COUNT; i++) {
+        sum += weights[base + i] * inputs[i];
+      }
+      hiddenOut[h] = Math.tanh(sum);
+    }
+    // Hidden -> Output (10x2 at 140..159 + 2 biases at 160..161)
+    for (let o = 0; o < 2; o++) {
+      let sum = weights[160 + o];
+      const base = 140 + o * 10;
+      for (let h = 0; h < 10; h++) {
+        sum += weights[base + h] * hiddenOut[h];
+      }
+      outOut[o] = Math.tanh(sum);
+    }
+    return outOut;
+  }
+
+  // =========================================================================
+  // 4. PHYSICS
+  // =========================================================================
+  function generateSpawn(rng) {
+    for (let tries = 0; tries < 500; tries++) {
+      const x1 = WALL_SPAWN_MARGIN + rng() * (ARENA_W - WALL_SPAWN_MARGIN * 2);
+      const y1 = WALL_SPAWN_MARGIN + rng() * (ARENA_H - WALL_SPAWN_MARGIN * 2);
+      const x2 = WALL_SPAWN_MARGIN + rng() * (ARENA_W - WALL_SPAWN_MARGIN * 2);
+      const y2 = WALL_SPAWN_MARGIN + rng() * (ARENA_H - WALL_SPAWN_MARGIN * 2);
+      if (Math.hypot(x2 - x1, y2 - y1) >= MIN_SPAWN_DIST) {
+        return {
+          predX: x1,
+          predY: y1,
+          predH: (rng() * 2 - 1) * Math.PI,
+          preyX: x2,
+          preyY: y2,
+          preyH: (rng() * 2 - 1) * Math.PI
+        };
+      }
+    }
+    return {
+      predX: 100,
+      predY: ARENA_H / 2,
+      predH: 0,
+      preyX: ARENA_W - 100,
+      preyY: ARENA_H / 2,
+      preyH: Math.PI
+    };
+  }
+
+  function createBody(x, y, heading, radius, maxSpeed, maxTurn) {
+    return {
+      x: x,
+      y: y,
+      heading: heading,
+      radius: radius,
+      maxSpeed: maxSpeed,
+      maxTurn: maxTurn,
+      speed: 0,
+      vx: 0,
+      vy: 0,
+      power: 1
+    };
+  }
+
+  function stepBody(body, turnCmd, throttleCmd) {
+    const turn = clamp(turnCmd, -1, 1) * body.maxTurn;
+    const throttle = clamp(throttleCmd, 0, 1);
+    body.heading = normalizeAngle(body.heading + turn);
+    body.speed = throttle * body.maxSpeed;
+    body.vx = Math.cos(body.heading) * body.speed;
+    body.vy = Math.sin(body.heading) * body.speed;
+    body.x = clamp(body.x + body.vx, body.radius, ARENA_W - body.radius);
+    body.y = clamp(body.y + body.vy, body.radius, ARENA_H - body.radius);
+  }
+
+  // =========================================================================
+  // 5. MATCHES AND ROUNDS
+  // =========================================================================
+  function createPopulation(size, rng) {
+    const pop = [];
+    for (let i = 0; i < size; i++) {
+      pop.push({
+        weights: createRandomWeights(rng),
+        fitness: 0,
+        matches: 0,
+        catches: 0,
+        escapes: 0
+      });
+    }
+    return pop;
+  }
+
+  function resetGenStats() {
+    genStats = {
+      predFitnessSum: new Float64Array(predators.length),
+      predMatches: new Int32Array(predators.length),
+      predCatches: new Int32Array(predators.length),
+      preyFitnessSum: new Float64Array(prey.length),
+      preyMatches: new Int32Array(prey.length),
+      preyEscapes: new Int32Array(prey.length),
+      h2hCatches: 0,
+      h2hDuels: 0
+    };
+  }
+
+  function applyRoundSettings() {
+    settings.predSpeed = pendingSettings.predSpeed;
+    settings.preySpeed = pendingSettings.preySpeed;
+    settings.predTurn = pendingSettings.predTurn;
+    settings.preyTurn = pendingSettings.preyTurn;
+    settings.matchLen = pendingSettings.matchLen;
+    settings.roundsPerGen = pendingSettings.roundsPerGen;
+  }
+
+  function applyGenSettings() {
+    settings.elites = pendingSettings.elites;
+    settings.parentPool = pendingSettings.parentPool;
+    settings.mutChance = pendingSettings.mutChance;
+    settings.mutSize = pendingSettings.mutSize;
+    settings.shrinkMut = pendingSettings.shrinkMut;
+    if (pendingSettings.popSize !== settings.popSize) {
+      const oldN = predators.length;
+      const newN = pendingSettings.popSize;
+      settings.popSize = newN;
+      if (newN > oldN) {
+        for (let i = oldN; i < newN; i++) {
+          predators.push({ weights: createRandomWeights(evoRng), fitness: 0, matches: 0, catches: 0, escapes: 0 });
+          prey.push({ weights: createRandomWeights(evoRng), fitness: 0, matches: 0, catches: 0, escapes: 0 });
+        }
+      } else {
+        predators.length = newN;
+        prey.length = newN;
+      }
+    }
+  }
+
+  function spawnFood(rng, avoidX, avoidY) {
+    for (let tries = 0; tries < 100; tries++) {
+      const fx = WALL_SPAWN_MARGIN + rng() * (ARENA_W - WALL_SPAWN_MARGIN * 2);
+      const fy = WALL_SPAWN_MARGIN + rng() * (ARENA_H - WALL_SPAWN_MARGIN * 2);
+      if (Math.hypot(fx - avoidX, fy - avoidY) >= 120) {
+        return { x: fx, y: fy };
+      }
+    }
+    return {
+      x: WALL_SPAWN_MARGIN + rng() * (ARENA_W - WALL_SPAWN_MARGIN * 2),
+      y: WALL_SPAWN_MARGIN + rng() * (ARENA_H - WALL_SPAWN_MARGIN * 2)
+    };
+  }
+
+  function respawnPreyAwayFrom(rng, pred) {
+    for (let tries = 0; tries < 200; tries++) {
+      const px = WALL_SPAWN_MARGIN + rng() * (ARENA_W - WALL_SPAWN_MARGIN * 2);
+      const py = WALL_SPAWN_MARGIN + rng() * (ARENA_H - WALL_SPAWN_MARGIN * 2);
+      if (Math.hypot(px - pred.x, py - pred.y) >= MIN_SPAWN_DIST) {
+        return { x: px, y: py, heading: (rng() * 2 - 1) * Math.PI };
+      }
+    }
+    return {
+      x: pred.x < ARENA_W / 2 ? ARENA_W - 80 : 80,
+      y: pred.y < ARENA_H / 2 ? ARENA_H - 80 : 80,
+      heading: (rng() * 2 - 1) * Math.PI
+    };
+  }
+
+  function createMatch(slot, predWeights, preyWeights, predIndex, preyIndex, predIsHoF, preyIsHoF, isHero) {
+    const spawnRng = mulberry32(hashIntegers(runSeed, generation, roundIndex, slot));
+    const sp = generateSpawn(spawnRng);
+    const pred = createBody(sp.predX, sp.predY, sp.predH, PRED_RADIUS, settings.predSpeed, settings.predTurn);
+    const pr = createBody(sp.preyX, sp.preyY, sp.preyH, PREY_RADIUS, settings.preySpeed, settings.preyTurn);
+    const food = spawnFood(spawnRng, pr.x, pr.y);
+    const startD = Math.hypot(pr.x - pred.x, pr.y - pred.y);
+    return {
+      slot: slot,
+      predIndex: predIndex,
+      preyIndex: preyIndex,
+      predWeights: predWeights,
+      preyWeights: preyWeights,
+      predIsHoF: predIsHoF,
+      preyIsHoF: preyIsHoF,
+      isHero: isHero,
+      matchRng: spawnRng,
+      pred: pred,
+      prey: pr,
+      food: food,
+      startD: startD,
+      minD: startD,
+      predDistSum: 0,
+      preyDistSum: 0,
+      predIdleFrames: 0,
+      preyIdleFrames: 0,
+      preyWallFrames: 0,
+      framesElapsed: 0,
+      caught: false,
+      catchCount: 0,
+      firstCatchFrame: 0,
+      preyFoodCount: 0,
+      preyAliveFrames: 0,
+      finished: false,
+      predTrail: [],
+      preyTrail: [],
+      predInputs: new Float64Array(INPUT_COUNT),
+      preyInputs: new Float64Array(INPUT_COUNT),
+      hiddenBuf: new Float64Array(10),
+      outBuf: new Float64Array(2)
+    };
+  }
+
+  function startRound() {
+    applyRoundSettings();
+    frameInRound = 0;
+    currentMatches = [];
+    effects = [];
+
+    const n = predators.length;
+    const isHoFRound =
+      roundIndex === settings.roundsPerGen - 1 &&
+      settings.roundsPerGen >= 2 &&
+      predatorHoF.length > 0 &&
+      preyHoF.length > 0;
+
+    const roundRng = mulberry32(hashIntegers(runSeed, generation, roundIndex, 99991));
+
+    if (isHoFRound) {
+      let slot = 0;
+      for (let i = 0; i < n; i++) {
+        const hofPreyIdx = Math.floor(roundRng() * preyHoF.length);
+        currentMatches.push(
+          createMatch(slot++, predators[i].weights, preyHoF[hofPreyIdx], i, -1, false, true, i === 0)
+        );
+      }
+      for (let i = 0; i < n; i++) {
+        const hofPredIdx = Math.floor(roundRng() * predatorHoF.length);
+        currentMatches.push(
+          createMatch(slot++, predatorHoF[hofPredIdx], prey[i].weights, -1, i, true, false, i === 0)
+        );
+      }
+    } else {
+      const shuffledPrey = new Int32Array(n);
+      for (let i = 0; i < n; i++) shuffledPrey[i] = i;
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(roundRng() * (i + 1));
+        const tmp = shuffledPrey[i];
+        shuffledPrey[i] = shuffledPrey[j];
+        shuffledPrey[j] = tmp;
+      }
+      for (let i = 0; i < n; i++) {
+        const pIdx = shuffledPrey[i];
+        currentMatches.push(
+          createMatch(i, predators[i].weights, prey[pIdx].weights, i, pIdx, false, false, i === 0 || pIdx === 0)
+        );
+      }
+    }
+  }
+
+  function stepSingleMatch(m, maxFrames, recordTrails) {
+    if (m.finished) return;
+
+    buildInputs(m.pred, m.prey, m.predInputs, null);
+    const predOut = forwardNetwork(m.predWeights, m.predInputs, m.hiddenBuf, m.outBuf);
+    const predTurn = predOut[0];
+    const predThrottle = (predOut[1] + 1) * 0.5;
+
+    buildInputs(m.prey, m.pred, m.preyInputs, m.food);
+    const preyOut = forwardNetwork(m.preyWeights, m.preyInputs, m.hiddenBuf, m.outBuf);
+    const preyTurn = preyOut[0];
+    const preyThrottle = (preyOut[1] + 1) * 0.5;
+
+    stepBody(m.pred, predTurn, predThrottle);
+    stepBody(m.prey, preyTurn, preyThrottle);
+
+    m.framesElapsed++;
+    if (!m.caught) m.preyAliveFrames++;
+    const d = Math.hypot(m.prey.x - m.pred.x, m.prey.y - m.pred.y);
+    if (d < m.minD) m.minD = d;
+    m.predDistSum += 1 - Math.min(d, 600) / 600;
+    m.preyDistSum += Math.min(d, 300) / 300;
+    if (m.pred.speed < 0.3) m.predIdleFrames++;
+    if (m.prey.speed < 0.3) m.preyIdleFrames++;
+    if (m.prey.x < 25 || ARENA_W - m.prey.x < 25 || m.prey.y < 25 || ARENA_H - m.prey.y < 25) {
+      m.preyWallFrames++;
+    }
+
+    // Check if prey ate its food pellet -> prey becomes faster & more powerful
+    if (m.food && Math.hypot(m.prey.x - m.food.x, m.prey.y - m.food.y) < FOOD_EAT_DIST) {
+      m.preyFoodCount++;
+      m.prey.power += 1;
+      m.prey.maxSpeed = Math.min(settings.preySpeed * MAX_SPEED_MULT, m.prey.maxSpeed + SPEED_BOOST_PREY);
+      if (recordTrails && effects.length < 40) {
+        effects.push({ x: m.food.x, y: m.food.y, r: 4, alpha: 0.9, color: "78, 205, 196" });
+      }
+      m.food = spawnFood(m.matchRng, m.prey.x, m.prey.y);
+    }
+
+    if (recordTrails) {
+      const maxT = m.isHero ? TRAIL_MAX_HERO : TRAIL_MAX_NORMAL;
+      m.predTrail.push({ x: m.pred.x, y: m.pred.y });
+      if (m.predTrail.length > maxT) m.predTrail.shift();
+      m.preyTrail.push({ x: m.prey.x, y: m.prey.y });
+      if (m.preyTrail.length > maxT) m.preyTrail.shift();
+    }
+
+    // Contact: stronger prey (prey.power > pred.power) cannot be killed by a weaker predator
+    if (d < CATCH_DIST) {
+      if (m.prey.power > m.pred.power) {
+        // Push weaker predator back; prey survives unharmed
+        const nx = d > 1e-6 ? (m.pred.x - m.prey.x) / d : 1;
+        const ny = d > 1e-6 ? (m.pred.y - m.prey.y) / d : 0;
+        m.pred.x = clamp(m.prey.x + nx * (CATCH_DIST + 8), m.pred.radius, ARENA_W - m.pred.radius);
+        m.pred.y = clamp(m.prey.y + ny * (CATCH_DIST + 8), m.pred.radius, ARENA_H - m.pred.radius);
+        if (recordTrails && effects.length < 40) {
+          effects.push({ x: m.prey.x, y: m.prey.y, r: 8, alpha: 0.75, color: "78, 205, 196" });
+        }
+      } else {
+        if (!m.caught) {
+          m.caught = true;
+          m.firstCatchFrame = m.framesElapsed;
+        }
+        m.catchCount++;
+        m.pred.power += 1;
+        m.pred.maxSpeed = Math.min(settings.predSpeed * MAX_SPEED_MULT, m.pred.maxSpeed + SPEED_BOOST_PRED);
+        if (recordTrails && effects.length < 40) {
+          effects.push({ x: m.prey.x, y: m.prey.y, r: 6, alpha: 1.0, color: "232, 168, 56" });
+        }
+        if (!moments.firstBlood) {
+          moments.firstBlood = true;
+          triggerToast("First blood — a predator made the first catch");
+        }
+        const nextPrey = respawnPreyAwayFrom(m.matchRng, m.pred);
+        m.prey.x = nextPrey.x;
+        m.prey.y = nextPrey.y;
+        m.prey.heading = nextPrey.heading;
+        m.prey.power = 1;
+        m.prey.maxSpeed = settings.preySpeed;
+        m.prey.speed = 0;
+        m.prey.vx = 0;
+        m.prey.vy = 0;
+        m.preyTrail.length = 0;
+      }
+    }
+
+    if (m.framesElapsed >= maxFrames) {
+      m.finished = true;
+    }
+  }
+
+  // =========================================================================
+  // 7. FITNESS
+  // =========================================================================
+  function computeMatchFitness(m, T) {
+    const frames = Math.max(1, m.framesElapsed);
+    const predIdle = m.predIdleFrames / frames;
+    const preyIdle = m.preyIdleFrames / frames;
+    const wallShare = m.preyWallFrames / frames;
+
+    let predFit = 0;
+    if (m.catchCount > 0) {
+      predFit += m.catchCount * 100 + 100 * (1 - m.firstCatchFrame / T);
+    }
+    const denom = Math.max(1e-6, m.startD - CATCH_DIST);
+    predFit += 30 * clamp(1 - (m.minD - CATCH_DIST) / denom, 0, 1);
+    predFit += 20 * (m.predDistSum / frames);
+    predFit -= 10 * predIdle;
+    predFit = Math.max(0, predFit);
+
+    let preyFit = 100 * (m.preyAliveFrames / T);
+    if (m.catchCount === 0) preyFit += 60;
+    else preyFit -= m.catchCount * 35;
+    preyFit += m.preyFoodCount * 25;
+    preyFit += 20 * (m.preyDistSum / frames);
+    preyFit -= 20 * wallShare;
+    preyFit -= 10 * preyIdle;
+    preyFit = Math.max(0, preyFit);
+
+    return { predFit: predFit, preyFit: preyFit };
+  }
+
+  function finalizeRoundStats() {
+    const T = settings.matchLen;
+    for (let i = 0; i < currentMatches.length; i++) {
+      const m = currentMatches[i];
+      const f = computeMatchFitness(m, T);
+      if (!m.predIsHoF && m.predIndex >= 0) {
+        genStats.predFitnessSum[m.predIndex] += f.predFit;
+        genStats.predMatches[m.predIndex]++;
+        if (m.caught) genStats.predCatches[m.predIndex]++;
+      }
+      if (!m.preyIsHoF && m.preyIndex >= 0) {
+        genStats.preyFitnessSum[m.preyIndex] += f.preyFit;
+        genStats.preyMatches[m.preyIndex]++;
+        if (!m.caught) genStats.preyEscapes[m.preyIndex]++;
+      }
+      if (!m.predIsHoF && !m.preyIsHoF) {
+        genStats.h2hDuels++;
+        if (m.caught) genStats.h2hCatches++;
+      }
+    }
+  }
+
+  // =========================================================================
+  // 8. EVOLUTION
+  // =========================================================================
+  function evolvePopulation(pop, progressScore) {
+    const n = pop.length;
+    const sorted = pop.slice().sort(function (a, b) { return b.fitness - a.fitness; });
+    const eliteCount = Math.min(settings.elites, n);
+    const poolCount = Math.min(Math.max(1, settings.parentPool), n);
+
+    const sigmaNormal = settings.shrinkMut
+      ? Math.max(0.03, settings.mutSize * (1 - progressScore))
+      : settings.mutSize;
+
+    const nextPop = [];
+    for (let i = 0; i < eliteCount; i++) {
+      nextPop.push({
+        weights: cloneWeights(sorted[i].weights),
+        fitness: 0,
+        matches: 0,
+        catches: 0,
+        escapes: 0
+      });
+    }
+
+    for (let i = eliteCount; i < n; i++) {
+      const p1Idx = Math.floor(evoRng() * poolCount);
+      let p2Idx = Math.floor(evoRng() * poolCount);
+      if (poolCount > 1 && p2Idx === p1Idx) {
+        p2Idx = (p1Idx + 1 + Math.floor(evoRng() * (poolCount - 1))) % poolCount;
+      }
+      const w1 = sorted[p1Idx].weights;
+      const w2 = sorted[p2Idx].weights;
+      const cut = Math.floor(evoRng() * WEIGHT_COUNT);
+      const childW = new Float64Array(WEIGHT_COUNT);
+      for (let k = 0; k < WEIGHT_COUNT; k++) {
+        childW[k] = k < cut ? w1[k] : w2[k];
+      }
+
+      const isBigJump = evoRng() < 0.05;
+      const sigma = isBigJump ? 0.6 : sigmaNormal;
+      for (let k = 0; k < WEIGHT_COUNT; k++) {
+        if (evoRng() < settings.mutChance) {
+          childW[k] += gaussianRandom(evoRng) * sigma;
+        }
+      }
+
+      nextPop.push({
+        weights: childW,
+        fitness: 0,
+        matches: 0,
+        catches: 0,
+        escapes: 0
+      });
+    }
+
+    return { nextPop: nextPop, championWeights: cloneWeights(sorted[0].weights), champion: sorted[0] };
+  }
+
+  function finishGeneration() {
+    let predBestFit = 0, predFitSum = 0, predBestIdx = 0;
+    for (let i = 0; i < predators.length; i++) {
+      const mCount = Math.max(1, genStats.predMatches[i]);
+      const fit = genStats.predFitnessSum[i] / mCount;
+      predators[i].fitness = fit;
+      predators[i].matches = mCount;
+      predators[i].catches = genStats.predCatches[i];
+      predFitSum += fit;
+      if (fit >= predBestFit) {
+        predBestFit = fit;
+        predBestIdx = i;
+      }
+    }
+
+    let preyBestFit = 0, preyFitSum = 0, preyBestIdx = 0;
+    for (let i = 0; i < prey.length; i++) {
+      const mCount = Math.max(1, genStats.preyMatches[i]);
+      const fit = genStats.preyFitnessSum[i] / mCount;
+      prey[i].fitness = fit;
+      prey[i].matches = mCount;
+      prey[i].escapes = genStats.preyEscapes[i];
+      preyFitSum += fit;
+      if (fit >= preyBestFit) {
+        preyBestFit = fit;
+        preyBestIdx = i;
+      }
+    }
+
+    lastFinishedSummary = {
+      gen: generation,
+      predBestFit: predBestFit,
+      predAvgFit: predFitSum / predators.length,
+      predBestCatches: predators[predBestIdx].catches,
+      predBestMatches: predators[predBestIdx].matches,
+      preyBestFit: preyBestFit,
+      preyAvgFit: preyFitSum / prey.length,
+      preyBestEscapes: prey[preyBestIdx].escapes,
+      preyBestMatches: prey[preyBestIdx].matches,
+      h2hCatches: genStats.h2hCatches,
+      h2hDuels: genStats.h2hDuels
+    };
+
+    // Enqueue time-sliced benchmark for this finished generation
+    enqueueBenchmark(generation, predators, prey);
+
+    // Evolve both populations
+    const predEvo = evolvePopulation(predators, latestPredBenchBest);
+    const preyEvo = evolvePopulation(prey, latestPreyBenchBest);
+
+    predatorHoF.push(predEvo.championWeights);
+    if (predatorHoF.length > HOF_MAX) predatorHoF.shift();
+    preyHoF.push(preyEvo.championWeights);
+    if (preyHoF.length > HOF_MAX) preyHoF.shift();
+
+    predators = predEvo.nextPop;
+    prey = preyEvo.nextPop;
+
+    applyGenSettings();
+    generation++;
+    roundIndex = 0;
+    resetGenStats();
+    startRound();
+    updateStatsUI(true);
+  }
+
+  // =========================================================================
+  // 9. BENCHMARK vs FROZEN GEN-1 NEURAL BASELINE (time-sliced)
+  // =========================================================================
+  function runSingleBenchmarkMatch(agentWeights, isPredator, seed) {
+    const rng = mulberry32(seed);
+    const sp = generateSpawn(rng);
+    const pred = createBody(sp.predX, sp.predY, sp.predH, PRED_RADIUS, settings.predSpeed, settings.predTurn);
+    const pr = createBody(sp.preyX, sp.preyY, sp.preyH, PREY_RADIUS, settings.preySpeed, settings.preyTurn);
+    let food = spawnFood(rng, pr.x, pr.y);
+    const maxF = settings.matchLen;
+    const inBuf = new Float64Array(INPUT_COUNT);
+    const hBuf = new Float64Array(10);
+    const oBuf = new Float64Array(2);
+    const predW = isPredator ? agentWeights : baselinePredWeights;
+    const preyW = isPredator ? baselinePreyWeights : agentWeights;
+
+    for (let f = 0; f < maxF; f++) {
+      buildInputs(pred, pr, inBuf, null);
+      forwardNetwork(predW, inBuf, hBuf, oBuf);
+      stepBody(pred, oBuf[0], (oBuf[1] + 1) * 0.5);
+
+      buildInputs(pr, pred, inBuf, food);
+      forwardNetwork(preyW, inBuf, hBuf, oBuf);
+      stepBody(pr, oBuf[0], (oBuf[1] + 1) * 0.5);
+
+      if (food && Math.hypot(pr.x - food.x, pr.y - food.y) < FOOD_EAT_DIST) {
+        pr.power += 1;
+        pr.maxSpeed = Math.min(settings.preySpeed * MAX_SPEED_MULT, pr.maxSpeed + SPEED_BOOST_PREY);
+        food = spawnFood(rng, pr.x, pr.y);
+      }
+      const d = Math.hypot(pr.x - pred.x, pr.y - pred.y);
+      if (d < CATCH_DIST) {
+        if (pr.power > pred.power) {
+          const nx = d > 1e-6 ? (pred.x - pr.x) / d : 1;
+          const ny = d > 1e-6 ? (pred.y - pr.y) / d : 0;
+          pred.x = clamp(pr.x + nx * (CATCH_DIST + 8), pred.radius, ARENA_W - pred.radius);
+          pred.y = clamp(pr.y + ny * (CATCH_DIST + 8), pred.radius, ARENA_H - pred.radius);
+        } else {
+          return true; // caught
+        }
+      }
+    }
+    return false; // survived
+  }
+
+  function enqueueBenchmark(genNum, predPop, preyPop) {
+    const job = {
+      gen: genNum,
+      predCopy: predPop.map(function (a) { return cloneWeights(a.weights); }),
+      preyCopy: preyPop.map(function (a) { return cloneWeights(a.weights); }),
+      predIdx: 0,
+      preyIdx: 0,
+      predBest: 0,
+      predSum: 0,
+      preyBest: 0,
+      preySum: 0
+    };
+    benchQueue.push(job);
+  }
+
+  function processBenchmarkSlice(budgetMs) {
+    if (benchQueue.length === 0) return;
+    const start = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    while (benchQueue.length > 0) {
+      const job = benchQueue[0];
+      while (job.predIdx < job.predCopy.length) {
+        let catches = 0;
+        const w = job.predCopy[job.predIdx];
+        for (let s = 0; s < BENCH_COUNT; s++) {
+          if (runSingleBenchmarkMatch(w, true, BENCH_SEED_BASE + s)) catches++;
+        }
+        const score = catches / BENCH_COUNT;
+        if (score > job.predBest) job.predBest = score;
+        job.predSum += score;
+        job.predIdx++;
+        if ((typeof performance !== "undefined" ? performance.now() : Date.now()) - start >= budgetMs) {
+          return;
+        }
+      }
+
+      while (job.preyIdx < job.preyCopy.length) {
+        let survivals = 0;
+        const w = job.preyCopy[job.preyIdx];
+        for (let s = 0; s < BENCH_COUNT; s++) {
+          if (!runSingleBenchmarkMatch(w, false, BENCH_SEED_BASE + s)) survivals++;
+        }
+        const score = survivals / BENCH_COUNT;
+        if (score > job.preyBest) job.preyBest = score;
+        job.preySum += score;
+        job.preyIdx++;
+        if ((typeof performance !== "undefined" ? performance.now() : Date.now()) - start >= budgetMs) {
+          return;
+        }
+      }
+
+      // Job complete
+      const predAvg = job.predSum / job.predCopy.length;
+      const preyAvg = job.preySum / job.preyCopy.length;
+
+      const prevPredBest = latestPredBenchBest;
+      const prevPreyBest = latestPreyBenchBest;
+      latestPredBenchBest = job.predBest;
+      latestPreyBenchBest = job.preyBest;
+
+      if (job.predBest > prevPredBest && predHistory.length > 0) {
+        triggerToast("New best predator: " + Math.round(job.predBest * 8) + "/8 vs baseline");
+      }
+      if (job.preyBest > prevPreyBest && preyHistory.length > 0) {
+        triggerToast("New best prey: " + Math.round(job.preyBest * 8) + "/8 vs baseline");
+      }
+
+      if (!moments.hunterBeatsScript && job.predBest >= 6 / 8) {
+        moments.hunterBeatsScript = true;
+        triggerToast("Predators dominate baseline (" + Math.round(job.predBest * 8) + "/8)");
+      }
+      if (!moments.preyOutrunsScript && job.preyBest >= 1.0) {
+        moments.preyOutrunsScript = true;
+        triggerToast("Untouchable prey (8/8 vs baseline)");
+      }
+      if (!moments.armsRace && job.predBest >= 6 / 8 && job.preyBest >= 1.0) {
+        moments.armsRace = true;
+        triggerToast("Arms race! Both sides surpass baseline");
+      }
+
+      predHistory.push({ gen: job.gen, best: job.predBest, avg: predAvg });
+      preyHistory.push({ gen: job.gen, best: job.preyBest, avg: preyAvg });
+      if (predHistory.length > GRAPH_WINDOW) {
+        predHistory.shift();
+        predGraphShift = 1.0;
+      }
+      if (preyHistory.length > GRAPH_WINDOW) {
+        preyHistory.shift();
+        preyGraphShift = 1.0;
+      }
+
+      benchQueue.shift();
+    }
+  }
+
+  // =========================================================================
+  // 10. RENDERING
+  // =========================================================================
+  const arenaCanvas = document.getElementById("arenaCanvas");
+  const arenaCtx = arenaCanvas ? arenaCanvas.getContext("2d") : null;
+
+  function drawTrail(ctx, trail, color, alpha, width) {
+    if (trail.length < 2) return;
+    ctx.save();
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    for (let i = 1; i < trail.length; i++) {
+      const t = i / trail.length;
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha * t * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(trail[i - 1].x, trail[i - 1].y);
+      ctx.lineTo(trail[i].x, trail[i].y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPredator(ctx, body, color, alpha, dashed) {
+    ctx.save();
+    ctx.translate(body.x, body.y);
+    ctx.rotate(body.heading);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(11, 0);
+    ctx.lineTo(-8, -6.5);
+    ctx.lineTo(-4.5, 0);
+    ctx.lineTo(-8, 6.5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (dashed) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = "#ece9e2";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawPrey(ctx, body, color, alpha, dashed) {
+    ctx.save();
+    ctx.translate(body.x, body.y);
+    ctx.rotate(body.heading);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, PREY_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (dashed) {
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = "#ece9e2";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Tiny eye showing heading
+    ctx.beginPath();
+    ctx.arc(3.5, 0, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#08090b";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWallRays(ctx, body) {
+    const angles = [-Math.PI / 4, 0, Math.PI / 4];
+    ctx.save();
+    ctx.strokeStyle = "rgba(232, 168, 56, 0.32)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const a = body.heading + angles[i];
+      const d = Math.min(150, rayWallDistance(body.x, body.y, a));
+      ctx.beginPath();
+      ctx.moveTo(body.x, body.y);
+      ctx.lineTo(body.x + Math.cos(a) * d, body.y + Math.sin(a) * d);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function renderArena() {
+    if (!arenaCtx) return;
+    const ctx = arenaCtx;
+    ctx.clearRect(0, 0, ARENA_W, ARENA_H);
+
+    // Subtle grid
+    ctx.strokeStyle = "rgba(255,255,255,0.03)";
+    ctx.lineWidth = 1;
+    for (let x = 100; x < ARENA_W; x += 100) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ARENA_H); ctx.stroke();
+    }
+    for (let y = 100; y < ARENA_H; y += 100) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ARENA_W, y); ctx.stroke();
+    }
+
+    // Non-hero matches first, then hero matches on top
+    for (let pass = 0; pass < 2; pass++) {
+      const wantHero = pass === 1;
+      for (let i = 0; i < currentMatches.length; i++) {
+        const m = currentMatches[i];
+        if (m.isHero !== wantHero) continue;
+
+        const predColor = m.predIndex === 0 ? "#e8a838" : "#c84b31";
+        const preyColor = m.preyIndex === 0 ? "#e8a838" : "#4ecdc4";
+        const baseAlpha = m.isHero ? 0.96 : 0.34;
+
+        if (m.food) {
+          ctx.save();
+          ctx.globalAlpha = m.isHero ? 0.92 : 0.22;
+          ctx.fillStyle = "#4ecdc4";
+          ctx.beginPath();
+          ctx.arc(m.food.x, m.food.y, m.isHero ? FOOD_RADIUS : 3.2, 0, Math.PI * 2);
+          ctx.fill();
+          if (m.isHero) {
+            ctx.strokeStyle = "rgba(236, 233, 226, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        drawTrail(ctx, m.predTrail, predColor, baseAlpha, m.isHero ? 2 : 1.2);
+        drawTrail(ctx, m.preyTrail, preyColor, baseAlpha, m.isHero ? 2 : 1.2);
+
+        if (m.isHero) {
+          ctx.save();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = "rgba(232, 168, 56, 0.25)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(m.pred.x, m.pred.y);
+          ctx.lineTo(m.prey.x, m.prey.y);
+          ctx.stroke();
+          ctx.restore();
+
+          if (m.predIndex === 0) drawWallRays(ctx, m.pred);
+          if (m.preyIndex === 0) drawWallRays(ctx, m.prey);
+        }
+
+        drawPredator(ctx, m.pred, predColor, m.predIndex === 0 ? 1.0 : baseAlpha, m.predIsHoF);
+        drawPrey(ctx, m.prey, preyColor, m.preyIndex === 0 ? 1.0 : baseAlpha, m.preyIsHoF);
+        if (m.pred.power > 1) {
+          ctx.save();
+          ctx.strokeStyle = predColor;
+          ctx.globalAlpha = m.isHero ? 0.55 : 0.2;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(m.pred.x, m.pred.y, PRED_RADIUS + 3 + Math.min(6, m.pred.power - 1), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        if (m.prey.power > 1) {
+          ctx.save();
+          ctx.strokeStyle = preyColor;
+          ctx.globalAlpha = m.isHero ? 0.65 : 0.22;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(m.prey.x, m.prey.y, PREY_RADIUS + 3 + Math.min(6, m.prey.power - 1), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    // Catch & eat effects
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    for (let i = effects.length - 1; i >= 0; i--) {
+      const ef = effects[i];
+      if (!reduceMotion) {
+        const col = ef.color || "232, 168, 56";
+        ctx.save();
+        ctx.strokeStyle = "rgba(" + col + ", " + ef.alpha + ")";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, ef.r, 0, Math.PI * 2);
+        ctx.stroke();
+        if (ef.alpha > 0.65) {
+          ctx.fillStyle = "rgba(236, 233, 226, " + (ef.alpha - 0.5) + ")";
+          ctx.beginPath();
+          ctx.arc(ef.x, ef.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      ef.r += 1.6;
+      ef.alpha -= 0.045;
+      if (ef.alpha <= 0) effects.splice(i, 1);
+    }
+  }
+
+  // =========================================================================
+  // 11. GRAPHS
+  // =========================================================================
+  const predGraphCanvas = document.getElementById("predGraph");
+  const preyGraphCanvas = document.getElementById("preyGraph");
+  const predGraphCtx = predGraphCanvas ? predGraphCanvas.getContext("2d") : null;
+  const preyGraphCtx = preyGraphCanvas ? preyGraphCanvas.getContext("2d") : null;
+
+  function drawGraph(ctx, canvas, history, shift) {
+    if (!ctx || !canvas) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    const padL = 30, padR = 8, padT = 8, padB = 16;
+    const gw = w - padL - padR;
+    const gh = h - padT - padB;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid & Y labels
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.fillStyle = "#66645e";
+    ctx.font = "10px 'Bricolage Grotesque', sans-serif";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const ticks = [0, 0.5, 1.0];
+    for (let i = 0; i < ticks.length; i++) {
+      const y = padT + gh * (1 - ticks[i]);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      ctx.fillText(Math.round(ticks[i] * 100) + "%", padL - 5, y);
+    }
+
+    if (history.length === 0) return;
+
+    const stepX = gw / Math.max(1, GRAPH_WINDOW - 1);
+    const offsetX = shift * stepX;
+
+    function plotLine(key, color, width) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(padL, 0, gw + 2, h);
+      ctx.clip();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (let i = 0; i < history.length; i++) {
+        const x = padL + i * stepX + offsetX;
+        const y = padT + gh * (1 - clamp(history[i][key], 0, 1));
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    plotLine("avg", "#7b92a8", 1.5);
+    plotLine("best", "#e8a838", 2.0);
+  }
+
+  function renderGraphs() {
+    predGraphShift = Math.max(0, predGraphShift - 0.12);
+    preyGraphShift = Math.max(0, preyGraphShift - 0.12);
+    drawGraph(predGraphCtx, predGraphCanvas, predHistory, predGraphShift);
+    drawGraph(preyGraphCtx, preyGraphCanvas, preyHistory, preyGraphShift);
+  }
+
+  // =========================================================================
+  // 12. INTERFACE & HOW IT WORKS MODAL
+  // =========================================================================
+  const hudGen = document.getElementById("hudGen");
+  const hudRound = document.getElementById("hudRound");
+  const hudFree = document.getElementById("hudFree");
+  const seedTag = document.getElementById("seedTag");
+  const hofSizeEl = document.getElementById("hofSize");
+  const predScoreEl = document.getElementById("predScore");
+  const predFitEl = document.getElementById("predFit");
+  const preyScoreEl = document.getElementById("preyScore");
+  const preyFitEl = document.getElementById("preyFit");
+  const h2hTextEl = document.getElementById("h2hText");
+  const toastStack = document.getElementById("toastStack");
+
+  function triggerToast(msg) {
+    if (!toastStack) return;
+    const div = document.createElement("div");
+    div.className = "toast";
+    div.textContent = msg;
+    toastStack.appendChild(div);
+    setTimeout(function () {
+      if (div.parentNode) div.parentNode.removeChild(div);
+    }, 3200);
+  }
+
+  function updateHUD() {
+    if (hudGen) hudGen.textContent = String(generation);
+    if (hudRound) hudRound.textContent = (roundIndex + 1) + " / " + settings.roundsPerGen;
+    if (hudFree) {
+      let free = 0;
+      for (let i = 0; i < currentMatches.length; i++) {
+        if (!currentMatches[i].caught) free++;
+      }
+      hudFree.textContent = String(free);
+    }
+    if (seedTag) seedTag.textContent = "seed " + runSeed;
+  }
+
+  function updateStatsUI(pulseGen) {
+    if (pulseGen && hudGen) {
+      hudGen.classList.remove("pulse");
+      void hudGen.offsetWidth;
+      hudGen.classList.add("pulse");
+    }
+    if (hofSizeEl) hofSizeEl.textContent = "HoF: " + predatorHoF.length + " / " + HOF_MAX;
+    if (!lastFinishedSummary) {
+      if (predScoreEl) predScoreEl.textContent = "—";
+      if (predFitEl) predFitEl.textContent = "best — · avg —";
+      if (preyScoreEl) preyScoreEl.textContent = "—";
+      if (preyFitEl) preyFitEl.textContent = "best — · avg —";
+      if (h2hTextEl) h2hTextEl.textContent = "Waiting for generation 1…";
+      return;
+    }
+    const s = lastFinishedSummary;
+    if (predScoreEl) predScoreEl.textContent = s.predBestCatches + " / " + s.predBestMatches + " catches";
+    if (predFitEl) predFitEl.textContent = "best " + s.predBestFit.toFixed(1) + " · avg " + s.predAvgFit.toFixed(1);
+    if (preyScoreEl) preyScoreEl.textContent = s.preyBestEscapes + " / " + s.preyBestMatches + " escapes";
+    if (preyFitEl) preyFitEl.textContent = "best " + s.preyBestFit.toFixed(1) + " · avg " + s.preyAvgFit.toFixed(1);
+    if (h2hTextEl) h2hTextEl.textContent = "predators caught " + s.h2hCatches + " of " + s.h2hDuels + " duels";
+  }
+
+  // Slider & preset bindings
+  const sliderSpecs = [
+    { id: "s_pop", valId: "v_pop", key: "popSize", parse: parseInt, fmt: function (v) { return String(v); }, immediate: false },
+    { id: "s_elites", valId: "v_elites", key: "elites", parse: parseInt, fmt: function (v) { return String(v); }, immediate: true },
+    { id: "s_pool", valId: "v_pool", key: "parentPool", parse: parseInt, fmt: function (v) { return String(v); }, immediate: true },
+    { id: "s_mutChance", valId: "v_mutChance", key: "mutChance", parse: function (v) { return parseInt(v, 10) / 100; }, toSlider: function (v) { return Math.round(v * 100); }, fmt: function (v) { return Math.round(v * 100) + "%"; }, immediate: true },
+    { id: "s_mutSize", valId: "v_mutSize", key: "mutSize", parse: parseFloat, fmt: function (v) { return v.toFixed(2); }, immediate: true },
+    { id: "s_predSpeed", valId: "v_predSpeed", key: "predSpeed", parse: parseFloat, fmt: function (v) { return v.toFixed(1); }, immediate: false },
+    { id: "s_preySpeed", valId: "v_preySpeed", key: "preySpeed", parse: parseFloat, fmt: function (v) { return v.toFixed(1); }, immediate: false },
+    { id: "s_predTurn", valId: "v_predTurn", key: "predTurn", parse: parseFloat, fmt: function (v) { return v.toFixed(3); }, immediate: false },
+    { id: "s_preyTurn", valId: "v_preyTurn", key: "preyTurn", parse: parseFloat, fmt: function (v) { return v.toFixed(3); }, immediate: false },
+    { id: "s_matchLen", valId: "v_matchLen", key: "matchLen", parse: parseInt, fmt: function (v) { return String(v); }, immediate: false },
+    { id: "s_rounds", valId: "v_rounds", key: "roundsPerGen", parse: parseInt, fmt: function (v) { return String(v); }, immediate: false }
+  ];
+
+  function clearPresetHighlight() {
+    activePreset = null;
+    const btns = document.querySelectorAll(".preset-btn");
+    for (let i = 0; i < btns.length; i++) btns[i].classList.remove("active");
+  }
+
+  function syncSlidersFromPending() {
+    for (let i = 0; i < sliderSpecs.length; i++) {
+      const sp = sliderSpecs[i];
+      const el = document.getElementById(sp.id);
+      const valEl = document.getElementById(sp.valId);
+      const raw = pendingSettings[sp.key];
+      if (el) el.value = String(sp.toSlider ? sp.toSlider(raw) : raw);
+      if (valEl) valEl.textContent = sp.fmt(raw);
+    }
+    const chk = document.getElementById("c_shrinkMut");
+    if (chk) chk.checked = !!pendingSettings.shrinkMut;
+  }
+
+  for (let i = 0; i < sliderSpecs.length; i++) {
+    (function (sp) {
+      const el = document.getElementById(sp.id);
+      const valEl = document.getElementById(sp.valId);
+      if (!el) return;
+      el.addEventListener("input", function () {
+        const val = sp.parse(el.value, 10);
+        pendingSettings[sp.key] = val;
+        if (sp.immediate) settings[sp.key] = val;
+        if (valEl) valEl.textContent = sp.fmt(val);
+        clearPresetHighlight();
+      });
+    })(sliderSpecs[i]);
+  }
+
+  const shrinkChk = document.getElementById("c_shrinkMut");
+  if (shrinkChk) {
+    shrinkChk.addEventListener("change", function () {
+      pendingSettings.shrinkMut = shrinkChk.checked;
+      settings.shrinkMut = shrinkChk.checked;
+      clearPresetHighlight();
+    });
+  }
+
+  function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    Object.assign(pendingSettings, DEFAULTS, p);
+    settings.elites = pendingSettings.elites;
+    settings.parentPool = pendingSettings.parentPool;
+    settings.mutChance = pendingSettings.mutChance;
+    settings.mutSize = pendingSettings.mutSize;
+    settings.shrinkMut = pendingSettings.shrinkMut;
+    syncSlidersFromPending();
+    activePreset = name;
+    const btns = document.querySelectorAll(".preset-btn");
+    for (let i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-preset") === name);
+    }
+  }
+
+  const presetBtns = document.querySelectorAll(".preset-btn");
+  for (let i = 0; i < presetBtns.length; i++) {
+    (function (btn) {
+      btn.addEventListener("click", function () {
+        applyPreset(btn.getAttribute("data-preset"));
+      });
+    })(presetBtns[i]);
+  }
+
+  const resetBtn = document.getElementById("resetBtn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      Object.assign(pendingSettings, DEFAULTS);
+      settings.elites = DEFAULTS.elites;
+      settings.parentPool = DEFAULTS.parentPool;
+      settings.mutChance = DEFAULTS.mutChance;
+      settings.mutSize = DEFAULTS.mutSize;
+      settings.shrinkMut = DEFAULTS.shrinkMut;
+      syncSlidersFromPending();
+      clearPresetHighlight();
+    });
+  }
+
+  // Speed & transport
+  const speedBtns = document.querySelectorAll(".speed-btn");
+  for (let i = 0; i < speedBtns.length; i++) {
+    (function (btn) {
+      btn.addEventListener("click", function () {
+        speedMult = parseInt(btn.getAttribute("data-speed"), 10) || 1;
+        for (let j = 0; j < speedBtns.length; j++) {
+          speedBtns[j].classList.toggle("active", speedBtns[j] === btn);
+        }
+      });
+    })(speedBtns[i]);
+  }
+
+  const pauseBtn = document.getElementById("pauseBtn");
+  if (pauseBtn) {
+    pauseBtn.addEventListener("click", function () {
+      paused = !paused;
+      pauseBtn.querySelector("span").textContent = paused ? "Resume" : "Pause";
+      pauseBtn.classList.toggle("active", paused);
+    });
+  }
+
+  const restartBtn = document.getElementById("restartBtn");
+  if (restartBtn) {
+    restartBtn.addEventListener("click", function () {
+      initRun(Math.floor(Math.random() * 900000) + 100000);
+    });
+  }
+
+  // How it works modal + live mini arena + animated network diagram
+  const howModal = document.getElementById("howModal");
+  const howBtn = document.getElementById("howBtn");
+  const closeHowBtn = document.getElementById("closeHowBtn");
+  const netCanvas = document.getElementById("netCanvas");
+  const netCtx = netCanvas ? netCanvas.getContext("2d") : null;
+  const miniCanvas = document.getElementById("miniArenaCanvas");
+  const miniCtx = miniCanvas ? miniCanvas.getContext("2d") : null;
+  const miniLabel = document.getElementById("miniArenaLabel");
+
+  let modalOpen = false;
+  let miniMatch = null;
+  let modalTick = 0;
+
+  function resetMiniMatch() {
+    const rng = mulberry32(hashIntegers(runSeed, modalTick, 777));
+    const sp = generateSpawn(rng);
+    miniMatch = {
+      rng: rng,
+      pred: createBody(sp.predX, sp.predY, sp.predH, PRED_RADIUS, settings.predSpeed, settings.predTurn),
+      prey: createBody(sp.preyX, sp.preyY, sp.preyH, PREY_RADIUS, settings.preySpeed, settings.preyTurn),
+      food: spawnFood(rng, sp.preyX, sp.preyY),
+      frames: 0,
+      inBuf: new Float64Array(INPUT_COUNT),
+      hBuf: new Float64Array(10),
+      oBuf: new Float64Array(2)
+    };
+  }
+
+  function renderHowModal() {
+    if (!modalOpen) return;
+    modalTick++;
+
+    // Step mini arena (pure neural duel: latest HoF champions or current slot-0 agents)
+    if (!miniMatch) resetMiniMatch();
+    const useHoF = predatorHoF.length > 0 && preyHoF.length > 0;
+    if (miniLabel) {
+      miniLabel.textContent = useHoF ? "Live Champion Duel (Gen " + (generation - 1) + ")" : "Live Neural Duel (Gen 1)";
+    }
+
+    const pW = useHoF ? predatorHoF[predatorHoF.length - 1] : predators[0].weights;
+    const yW = useHoF ? preyHoF[preyHoF.length - 1] : prey[0].weights;
+    buildInputs(miniMatch.pred, miniMatch.prey, miniMatch.inBuf, null);
+    forwardNetwork(pW, miniMatch.inBuf, miniMatch.hBuf, miniMatch.oBuf);
+    stepBody(miniMatch.pred, miniMatch.oBuf[0], (miniMatch.oBuf[1] + 1) * 0.5);
+
+    buildInputs(miniMatch.prey, miniMatch.pred, miniMatch.inBuf, miniMatch.food);
+    forwardNetwork(yW, miniMatch.inBuf, miniMatch.hBuf, miniMatch.oBuf);
+    stepBody(miniMatch.prey, miniMatch.oBuf[0], (miniMatch.oBuf[1] + 1) * 0.5);
+
+    miniMatch.frames++;
+    if (miniMatch.food && Math.hypot(miniMatch.prey.x - miniMatch.food.x, miniMatch.prey.y - miniMatch.food.y) < FOOD_EAT_DIST) {
+      miniMatch.prey.power += 1;
+      miniMatch.prey.maxSpeed = Math.min(settings.preySpeed * MAX_SPEED_MULT, miniMatch.prey.maxSpeed + SPEED_BOOST_PREY);
+      miniMatch.food = spawnFood(miniMatch.rng, miniMatch.prey.x, miniMatch.prey.y);
+    }
+    const md = Math.hypot(miniMatch.prey.x - miniMatch.pred.x, miniMatch.prey.y - miniMatch.pred.y);
+    if (md < CATCH_DIST) {
+      if (miniMatch.prey.power > miniMatch.pred.power) {
+        const nx = md > 1e-6 ? (miniMatch.pred.x - miniMatch.prey.x) / md : 1;
+        const ny = md > 1e-6 ? (miniMatch.pred.y - miniMatch.prey.y) / md : 0;
+        miniMatch.pred.x = clamp(miniMatch.prey.x + nx * (CATCH_DIST + 8), miniMatch.pred.radius, ARENA_W - miniMatch.pred.radius);
+        miniMatch.pred.y = clamp(miniMatch.prey.y + ny * (CATCH_DIST + 8), miniMatch.pred.radius, ARENA_H - miniMatch.pred.radius);
+      } else {
+        miniMatch.pred.power += 1;
+        miniMatch.pred.maxSpeed = Math.min(settings.predSpeed * MAX_SPEED_MULT, miniMatch.pred.maxSpeed + SPEED_BOOST_PRED);
+        const nextPrey = respawnPreyAwayFrom(miniMatch.rng, miniMatch.pred);
+        miniMatch.prey.x = nextPrey.x;
+        miniMatch.prey.y = nextPrey.y;
+        miniMatch.prey.heading = nextPrey.heading;
+        miniMatch.prey.power = 1;
+        miniMatch.prey.maxSpeed = settings.preySpeed;
+      }
+    }
+    if (miniMatch.frames >= 400) {
+      resetMiniMatch();
+    }
+
+    if (miniCtx) {
+      const scale = miniCanvas.width / ARENA_W;
+      miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+      miniCtx.save();
+      miniCtx.scale(scale, scale);
+      if (miniMatch.food) {
+        miniCtx.fillStyle = "#4ecdc4";
+        miniCtx.beginPath();
+        miniCtx.arc(miniMatch.food.x, miniMatch.food.y, FOOD_RADIUS, 0, Math.PI * 2);
+        miniCtx.fill();
+      }
+      drawWallRays(miniCtx, miniMatch.pred);
+      drawPredator(miniCtx, miniMatch.pred, "#e8a838", 1.0, false);
+      drawPrey(miniCtx, miniMatch.prey, "#4ecdc4", 1.0, false);
+      miniCtx.restore();
+    }
+
+    // Animated network diagram
+    if (netCtx) {
+      const w = netCanvas.width;
+      const h = netCanvas.height;
+      netCtx.clearRect(0, 0, w, h);
+
+      const inLabels = [
+        "sin bearing", "cos bearing", "distance",
+        "opp v fwd", "opp v side", "own speed",
+        "ray -45°", "ray 0°", "ray +45°",
+        "food sin", "food cos",
+        "own power", "opp power"
+      ];
+      const outLabels = ["turn", "throttle"];
+
+      const xIn = 104, xHid = 232, xOut = 344;
+      const inY = [], hidY = [], outY = [h * 0.38, h * 0.62];
+      for (let i = 0; i < 13; i++) inY.push(14 + i * ((h - 28) / 12));
+      for (let i = 0; i < 10; i++) hidY.push(20 + i * ((h - 40) / 9));
+
+      // Animated connection lines
+      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const phase = reduceMotion ? 0 : modalTick * 0.04;
+      for (let i = 0; i < 13; i++) {
+        for (let j = 0; j < 10; j++) {
+          const pulse = 0.08 + 0.14 * (0.5 + 0.5 * Math.sin(phase + i * 0.6 + j * 0.4));
+          netCtx.strokeStyle = "rgba(232, 168, 56, " + pulse.toFixed(3) + ")";
+          netCtx.lineWidth = 1;
+          netCtx.beginPath();
+          netCtx.moveTo(xIn, inY[i]);
+          netCtx.lineTo(xHid, hidY[j]);
+          netCtx.stroke();
+        }
+      }
+      for (let j = 0; j < 10; j++) {
+        for (let k = 0; k < 2; k++) {
+          const pulse = 0.12 + 0.22 * (0.5 + 0.5 * Math.sin(phase * 1.2 + j * 0.5 + k));
+          netCtx.strokeStyle = "rgba(123, 146, 168, " + pulse.toFixed(3) + ")";
+          netCtx.lineWidth = 1.1;
+          netCtx.beginPath();
+          netCtx.moveTo(xHid, hidY[j]);
+          netCtx.lineTo(xOut, outY[k]);
+          netCtx.stroke();
+        }
+      }
+
+      // Nodes & labels
+      netCtx.font = "10px 'Bricolage Grotesque', sans-serif";
+      netCtx.textBaseline = "middle";
+      netCtx.textAlign = "right";
+      for (let i = 0; i < 13; i++) {
+        netCtx.fillStyle = "#9a978f";
+        netCtx.fillText(inLabels[i], xIn - 10, inY[i]);
+        netCtx.fillStyle = "#ece9e2";
+        netCtx.beginPath(); netCtx.arc(xIn, inY[i], 3.8, 0, Math.PI * 2); netCtx.fill();
+      }
+      for (let j = 0; j < 10; j++) {
+        netCtx.fillStyle = "#e8a838";
+        netCtx.beginPath(); netCtx.arc(xHid, hidY[j], 4.5, 0, Math.PI * 2); netCtx.fill();
+      }
+      netCtx.textAlign = "left";
+      for (let k = 0; k < 2; k++) {
+        netCtx.fillStyle = "#ece9e2";
+        netCtx.beginPath(); netCtx.arc(xOut, outY[k], 5, 0, Math.PI * 2); netCtx.fill();
+        netCtx.fillStyle = "#e8a838";
+        netCtx.fillText(outLabels[k], xOut + 10, outY[k]);
+      }
+    }
+  }
+
+  if (howBtn && howModal) {
+    howBtn.addEventListener("click", function () {
+      modalOpen = true;
+      howModal.classList.add("open");
+      resetMiniMatch();
+    });
+  }
+  if (closeHowBtn && howModal) {
+    closeHowBtn.addEventListener("click", function () {
+      modalOpen = false;
+      howModal.classList.remove("open");
+    });
+  }
+  if (howModal) {
+    howModal.addEventListener("click", function (e) {
+      if (e.target === howModal) {
+        modalOpen = false;
+        howModal.classList.remove("open");
+      }
+    });
+  }
+
+  // =========================================================================
+  // SIMULATION STEP & MAIN LOOP
+  // =========================================================================
+  function stepFrame(recordTrails) {
+    let anyRunning = false;
+    for (let i = 0; i < currentMatches.length; i++) {
+      stepSingleMatch(currentMatches[i], settings.matchLen, recordTrails);
+      if (!currentMatches[i].finished) anyRunning = true;
+    }
+    frameInRound++;
+
+    if (!anyRunning || frameInRound >= settings.matchLen) {
+      finalizeRoundStats();
+      roundIndex++;
+      if (roundIndex >= settings.roundsPerGen) {
+        finishGeneration();
+      } else {
+        startRound();
+      }
+    }
+  }
+
+  function initRun(seed) {
+    runSeed = seed >>> 0;
+    evoRng = mulberry32(hashIntegers(runSeed, 55555));
+    generation = 1;
+    roundIndex = 0;
+    frameInRound = 0;
+    predatorHoF = [];
+    preyHoF = [];
+    predHistory = [];
+    preyHistory = [];
+    predGraphShift = 0;
+    preyGraphShift = 0;
+    latestPredBenchBest = 0;
+    latestPreyBenchBest = 0;
+    lastFinishedSummary = null;
+    benchQueue = [];
+    effects = [];
+    moments.firstBlood = false;
+    moments.hunterBeatsScript = false;
+    moments.preyOutrunsScript = false;
+    moments.armsRace = false;
+
+    applyGenSettings();
+    applyRoundSettings();
+    predators = createPopulation(settings.popSize, evoRng);
+    prey = createPopulation(settings.popSize, evoRng);
+    baselinePredWeights = cloneWeights(predators[0].weights);
+    baselinePreyWeights = cloneWeights(prey[0].weights);
+    resetGenStats();
+    startRound();
+    updateStatsUI(false);
+    updateHUD();
+  }
+
+  function tick() {
+    if (!paused) {
+      const steps = speedMult;
+      for (let s = 0; s < steps; s++) {
+        // Record trails on last few steps so 80x stays smooth and crisp
+        stepFrame(s >= steps - 2);
+      }
+      processBenchmarkSlice(12);
+    }
+
+    renderArena();
+    renderGraphs();
+    updateHUD();
+    renderHowModal();
+
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  // Expose minimal test hooks on window for headless verification
+  window.__HUNT_DEBUG__ = {
+    getState: function () {
+      return {
+        generation: generation,
+        roundIndex: roundIndex,
+        settings: Object.assign({}, settings),
+        pendingSettings: Object.assign({}, pendingSettings),
+        predatorsCount: predators.length,
+        preyCount: prey.length,
+        weightLength: predators[0] ? predators[0].weights.length : 0,
+        predHistory: predHistory,
+        preyHistory: preyHistory,
+        predatorHoF: predatorHoF.length,
+        preyHoF: preyHoF.length,
+        moments: Object.assign({}, moments),
+        benchQueueLen: benchQueue.length
+      };
+    },
+    initRun: initRun,
+    stepFrames: function (n) {
+      for (let i = 0; i < n; i++) stepFrame(false);
+    },
+    flushBenchmarks: function () {
+      while (benchQueue.length > 0) processBenchmarkSlice(10000);
+    },
+    helpers: {
+      mulberry32: mulberry32,
+      generateSpawn: generateSpawn,
+      buildInputs: buildInputs,
+      createBody: createBody,
+      stepBody: stepBody,
+      ARENA_W: ARENA_W,
+      ARENA_H: ARENA_H,
+      PRED_RADIUS: PRED_RADIUS,
+      PREY_RADIUS: PREY_RADIUS,
+      CATCH_DIST: CATCH_DIST
+    }
+  };
+
+  // Start immediately
+  syncSlidersFromPending();
+  initRun(Math.floor(Math.random() * 900000) + 100000);
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(tick);
+  }
+})();
+</script>
+</body>
+</html>
